@@ -1,0 +1,194 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { Download, FileSpreadsheet, FileText, Lock, ChevronDown } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportHelper';
+
+export const ExportButton = ({
+  moduleName,
+  data = [],
+  excelFilename = '7Heaven_Data.xlsx',
+  csvFilename = '7Heaven_Data.csv',
+  pdfTitle = '7Heaven Export',
+  pdfFilename = '7Heaven_Data.pdf',
+  pdfHeaders = [],
+  pdfRows = []
+}) => {
+  const { can } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const hasDownloadRight = can(moduleName, 'canDownload');
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  if (!hasDownloadRight) {
+    return (
+      <div style={{ position: 'relative', display: 'inline-block' }} title="Download Restricted: You do not have data download permissions.">
+        <button
+          className="btn btn-outline"
+          disabled
+          style={{ opacity: 0.6, cursor: 'not-allowed', color: '#94a3b8', borderStyle: 'dashed' }}
+        >
+          <Lock size={14} color="#f59e0b" />
+          <span>Export Locked</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      style={{
+        position: 'relative',
+        display: 'inline-block',
+        zIndex: isOpen ? 100 : 'auto'
+      }}
+      ref={dropdownRef}
+    >
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="btn btn-outline-gold"
+        type="button"
+        aria-expanded={isOpen}
+      >
+        <Download size={15} />
+        <span>Export Data</span>
+        <ChevronDown
+          size={14}
+          style={{
+            transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease'
+          }}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          className="animate-fade-in"
+          style={{
+            position: 'absolute',
+            right: 0,
+            top: 'calc(100% + 6px)',
+            width: '190px',
+            zIndex: 1000,
+            padding: '6px',
+            backgroundColor: '#121829',
+            borderRadius: '12px',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(212, 175, 55, 0.25)',
+            border: '1px solid rgba(212, 175, 55, 0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px'
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              exportToExcel(data, excelFilename);
+              setIsOpen(false);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              background: 'transparent',
+              border: 'none',
+              color: '#f8fafc',
+              fontSize: '0.825rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <FileSpreadsheet size={15} color="#10b981" />
+            <span style={{ fontWeight: 500 }}>Excel (.xlsx)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              exportToCSV(data, csvFilename);
+              setIsOpen(false);
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '9px 12px',
+              background: 'transparent',
+              border: 'none',
+              color: '#f8fafc',
+              fontSize: '0.825rem',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background 0.15s ease'
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <FileText size={15} color="#0ea5e9" />
+            <span style={{ fontWeight: 500 }}>CSV File</span>
+          </button>
+
+          {pdfHeaders.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                exportToPDF(pdfHeaders, pdfRows, pdfTitle, pdfFilename);
+                setIsOpen(false);
+              }}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '9px 12px',
+                background: 'transparent',
+                border: 'none',
+                color: '#f8fafc',
+                fontSize: '0.825rem',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                textAlign: 'left',
+                transition: 'background 0.15s ease'
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              <FileText size={15} color="#f43f5e" />
+              <span style={{ fontWeight: 500 }}>PDF Document</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default ExportButton;

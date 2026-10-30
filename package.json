@@ -1,0 +1,26 @@
+{
+  "name": "7heaven-crm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "7Heaven Luxury Travel CRM - monorepo (Express API + React/Vite web app)",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "npm run dev -w backend",
+    "dev:frontend": "npm run dev -w frontend",
+    "build": "npm run build -w frontend",
+    "start": "npm run start -w backend",
+    "build:vercel": "npm run build -w frontend && node scripts/vercel-postbuild.mjs",
+    "create-admin": "node scripts/create-admin.mjs"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
+  }
+}

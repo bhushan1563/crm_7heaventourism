@@ -1,0 +1,15 @@
+# dependencies & build output
+node_modules/
+dist/
+.vercel/
+
+# secrets / local env (the shared, secret-free .env.development / .env.production / .env.example are committed)
+.env
+.env.local
+.env.*.local
+
+# logs & OS files
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
