@@ -19,7 +19,7 @@ const findGuest = (req) => findGuestDocument(req.params.id);
 
 router.use(protect);
 
-router.get('/stats', getGuestStats);
+router.get('/stats', checkRights('guest_list', 'canRead'), getGuestStats);
 router.get('/', checkRights('guest_list', 'canRead'), getGuests);
 router.get('/:id', checkRights('guest_list', 'canRead'), getGuestById);
 router.post('/', checkRights('guest_list', 'canCreate'), createGuest);

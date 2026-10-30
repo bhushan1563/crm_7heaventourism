@@ -1,6 +1,30 @@
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
 import { formatDate } from './dateHelper';
+
+// html2canvas and jspdf are large, so they are loaded only when a PDF is generated.
+
+/** Escapes text that is interpolated into hand-built HTML (print windows), so quotation fields can never inject markup. */
+const esc = (value) =>
+  String(value ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/** Only plain web links may become clickable (blocks javascript: and data: URLs). */
+const safeUrl = (value) => (/^https?:\/\//i.test(String(value ?? '').trim()) ? String(value).trim() : '');
+
+/**
+ * Prints a document that was written into a window we opened. The print call is made from this page rather than from
+ * an inline <script> in the new document, which the app's Content-Security-Policy does not allow.
+ */
+const printWhenReady = (printWindow) => {
+  let started = false;
+  const start = () => {
+    if (started || printWindow.closed) return;
+    started = true;
+    printWindow.focus();
+    printWindow.print();
+    setTimeout(() => printWindow.close(), 500);
+  };
+  printWindow.addEventListener('load', start); // after document.close(), once fonts/images have loaded
+  setTimeout(start, 2500); // fallback when the load event never arrives
+};
 
 /** Height of one A4 sheet for a page laid out at print width. */
 const a4HeightPx = (page) => {
@@ -102,7 +126,7 @@ const PRINT_PAGE_CSS = `
   }
 `;
 
-const buildQuotationPrintHtml = (bodyHtml, autoPrint = false) => `
+const buildQuotationPrintHtml = (bodyHtml) => `
   <!DOCTYPE html>
   <html>
     <head>
@@ -112,12 +136,6 @@ const buildQuotationPrintHtml = (bodyHtml, autoPrint = false) => `
     </head>
     <body>
       ${bodyHtml}
-      ${autoPrint ? `<script>
-        window.onload = function() {
-          window.print();
-          setTimeout(function() { window.close(); }, 500);
-        };
-      </script>` : ''}
     </body>
   </html>
 `;
@@ -152,7 +170,7 @@ const openPrintFrame = async (container) => {
 
   const doc = iframe.contentDocument;
   doc.open();
-  doc.write(buildQuotationPrintHtml(container.outerHTML, false));
+  doc.write(buildQuotationPrintHtml(container.outerHTML));
   doc.close();
 
   await waitForPrintFrame(iframe);
@@ -175,6 +193,8 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
   if (!container) {
     throw new Error(`Quotation container #${containerId} not found in DOM.`);
   }
+
+  const [{ default: html2canvas }, { jsPDF }] = await Promise.all([import('html2canvas'), import('jspdf')]);
 
   let frame;
   try {
@@ -290,15 +310,18 @@ export const printQuotation = (containerId) => {
     frame.parentElement?.remove();
     frame.remove();
     printWindow.document.open();
-    printWindow.document.write(buildQuotationPrintHtml(printableHtml, true));
+    printWindow.document.write(buildQuotationPrintHtml(printableHtml));
     printWindow.document.close();
+    printWhenReady(printWindow);
   }).catch(() => {
     printWindow.close();
   });
 };
 
 /**
- * Quick flight voucher print trigger
+ * Quick flight voucher print trigger.
+ * Every quotation field is HTML-escaped: the voucher is written into a new window, so unescaped text would let
+ * whoever can edit a quotation run script for whoever prints it.
  */
 export const printFlightVoucher = (quotation) => {
   if (!quotation) return;
@@ -310,6 +333,7 @@ export const printFlightVoucher = (quotation) => {
     email: 'sales@7heaventourism.in',
     website: 'www.7heaventourism.in'
   };
+  const co = Object.fromEntries(Object.entries(company).map(([key, value]) => [key, esc(value)]));
 
   const flightDetails = quotation.flightDetails || [];
   const asPerTicket = quotation.asPerFlightTicket;
@@ -320,46 +344,53 @@ export const printFlightVoucher = (quotation) => {
     return;
   }
 
+  const ticketUrl = safeUrl(quotation.flightTicketUrl);
+  const ticketLink = ticketUrl
+    ? `<a href="${esc(ticketUrl)}" target="_blank" rel="noopener noreferrer" style="color: #0284c7;">${esc(ticketUrl)}</a>`
+    : esc(quotation.flightTicketUrl);
+
+  const withDate = (date) => (date ? ` (${esc(formatDate(date))})` : '');
+
   const flightCardsHtml = asPerTicket ? `
     <div style="border: 2px solid #0284c7; background: #f0f9ff; padding: 24px; border-radius: 8px; text-align: center; margin: 24px 0;">
       <div style="font-size: 18px; font-weight: 800; color: #0369a1; margin-bottom: 8px;">
         ✈️ Flight Details As Per Issued Flight Ticket
       </div>
       <div style="font-size: 13px; color: #334155; line-height: 1.5; max-width: 540px; margin: 0 auto;">
-        ${quotation.flightTicketNote || 'Official airline PNR and confirmed e-tickets will be shared upon booking confirmation and flight ticket issuance.'}
+        ${esc(quotation.flightTicketNote || 'Official airline PNR and confirmed e-tickets will be shared upon booking confirmation and flight ticket issuance.')}
       </div>
       ${quotation.flightTicketUrl ? `
         <div style="margin-top: 14px; font-size: 12px; color: #0284c7; font-weight: 600;">
-          Attached Ticket Document: <a href="${quotation.flightTicketUrl}" target="_blank" style="color: #0284c7;">${quotation.flightTicketUrl}</a>
+          Attached Ticket Document: ${ticketLink}
         </div>
       ` : ''}
     </div>
   ` : (flightDetails.length > 0 ? flightDetails.map((f, i) => `
     <div style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 16px; margin-bottom: 16px; background: #fafafa;">
       <div style="display: flex; justify-content: space-between; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 10px; font-size: 12px; font-weight: 700; color: #0369a1;">
-        <span>Flight #${i + 1}: ${f.flightType || 'Flight Segment'}${f.departureDate || f.depDate ? ` (${formatDate(f.departureDate || f.depDate)})` : ''}</span>
-        <span>${f.airline || 'Airline'} ${f.flightNumber ? `(${f.flightNumber})` : ''}</span>
+        <span>Flight #${i + 1}: ${esc(f.flightType || 'Flight Segment')}${withDate(f.departureDate || f.depDate)}</span>
+        <span>${esc(f.airline || 'Airline')} ${f.flightNumber ? `(${esc(f.flightNumber)})` : ''}</span>
       </div>
       <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 12px; align-items: center; text-align: center;">
         <div style="text-align: left;">
           <div style="font-size: 11px; color: #64748b;">From</div>
-          <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${f.fromAirport || 'Departure Airport'}</div>
-          <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${f.depTime || '--:--'}${f.depDate ? ` (${formatDate(f.depDate)})` : ''}</div>
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${esc(f.fromAirport || 'Departure Airport')}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${esc(f.depTime || '--:--')}${withDate(f.depDate)}</div>
         </div>
         <div>
-          <div style="font-size: 11px; color: #64748b;">${f.duration || 'Direct'}</div>
+          <div style="font-size: 11px; color: #64748b;">${esc(f.duration || 'Direct')}</div>
           <div style="color: #b91c1c; font-size: 16px;">✈</div>
-          <div style="font-size: 10px; color: #059669; font-weight: 700;">${f.flightStop || 'Non-stop'}</div>
+          <div style="font-size: 10px; color: #059669; font-weight: 700;">${esc(f.flightStop || 'Non-stop')}</div>
         </div>
         <div style="text-align: right;">
           <div style="font-size: 11px; color: #64748b;">To</div>
-          <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${f.toAirport || 'Arrival Airport'}</div>
-          <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${f.arrTime || '--:--'}${f.arrDate ? ` (${formatDate(f.arrDate)})` : ''}</div>
+          <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${esc(f.toAirport || 'Arrival Airport')}</div>
+          <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${esc(f.arrTime || '--:--')}${withDate(f.arrDate)}</div>
         </div>
       </div>
       <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #475569; display: flex; justify-content: space-between;">
-        <span>Check-in Baggage: <strong>${f.baggageCheckIn || '15 kg'}</strong></span>
-        <span>Class: <strong>${f.cabinClass || 'Economy'}</strong></span>
+        <span>Check-in Baggage: <strong>${esc(f.baggageCheckIn || '15 kg')}</strong></span>
+        <span>Class: <strong>${esc(f.cabinClass || 'Economy')}</strong></span>
       </div>
     </div>
   `).join('') : `
@@ -372,7 +403,7 @@ export const printFlightVoucher = (quotation) => {
     <!DOCTYPE html>
     <html>
       <head>
-        <title>Flight Voucher - ${quotation.quotationNo || '7Heaven'}</title>
+        <title>Flight Voucher - ${esc(quotation.quotationNo || '7Heaven')}</title>
         <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
         <style>
           @page { size: A4 portrait; margin: 15mm; }
@@ -393,12 +424,12 @@ export const printFlightVoucher = (quotation) => {
       <body>
         <div class="header">
           <div>
-            <h1 style="font-size: 22px; font-weight: 900; color: #0f172a; margin: 0;">${company.name}</h1>
+            <h1 style="font-size: 22px; font-weight: 900; color: #0f172a; margin: 0;">${co.name}</h1>
             <div style="font-size: 10px; color: #0284c7; font-weight: 700; letter-spacing: 0.1em; margin-top: 2px;">AIRLINE TICKETS & TRAVEL VOUCHER</div>
           </div>
           <div style="text-align: right; font-size: 11px; color: #64748b;">
-            <div><strong>Ref:</strong> ${quotation.quotationNo || '7H-QT-2026'}</div>
-            <div><strong>Date:</strong> ${formatDate(quotation.travelDate) || new Date().toLocaleDateString()}</div>
+            <div><strong>Ref:</strong> ${esc(quotation.quotationNo || '7H-QT-2026')}</div>
+            <div><strong>Date:</strong> ${esc(formatDate(quotation.travelDate) || new Date().toLocaleDateString())}</div>
           </div>
         </div>
 
@@ -407,10 +438,10 @@ export const printFlightVoucher = (quotation) => {
         </div>
 
         <div class="meta-grid">
-          <div><strong>Passenger / Guest:</strong> ${quotation.clientName || 'Valued Guest'}</div>
-          <div><strong>Total Pax:</strong> ${quotation.paxDetails || '1'}</div>
-          <div><strong>Destination:</strong> ${quotation.destination || 'Tour Destination'}</div>
-          <div><strong>Travel Date:</strong> ${formatDate(quotation.travelDate) || 'As confirmed'}</div>
+          <div><strong>Passenger / Guest:</strong> ${esc(quotation.clientName || 'Valued Guest')}</div>
+          <div><strong>Total Pax:</strong> ${esc(quotation.paxDetails || '1')}</div>
+          <div><strong>Destination:</strong> ${esc(quotation.destination || 'Tour Destination')}</div>
+          <div><strong>Travel Date:</strong> ${esc(formatDate(quotation.travelDate) || 'As confirmed')}</div>
         </div>
 
         <div>
@@ -431,16 +462,9 @@ export const printFlightVoucher = (quotation) => {
         </div>
 
         <div class="footer">
-          <div>${company.address}</div>
-          <div>Phone: ${company.phone} | Email: ${company.email} | Web: ${company.website}</div>
+          <div>${co.address}</div>
+          <div>Phone: ${co.phone} | Email: ${co.email} | Web: ${co.website}</div>
         </div>
-
-        <script>
-          window.onload = function() {
-            window.print();
-            setTimeout(function() { window.close(); }, 500);
-          };
-        </script>
       </body>
     </html>
   `;
@@ -448,4 +472,5 @@ export const printFlightVoucher = (quotation) => {
   printWindow.document.open();
   printWindow.document.write(htmlContent);
   printWindow.document.close();
+  printWhenReady(printWindow);
 };

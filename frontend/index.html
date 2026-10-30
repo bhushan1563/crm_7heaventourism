@@ -3,8 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/webp" href="/logo.webp" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover lets the layout use the full screen on notched phones (safe-area insets are handled in CSS) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0F172A" />
     <meta name="description" content="7Heaven - Luxury Travel CRM, Guest Inquiries, Categorized Suppliers, Granular Rights, and Mobile Document Scanner" />
+    <meta name="robots" content="noindex, nofollow" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -12,6 +15,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>7Heaven CRM needs JavaScript to run. Please enable JavaScript in your browser and reload.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

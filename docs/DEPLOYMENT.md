@@ -30,8 +30,10 @@ Point your domain's **A record** (e.g. `crm.example.com`) at the VPS IP.
 
 ### 2. MongoDB
 
-- **Atlas (simplest):** create a cluster, a database user, and add the VPS IP under *Network Access*.
-  Use the `mongodb+srv://...` string as `MONGODB_URI`.
+- **Atlas (simplest):** create a cluster, a database user, and add the VPS IP under *Network Access*
+  (remove the `0.0.0.0/0` "allow from anywhere" entry that Atlas' auto-setup adds).
+  Use the `mongodb+srv://...` string as `MONGODB_URI`. If the password contains `@ : / ?` etc., URL-encode it (`@` -> `%40`).
+  Give the database user the **readWrite** role on this one database only, not "Atlas admin".
 - **On the VPS:** install MongoDB Community (follow MongoDB's Ubuntu instructions), keep it bound to `127.0.0.1`,
   enable authentication, and use `mongodb://USER:PASS@127.0.0.1:27017/7heaven_crm?authSource=admin`.
 - **Moving existing data:** `mongodump --uri="<old uri>" --out dump` then `mongorestore --uri="<new uri>" dump`.
@@ -46,7 +48,9 @@ cp backend/.env.example backend/.env
 nano backend/.env       # PORT=5000, MONGODB_URI=..., JWT_SECRET=<openssl rand -hex 48>, NODE_ENV=production
 ```
 
-> Changing `JWT_SECRET` signs everyone out once; that is expected.
+> `JWT_SECRET` is mandatory: in production the API exits at start-up if it is missing or a placeholder, and logs what to fix
+> (`pm2 logs 7heaven-crm`). Changing it signs everyone out once; that is expected.
+> Move existing data in with `npm run import-csv -- "<folder>"` (see the README) or `mongodump` / `mongorestore` (below).
 
 ### 4. Build and start
 
@@ -90,8 +94,19 @@ cd /var/www/7heaven-crm && bash deploy/deploy.sh   # git pull, npm ci, build, pm
 | Status | `pm2 status` |
 | Backup DB | `mongodump --uri="<uri>" --out backup-$(date +%F)` |
 
-Notes: `pm2 logs` contains the MongoDB URI (the API prints it at startup) - keep server access restricted.
-Run a single instance (the PM2 file does); the OCR scanner is memory-hungry.
+Notes: logs no longer contain the MongoDB URI or any secret. Run a single instance (the PM2 file does): the OCR scanner is
+memory-hungry and the login rate limiter keeps its counters in memory. PM2 sends SIGTERM on reload; the API drains in-flight requests and
+closes the database cleanly. `curl /api/health` returns 503 while the database is unreachable (use it for uptime monitoring).
+
+### Production checklist
+
+- [ ] `NODE_ENV=production`, a random `JWT_SECRET`, `MONGODB_URI` set in `backend/.env` (or Vercel env vars)
+- [ ] First admin created with `npm run create-admin`, strong password; no `ADMIN_*` variables left in the environment
+- [ ] Atlas *Network Access* limited to the server IP; database user limited to `readWrite` on this database
+- [ ] HTTPS enabled (certbot) and, afterwards, the HSTS line from `deploy/nginx/7heaven-crm.conf`
+- [ ] `npm test` passes; `npm run build` succeeds
+- [ ] Backups: `mongodump` on a schedule (Atlas M0 has none), copy it off the server
+- [ ] Imported temporary passwords handed out and `IMPORTED_USER_LOGINS.csv` deleted
 
 ---
 
@@ -105,8 +120,9 @@ and routes `/api/*` to `api/index.js`, which wraps the same Express app.
    Framework preset: *Other* (`vercel.json` supplies build and output settings).
 3. **Settings -> General -> Node.js Version:** 22.x.
 4. **Settings -> Environment Variables** (Production, and Preview if you use it):
-   - `MONGODB_URI` - an **Atlas** string (a database on your own machine/VPS localhost is not reachable)
-   - `JWT_SECRET` - long random string
+   - `MONGODB_URI` - an **Atlas** string (a database on your own machine/VPS localhost is not reachable); URL-encode special characters in the password
+   - `JWT_SECRET` - **required**, long random string (`openssl rand -hex 48`). Without it every `/api` call answers 500 "not configured correctly"
+   - Do **not** copy `backend/.env` anywhere in the repository; Vercel reads these settings, not the file
 5. In Atlas -> *Network Access*, allow Vercel's outbound traffic (Vercel has no fixed IPs on most plans, so this usually means `0.0.0.0/0`; keep a strong DB password).
 6. Deploy. On an **empty** database create the first admin from your machine:
    `MONGODB_URI="<atlas uri>" npm run create-admin -- admin@yourdomain.com 'A-strong-password'`

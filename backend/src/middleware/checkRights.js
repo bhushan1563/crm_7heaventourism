@@ -41,22 +41,19 @@ export const checkRecordOwnership = (recordFinder) => {
     else if (req.baseUrl.includes('quotations')) moduleName = 'quotations';
     const rights = req.userRights && req.userRights[moduleName];
 
-    // If user has canEditOthers right, they can modify any record
-    if (rights && rights.canEditOthers) {
-      return next();
-    }
-
     try {
       const record = await recordFinder(req);
       if (!record) {
         return res.status(200).json({ success: false, message: 'Record not found' });
       }
 
-      // Check if user is creator or assigned sales/ops
-      const isCreator = record.createdBy === req.user._id || record.createdBy === req.user.email;
+      // Check if user is creator or assigned sales/ops.
+      // Ids are stored as strings on records but req.user._id is an ObjectId, so compare as strings.
+      const userId = String(req.user._id);
+      const isCreator = record.createdBy === userId || record.createdBy === req.user.email;
       const userFullName = `${req.user.firstName} ${req.user.lastName}`.trim().toLowerCase();
-      const isAssignedSales = record.salesId === req.user._id || (record.sales && record.sales.trim().toLowerCase() === userFullName);
-      const isAssignedOps = record.opsId === req.user._id || (record.ops && record.ops.trim().toLowerCase() === userFullName);
+      const isAssignedSales = record.salesId === userId || (record.sales && record.sales.trim().toLowerCase() === userFullName);
+      const isAssignedOps = record.opsId === userId || (record.ops && record.ops.trim().toLowerCase() === userFullName);
       const isAssignedStaff = isCreator || isAssignedSales || isAssignedOps;
 
       const isConfirmed = record.status === 'Confirmed' || record.status === 'Confirmed & Payment received' || record.isLocked === true;

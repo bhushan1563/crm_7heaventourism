@@ -13,3 +13,8 @@ dist/
 npm-debug.log*
 .DS_Store
 Thumbs.db
+
+# local data exports / keys - never commit
+old data/
+*.csv
+!**/fixtures/*.csv

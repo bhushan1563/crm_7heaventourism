@@ -1,6 +1,6 @@
 // Creates an Admin user in the database configured in backend/.env (or the MONGODB_URI env var).
-// Needed on a fresh database, because the built-in seed tries to create a "SuperAdmin" role that the
-// User schema does not allow. An existing user with the same email is left untouched.
+// Needed on a fresh database: the API ships with no default login. (Alternatively set ADMIN_EMAIL and
+// ADMIN_PASSWORD once and start the API on an empty database.) An existing user with the same email is left untouched.
 //
 //   npm run create-admin -- <email> <password> [firstName] [lastName]
 //   ADMIN_EMAIL=... ADMIN_PASSWORD=... npm run create-admin
@@ -20,6 +20,10 @@ const lastName = argLast || process.env.ADMIN_LAST_NAME || 'User';
 
 if (!email || !password) {
   console.error('Usage: npm run create-admin -- <email> <password> [firstName] [lastName]');
+  process.exit(1);
+}
+if (password.length < 8) {
+  console.error('The password must be at least 8 characters.');
   process.exit(1);
 }
 if (!process.env.MONGODB_URI) {

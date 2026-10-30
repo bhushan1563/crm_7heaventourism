@@ -199,7 +199,7 @@ export const QuotationListPage = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Top Header Banner */}
       <div
-        className="glass-panel-azure animate-fade-in"
+        className="glass-panel-azure animate-fade-in rs-banner"
         style={{
           borderRadius: '16px',
           display: 'flex',
@@ -215,7 +215,7 @@ export const QuotationListPage = () => {
           </h1>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="page-actions">
           {/* Export Button */}
           <ExportButton
             moduleName="quotations"
@@ -375,7 +375,7 @@ export const QuotationListPage = () => {
         }}
       >
         {/* Status Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="filter-pills">
           {STATUS_TABS.map((tab) => (
             <button
               key={tab}
@@ -400,7 +400,7 @@ export const QuotationListPage = () => {
         </div>
 
         {/* Search Input */}
-        <div style={{ position: 'relative', minWidth: '260px', maxWidth: '380px', flex: 1 }}>
+        <div className="filter-search" style={{ position: 'relative', minWidth: '260px', maxWidth: '380px', flex: 1 }}>
           <Search
             size={16}
             style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}
@@ -417,8 +417,8 @@ export const QuotationListPage = () => {
       </div>
 
       {/* Quotations List Table */}
-      <div className="table-container animate-fade-in" style={{ width: '100%', overflowX: 'hidden' }}>
-        <table className="luxury-table" style={{ width: '100%' }}>
+      <div className="table-container animate-fade-in" style={{ width: '100%' }}>
+        <table className="luxury-table table-stack" style={{ width: '100%' }}>
           <thead>
             <tr>
               <th style={{ width: '13%' }}>Quotation #</th>
@@ -459,7 +459,7 @@ export const QuotationListPage = () => {
                 return (
                   <tr key={q._id} className="table-row-hover">
                     {/* Quotation No & Type */}
-                    <td>
+                    <td data-label="Quotation">
                       <div style={{ fontWeight: 700, color: '#0284c7', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         {q.quotationNo}
                       </div>
@@ -485,7 +485,7 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Client & Pax */}
-                    <td>
+                    <td data-label="Client">
                       <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.clientName}
                       </div>
@@ -495,7 +495,7 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Destination & Duration */}
-                    <td>
+                    <td data-label="Destination">
                       <div style={{ fontWeight: 700, color: '#00a6f4', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.destination}
                       </div>
@@ -505,7 +505,7 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Travel Date */}
-                    <td>
+                    <td data-label="Travel Date">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#334155', whiteSpace: 'nowrap' }}>
                         <Calendar size={12} color="#00a6f4" style={{ flexShrink: 0 }} />
                         <span>{q.travelDate ? formatDate(q.travelDate) : 'Not specified'}</span>
@@ -513,7 +513,7 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Pricing */}
-                    <td>
+                    <td data-label="Pricing">
                       <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         ₹{(q.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
                       </div>
@@ -523,7 +523,7 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Assigned Team */}
-                    <td>
+                    <td data-label="Team">
                       <div style={{ fontSize: '0.75rem', color: '#0f172a', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <span style={{ color: '#64748b' }}>Sales:</span> {q.sales || 'Unassigned'}
                       </div>
@@ -533,12 +533,12 @@ export const QuotationListPage = () => {
                     </td>
 
                     {/* Status */}
-                    <td>
+                    <td data-label="Status">
                       <StatusBadge status={q.status || 'Draft'} />
                     </td>
 
                     {/* Actions */}
-                    <td>
+                    <td data-label="">
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexWrap: 'nowrap' }}>
                         {/* 1. Follow-up Button */}
                         {canModify && (

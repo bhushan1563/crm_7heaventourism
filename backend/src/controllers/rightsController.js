@@ -1,5 +1,6 @@
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
+import { queryString } from '../utils/security.js';
 
 const MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
 const EDITABLE_ROLES = ['Sales', 'Ops', 'Viewer'];
@@ -34,7 +35,8 @@ const saveRight = (rightData) => {
 
 export const getRights = async (req, res) => {
   try {
-    const { userId, userRole } = req.query;
+    const userId = queryString(req.query.userId);
+    const userRole = queryString(req.query.userRole);
     const filter = {};
     if (userId) {
       filter.userId = userId;
@@ -55,7 +57,7 @@ export const getRights = async (req, res) => {
 
 export const getAllRightsMatrix = async (req, res) => {
   try {
-    const users = await UserModel.find().select('-password').sort({ createdAt: -1 });
+    const users = await UserModel.find({ deleted: { $ne: true } }).select('-password').sort({ createdAt: -1 });
     const allRights = await RightModel.find();
     const modules = MODULES;
 
@@ -139,6 +141,11 @@ export const updateRight = async (req, res) => {
       });
     }
 
+    // Upserts skip schema validation, so check the identifiers here (and keep objects out of the query).
+    if (!MODULES.includes(module) || (userId && typeof userId !== 'string') || (userRole && !EDITABLE_ROLES.includes(userRole))) {
+      return res.status(200).json({ success: false, message: 'Invalid module, user or role.' });
+    }
+
     const saved = await saveRight({
       userId: userId || null,
       userRole: userRole || null,
@@ -167,6 +174,10 @@ export const bulkUpdateUserRights = async (req, res) => {
 
     if ((!userId && !userRole) || !permissions || typeof permissions !== 'object') {
       return res.status(200).json({ success: false, message: 'permissions and either userId or userRole are required.' });
+    }
+
+    if (userId && typeof userId !== 'string') {
+      return res.status(200).json({ success: false, message: 'Invalid user.' });
     }
 
     if (userRole && !EDITABLE_ROLES.includes(userRole)) {

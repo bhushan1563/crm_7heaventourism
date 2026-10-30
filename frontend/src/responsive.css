@@ -1,0 +1,467 @@
+/* ==========================================================================
+   Responsive layer for the pages.
+
+   Breakpoints
+     >= 1024px   desktop  - original layout
+     <  1024px   tablet   - drawer navigation, larger touch targets, tables scroll sideways
+     <   768px   phone    - tables become cards, two-column screens stack
+     <   640px   small    - form grids collapse to one column, bottom-sheet dialogs
+
+   Most screens style themselves inline, so a few rules here use !important to override
+   those inline values at small sizes. Anything inside the A4 quotation document
+   (.quotation-doc-container) is deliberately left alone: it is a fixed-size print layout.
+   ========================================================================== */
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+img,
+video,
+canvas {
+  max-width: 100%;
+}
+
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: break-word;
+}
+
+/* Keyboard focus must be visible everywhere (inline-styled buttons otherwise lose their outline cues). */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ---------- Reusable layout hooks (added to pages as class names) ---------- */
+
+.page-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.filter-pills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* ---------- Tablet and below (< 1024px) ---------- */
+@media (max-width: 1023.98px) {
+  /* 16px stops iOS Safari from zooming the page when a field gets focus. */
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+
+  .form-input,
+  .form-select,
+  .search-bar-input {
+    min-height: 44px;
+  }
+
+  .form-textarea {
+    min-height: 88px;
+  }
+
+  /* Comfortable touch targets (44px is the usual minimum). */
+  .btn {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 40px;
+  }
+
+  .btn-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* Inline status dropdowns in tables and the quotation editor's step tabs. */
+  .luxury-table select {
+    min-height: 38px;
+    min-width: 136px;
+  }
+
+  .builder-tabs {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .builder-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .builder-tabs button {
+    min-height: 42px;
+  }
+
+  /* Wide tables scroll sideways inside their card instead of being clipped. */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .luxury-table:not(.table-stack) {
+    min-width: 680px;
+  }
+
+  .luxury-table.table-stack {
+    min-width: 860px;
+  }
+
+  /* The rights matrix keeps its first column visible while scrolling sideways. */
+  .luxury-table.table-sticky-first th:first-child,
+  .luxury-table.table-sticky-first td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #FFFFFF;
+    box-shadow: 1px 0 0 var(--border-color);
+  }
+
+  .luxury-table.table-sticky-first th:first-child {
+    background: #F8FAFC;
+  }
+
+  /* Two-column screens stack. */
+  .rs-two-col {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* Tab / pill strips become one swipeable row. */
+  .filter-pills {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    max-width: 100%;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-pills > * {
+    flex-shrink: 0;
+  }
+
+  .filter-search {
+    min-width: 0 !important;
+    max-width: none !important;
+    flex: 1 1 100% !important;
+  }
+
+  /* Header banners that hold a title next to buttons. */
+  .rs-banner {
+    flex-wrap: wrap !important;
+    gap: 16px !important;
+  }
+}
+
+/* Tablet / small laptop table view: keep the row actions (edit, delete...) pinned to the right while scrolling sideways. */
+@media (min-width: 768px) and (max-width: 1279.98px) {
+  .luxury-table.table-stack th:last-child,
+  .luxury-table.table-stack td:last-child {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: #FFFFFF;
+    box-shadow: -1px 0 0 var(--border-color);
+  }
+
+  .luxury-table.table-stack th:last-child {
+    background: #F8FAFC;
+  }
+
+  .luxury-table.table-stack tbody tr:hover td:last-child {
+    background: #F8FAFC;
+  }
+}
+
+/* Builder: the editor and the A4 preview stack below 1280px (the preview alone needs ~800px at full size). */
+@media (max-width: 1279.98px) {
+  .rs-builder-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .rs-builder-preview {
+    position: static !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding-right: 0 !important;
+  }
+}
+
+/* ---------- Phone (< 768px): tables become cards ---------- */
+@media (max-width: 767.98px) {
+  .table-container:has(> .table-stack) {
+    overflow: visible !important;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  .luxury-table.table-stack {
+    min-width: 0;
+  }
+
+  .table-stack,
+  .table-stack tbody,
+  .table-stack tr,
+  .table-stack td {
+    display: block;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  /* Visually hidden but still announced by screen readers. */
+  .table-stack thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .table-stack tbody tr {
+    background: #FFFFFF;
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 6px 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+  }
+
+  .table-stack tbody tr:hover {
+    background: #FFFFFF;
+  }
+
+  .table-stack td {
+    position: relative;
+    padding: 9px 0 9px 42% !important;
+    min-height: 38px;
+    border-bottom: 1px dashed var(--border-color) !important;
+    text-align: left !important;
+    overflow-wrap: anywhere;
+  }
+
+  .table-stack tr td:last-child {
+    border-bottom: none !important;
+  }
+
+  .table-stack td::before {
+    content: attr(data-label);
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 38%;
+    padding-right: 10px;
+    font-family: var(--font-headline);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  /* Cells without a label (the action buttons) use the full card width. */
+  .table-stack td[data-label=''],
+  .table-stack td:not([data-label]) {
+    padding-left: 0 !important;
+  }
+
+  .table-stack td[data-label='']::before,
+  .table-stack td:not([data-label])::before {
+    display: none;
+  }
+
+  /* "Loading..." / "No results" rows. */
+  .table-stack td[colspan] {
+    text-align: center !important;
+    padding: 28px 8px !important;
+  }
+
+  .table-stack td div,
+  .table-stack td span {
+    white-space: normal !important;
+    max-width: none !important;
+  }
+
+  .table-stack td .badge {
+    white-space: nowrap !important;
+  }
+
+  .table-stack td[data-label=''] > div {
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .table-stack td select {
+    width: 100% !important;
+    min-height: 42px;
+  }
+
+  /* 26px icon buttons are far too small for a thumb. */
+  .table-stack .btn-icon {
+    width: 42px !important;
+    height: 42px !important;
+    padding: 0 !important;
+  }
+
+  .rs-banner {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    padding: 20px 18px !important;
+  }
+
+  .rs-banner h1,
+  .rs-banner h2 {
+    font-size: 1.35rem !important;
+  }
+}
+
+/* ---------- Small phone (< 640px) ---------- */
+@media (max-width: 639.98px) {
+  /* Every inline multi-column form grid becomes one column (not the A4 document, not opted-out grids). */
+  .app-content [style*='grid-template-columns']:not(.quotation-doc-container *):not([data-keep-cols]) {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .glass-panel[style*='padding: 24px'],
+  .glass-panel[style*='padding: 20px'] {
+    padding: 16px !important;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions > .btn,
+  .page-actions > div {
+    flex: 1 1 auto;
+  }
+
+  .page-actions > .btn {
+    justify-content: center;
+  }
+
+  .page-actions > div > .btn {
+    width: 100%;
+  }
+
+  /* Page titles */
+  .app-content h1[style*='font-size: 1.75rem'] {
+    font-size: 1.4rem !important;
+  }
+
+  /* Dialog footers keep their two buttons side by side but allow wrapping instead of overflowing. */
+  .modal-body form > div[style*='justify-content: flex-end'],
+  .modal-body > div[style*='justify-content: flex-end'] {
+    flex-wrap: wrap;
+  }
+}
+
+/* ---------- Login screen ---------- */
+@media (max-width: 1023.98px) {
+  .login-shell {
+    flex-direction: column !important;
+    width: 100% !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .login-hero {
+    flex: none !important;
+    padding: 28px 24px 8px !important;
+    border-right: none !important;
+    background: transparent !important;
+  }
+
+  /* Marketing copy is hidden on tablets and phones: the form is what people came for. */
+  .login-hero-copy,
+  .login-hero-footer {
+    display: none !important;
+  }
+
+  .login-form-col {
+    flex: 1 !important;
+    justify-content: flex-start !important;
+    padding: 20px 16px 40px !important;
+    background: transparent !important;
+  }
+
+  .login-card {
+    padding: 28px 22px !important;
+    margin-top: 8px;
+  }
+}
+
+/* ---------- Quotation preview dialog (full-screen on phones) ---------- */
+@media (max-width: 767.98px) {
+  .qpm-overlay {
+    padding: 0 !important;
+  }
+
+  .qpm-dialog {
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+  }
+
+  .qpm-bar {
+    padding: 10px 12px !important;
+    gap: 8px !important;
+  }
+
+  .qpm-badge {
+    display: none !important;
+  }
+
+  /* Zoom, Print, Download and Close wrap onto a second row instead of running off the screen. */
+  .qpm-actions {
+    flex-wrap: wrap !important;
+    width: 100%;
+  }
+
+  .qpm-actions > div:first-child {
+    margin-right: 0 !important;
+  }
+
+  .qpm-body {
+    padding: 12px !important;
+  }
+}
+
+/* ---------- Printing the app itself (not the quotation window) ---------- */
+@media print {
+  .app-sidebar,
+  .app-navbar,
+  .sidebar-backdrop,
+  .toast-stack {
+    display: none !important;
+  }
+
+  .app-shell,
+  .app-main,
+  .app-content {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+}

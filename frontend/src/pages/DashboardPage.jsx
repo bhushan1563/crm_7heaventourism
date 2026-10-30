@@ -56,7 +56,7 @@ export const DashboardPage = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Welcome Banner */}
       <div
-        className="glass-panel-hero animate-fade-in"
+        className="glass-panel-hero animate-fade-in rs-banner"
         style={{
           padding: '28px 32px',
           borderRadius: '16px',
@@ -76,7 +76,7 @@ export const DashboardPage = () => {
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px', zIndex: 1 }}>
+        <div className="page-actions" style={{ zIndex: 1 }}>
           <button
             onClick={() => navigate('/scanner')}
             className="btn btn-primary"
@@ -132,7 +132,7 @@ export const DashboardPage = () => {
       </div>
 
       {/* Pipeline Status Breakdown & Category Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
+      <div className="rs-two-col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
         {/* Status Pipeline Visual */}
         <div className="glass-panel" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
@@ -266,7 +266,7 @@ export const DashboardPage = () => {
         </div>
 
         <div className="table-container">
-          <table className="luxury-table">
+          <table className="luxury-table table-stack">
             <thead>
               <tr>
                 <th>Sr No</th>
@@ -281,23 +281,23 @@ export const DashboardPage = () => {
             <tbody>
               {recentGuests.map((g) => (
                 <tr key={g._id || g.srNo}>
-                  <td style={{ fontWeight: 700, color: '#2563EB' }}>{g.srNo}</td>
-                  <td style={{ color: '#64748B' }}>{formatDate(g.inquiryDate)}</td>
-                  <td>
+                  <td data-label="Sr No" style={{ fontWeight: 700, color: '#2563EB' }}>{g.srNo}</td>
+                  <td data-label="Inquiry Date" style={{ color: '#64748B' }}>{formatDate(g.inquiryDate)}</td>
+                  <td data-label="Guest">
                     <div style={{ fontWeight: 600, color: '#0F172A' }}>{g.guestNames}</div>
                     <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{g.contactNumber}</div>
                   </td>
-                  <td>
+                  <td data-label="Destination">
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155' }}>
                       <MapPin size={13} color="#2563EB" />
                       <span>{g.destination}</span>
                     </div>
                   </td>
-                  <td style={{ color: '#475569' }}>{formatDate(g.travelDate)}</td>
-                  <td>
+                  <td data-label="Travel Date" style={{ color: '#475569' }}>{formatDate(g.travelDate)}</td>
+                  <td data-label="Status">
                     <StatusBadge status={g.status} />
                   </td>
-                  <td>
+                  <td data-label="Sales / Ops">
                     <div style={{ fontSize: '0.775rem', color: '#2563EB', fontWeight: 600 }}>Sales: {g.sales}</div>
                     <div style={{ fontSize: '0.775rem', color: '#0D9488', fontWeight: 600 }}>Ops: {g.ops}</div>
                   </td>

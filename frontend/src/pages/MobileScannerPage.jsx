@@ -291,7 +291,7 @@ export const MobileScannerPage = () => {
       </div>
 
       {/* Main Scanner Workspace Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="rs-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         {/* Left Box: Capture / Upload Viewport */}
         <div
           className="glass-panel"

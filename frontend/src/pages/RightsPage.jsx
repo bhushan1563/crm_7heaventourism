@@ -292,7 +292,7 @@ export const RightsPage = () => {
                 </label>
                 <select
                   className="form-select"
-                  style={{ minWidth: '280px' }}
+                  style={{ minWidth: 'min(280px, 100%)' }}
                   value={selectedUserId}
                   onChange={(e) => handleUserChange(e.target.value)}
                 >
@@ -338,7 +338,7 @@ export const RightsPage = () => {
               </label>
               <select
                 className="form-select"
-                style={{ minWidth: '220px' }}
+                style={{ minWidth: 'min(220px, 100%)' }}
                 value={selectedRole}
                 onChange={(e) => handleRoleChange(e.target.value)}
               >
@@ -371,7 +371,7 @@ export const RightsPage = () => {
 
       {/* Rights Matrix Table */}
       <div className="table-container">
-        <table className="luxury-table">
+        <table className="luxury-table table-sticky-first">
           <thead>
             <tr>
               <th style={{ width: '260px' }}>Module</th>

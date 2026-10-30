@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Download, FileSpreadsheet, FileText, Lock, ChevronDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { exportToCSV, exportToExcel, exportToPDF } from '../utils/exportHelper';
 
 export const ExportButton = ({
@@ -14,10 +15,22 @@ export const ExportButton = ({
   pdfRows = []
 }) => {
   const { can } = useAuth();
+  const { showToast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   const hasDownloadRight = can(moduleName, 'canDownload');
+
+  // Exports load their libraries on demand, so they can fail (e.g. offline); tell the user instead of failing silently.
+  const runExport = async (exporter) => {
+    setIsOpen(false);
+    try {
+      await exporter();
+    } catch (error) {
+      console.error('Export failed:', error);
+      showToast('Export failed. Check your connection and try again.', 'error');
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -102,10 +115,7 @@ export const ExportButton = ({
         >
           <button
             type="button"
-            onClick={() => {
-              exportToExcel(data, excelFilename);
-              setIsOpen(false);
-            }}
+            onClick={() => runExport(() => exportToExcel(data, excelFilename))}
             style={{
               width: '100%',
               display: 'flex',
@@ -130,10 +140,7 @@ export const ExportButton = ({
 
           <button
             type="button"
-            onClick={() => {
-              exportToCSV(data, csvFilename);
-              setIsOpen(false);
-            }}
+            onClick={() => runExport(() => exportToCSV(data, csvFilename))}
             style={{
               width: '100%',
               display: 'flex',
@@ -159,10 +166,7 @@ export const ExportButton = ({
           {pdfHeaders.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                exportToPDF(pdfHeaders, pdfRows, pdfTitle, pdfFilename);
-                setIsOpen(false);
-              }}
+              onClick={() => runExport(() => exportToPDF(pdfHeaders, pdfRows, pdfTitle, pdfFilename))}
               style={{
                 width: '100%',
                 display: 'flex',

@@ -18,7 +18,9 @@
     "build": "npm run build -w frontend",
     "start": "npm run start -w backend",
     "build:vercel": "npm run build -w frontend && node scripts/vercel-postbuild.mjs",
-    "create-admin": "node scripts/create-admin.mjs"
+    "create-admin": "node scripts/create-admin.mjs",
+    "test": "npm test -w backend",
+    "import-csv": "node scripts/import-legacy-csv.mjs"
   },
   "devDependencies": {
     "concurrently": "^10.0.5"

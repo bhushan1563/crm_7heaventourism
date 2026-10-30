@@ -17,7 +17,7 @@ const findSupplier = (req) => findSupplierDocument(req.params.id);
 
 router.use(protect);
 
-router.get('/stats', getSupplierStats);
+router.get('/stats', checkRights('supplier_list', 'canRead'), getSupplierStats);
 router.get('/', checkRights('supplier_list', 'canRead'), getSuppliers);
 router.get('/:id', checkRights('supplier_list', 'canRead'), getSupplierById);
 router.post('/', checkRights('supplier_list', 'canCreate'), createSupplier);

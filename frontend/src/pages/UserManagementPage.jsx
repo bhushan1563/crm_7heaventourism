@@ -238,7 +238,7 @@ export const UserManagementPage = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="page-actions">
           <ExportButton
             moduleName="users"
             data={filteredUsers.map(u => ({
@@ -283,7 +283,7 @@ export const UserManagementPage = () => {
           gap: '12px'
         }}
       >
-        <div style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
+        <div className="filter-search" style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
           <input
             type="text"
@@ -295,7 +295,7 @@ export const UserManagementPage = () => {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div className="filter-pills">
           {USER_ROLE_FILTERS.map((r) => (
             <button
               key={r}
@@ -310,7 +310,7 @@ export const UserManagementPage = () => {
 
       {/* Users Table */}
       <div className="table-container">
-        <table className="luxury-table">
+        <table className="luxury-table table-stack">
           <thead>
             <tr>
               <th>User Details</th>
@@ -338,7 +338,7 @@ export const UserManagementPage = () => {
             ) : (
               filteredUsers.map((u) => (
                   <tr key={u._id}>
-                    <td>
+                    <td data-label="User">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <div
                           style={{
@@ -369,22 +369,22 @@ export const UserManagementPage = () => {
                       </div>
                     </td>
 
-                    <td>
+                    <td data-label="Email">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: '#475569' }}>
                         <Mail size={13} color="#2563EB" />
                         <span>{u.email}</span>
                       </div>
                     </td>
 
-                    <td style={{ color: '#0F172A', fontWeight: 600 }}>
+                    <td data-label="First Name" style={{ color: '#0F172A', fontWeight: 600 }}>
                       {u.firstName}
                     </td>
 
-                    <td style={{ color: '#0F172A', fontWeight: 600 }}>
+                    <td data-label="Last Name" style={{ color: '#0F172A', fontWeight: 600 }}>
                       {u.lastName}
                     </td>
 
-                    <td>
+                    <td data-label="Role">
                       <span
                         style={{
                           fontSize: '0.725rem',
@@ -410,7 +410,7 @@ export const UserManagementPage = () => {
                     </td>
 
                     {/* C. Active Status Toggle */}
-                    <td>
+                    <td data-label="Status">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                         <label className="switch">
                           <input
@@ -434,7 +434,7 @@ export const UserManagementPage = () => {
                     </td>
 
                     {/* Actions */}
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                         {can('users', 'canUpdate') && (
                           <button

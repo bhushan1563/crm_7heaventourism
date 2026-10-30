@@ -50,6 +50,7 @@ import guestService from '../services/guestService';
 import userService from '../services/userService';
 import QuotationDocumentView from '../components/QuotationDocumentView';
 import { generateQuotationPDF, printQuotation, printFlightVoucher } from '../utils/quotationPdfGenerator';
+import QuotationLivePreview from '../components/QuotationLivePreview';
 import { formatDate, toInputDate } from '../utils/dateHelper';
 
 const DEFAULT_COMPANY = {
@@ -716,7 +717,7 @@ export const QuotationBuilderPage = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Top Action Bar */}
       <div
-        className="glass-panel-azure animate-fade-in"
+        className="glass-panel-azure animate-fade-in rs-banner"
         style={{
           borderRadius: '16px',
           display: 'flex',
@@ -779,12 +780,13 @@ export const QuotationBuilderPage = () => {
       </div>
 
       {/* Main Grid: Form Builder on Left, Live PDF Preview on Right */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(440px, 1.25fr) minmax(380px, 1fr)', gap: '24px' }}>
+      <div className="rs-builder-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(440px, 1.25fr) minmax(380px, 1fr)', gap: '24px' }}>
         {/* LEFT: Tabbed Form Controls */}
         <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
           {/* Navigation Tabs Bar (6 Separate Steps) */}
           <div
+            className="builder-tabs"
             style={{
               display: 'flex',
               gap: '4px',
@@ -2499,51 +2501,7 @@ export const QuotationBuilderPage = () => {
         </div>
 
         {/* RIGHT: Live Interactive Document Preview */}
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            position: 'sticky',
-            top: '20px',
-            maxHeight: 'calc(100vh - 40px)',
-            overflowY: 'auto',
-            paddingRight: '4px'
-          }}
-        >
-          <div
-            style={{
-              padding: '10px 14px',
-              borderRadius: '10px',
-              border: '1px solid rgba(14, 165, 233, 0.25)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              backgroundColor: '#f8fafc'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: '#0284c7' }}>
-              <Sparkles size={15} />
-              <span>Real-Time PDF Document Preview</span>
-            </div>
-          </div>
-
-          {/* Render Preview Component */}
-          <div
-            style={{
-              transform: 'scale(0.85)',
-              transformOrigin: 'top center',
-              borderRadius: '8px',
-              padding: '12px'
-            }}
-          >
-            <QuotationDocumentView
-              quotation={formData}
-              pageNumber={null}
-              id="quotation-live-render-view"
-            />
-          </div>
-        </div>
+        <QuotationLivePreview quotation={formData} />
       </div >
     </div >
   );

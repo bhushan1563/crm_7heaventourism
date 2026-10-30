@@ -1,13 +1,6 @@
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+// xlsx and jspdf are large; they are loaded only when someone actually exports, so they stay out of the initial bundle.
 
-export const exportToCSV = (data, filename = 'export.csv') => {
-  if (!data || !data.length) return;
-  const worksheet = XLSX.utils.json_to_sheet(data);
-  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
-  
-  const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
+const download = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
@@ -15,28 +8,40 @@ export const exportToCSV = (data, filename = 'export.csv') => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
-export const exportToExcel = (data, filename = '7Heaven_Report.xlsx', sheetName = 'Data') => {
+export const exportToCSV = async (data, filename = 'export.csv') => {
   if (!data || !data.length) return;
+  const XLSX = await import('xlsx');
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const csvOutput = XLSX.utils.sheet_to_csv(worksheet);
+
+  download(new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' }), filename);
+};
+
+export const exportToExcel = async (data, filename = '7Heaven_Report.xlsx', sheetName = 'Data') => {
+  if (!data || !data.length) return;
+  const XLSX = await import('xlsx');
   const worksheet = XLSX.utils.json_to_sheet(data);
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
   XLSX.writeFile(workbook, filename);
 };
 
-export const exportToPDF = (headers, rows, title = '7Heaven Luxury Report', filename = '7Heaven_Report.pdf') => {
+export const exportToPDF = async (headers, rows, title = '7Heaven Luxury Report', filename = '7Heaven_Report.pdf') => {
+  const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF('l', 'pt', 'a4');
-  
+
   // Header styling
   doc.setFillColor(11, 19, 43); // Dark navy
   doc.rect(0, 0, doc.internal.pageSize.width, 60, 'F');
-  
+
   doc.setTextColor(212, 175, 55); // Gold
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.text('7Heaven Luxury Operations', 40, 38);
-  
+
   doc.setFontSize(10);
   doc.setTextColor(200, 200, 200);
   doc.text(`Generated: ${new Date().toLocaleDateString()} | ${title}`, 40, 52);

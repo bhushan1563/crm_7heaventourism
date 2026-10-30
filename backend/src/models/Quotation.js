@@ -203,5 +203,7 @@ const quotationSchema = new mongoose.Schema({
   timestamps: true
 });
 
+quotationSchema.index({ deleted: 1, createdAt: -1 });
+
 export const QuotationModel = mongoose.model('Quotation', quotationSchema);
 export default QuotationModel;

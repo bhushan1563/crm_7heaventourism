@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, Sparkles, Users, Building2, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { API_ORIGIN } from '../services/api';
 import logo from '../assets/logo.webp';
 
 export const LoginPage = () => {
@@ -37,9 +38,10 @@ export const LoginPage = () => {
 
   return (
     <div
+      className="login-shell"
       style={{
         minHeight: '100vh',
-        width: '100vw',
+        width: '100%',
         display: 'flex',
         background: '#0F172A',
         position: 'relative',
@@ -76,6 +78,7 @@ export const LoginPage = () => {
 
       {/* Left Column: Brand Hero & Value Proposition */}
       <div
+        className="login-hero"
         style={{
           flex: '1.1',
           padding: '60px 70px',
@@ -115,7 +118,7 @@ export const LoginPage = () => {
         </div>
 
         {/* Hero Copy */}
-        <div style={{ maxWidth: '540px', margin: '40px 0' }}>
+        <div className="login-hero-copy" style={{ maxWidth: '540px', margin: '40px 0' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -189,13 +192,14 @@ export const LoginPage = () => {
         </div>
 
         {/* Footer info */}
-        <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+        <div className="login-hero-footer" style={{ fontSize: '0.8rem', color: '#64748B' }}>
           © 2026 7Heaven Tourism • High Availability Cluster
         </div>
       </div>
 
       {/* Right Column: Portal Login Form */}
       <div
+        className="login-form-col"
         style={{
           flex: '0.9',
           display: 'flex',
@@ -208,6 +212,7 @@ export const LoginPage = () => {
         }}
       >
         <div
+          className="login-card"
           style={{
             width: '100%',
             maxWidth: '440px',
@@ -228,10 +233,16 @@ export const LoginPage = () => {
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label className="form-label">Email Address</label>
+              <label className="form-label" htmlFor="login-email">Email Address</label>
               <div style={{ position: 'relative' }}>
                 <input
+                  id="login-email"
                   type="email"
+                  name="email"
+                  autoComplete="username"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  spellCheck={false}
                   className="form-input"
                   style={{ paddingLeft: '40px' }}
                   placeholder="name@7heaven.com"
@@ -256,6 +267,9 @@ export const LoginPage = () => {
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
+                  name="password"
+                  autoComplete="current-password"
+                  aria-label="Password"
                   className="form-input"
                   style={{ paddingLeft: '40px', paddingRight: '40px' }}
                   placeholder="••••••••"
@@ -270,6 +284,7 @@ export const LoginPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   style={{
                     position: 'absolute',
                     right: '12px',
@@ -301,7 +316,7 @@ export const LoginPage = () => {
               className="btn btn-secondary"
               style={{ width: '100%', padding: '13px', fontSize: '0.95rem', marginTop: '10px' }}
               onClick={() => {
-                window.location.href = `${process.env?.REACT_APP_APIURL.replace(/\/+$/, '')}/static/7heaven.apk`;
+                window.location.href = `${API_ORIGIN}/static/7heaven.apk`;
               }}
             >
               Download Mobile App

@@ -15,9 +15,17 @@ import QuotationDocumentView from './QuotationDocumentView';
 import { generateQuotationPDF, printQuotation } from '../utils/quotationPdfGenerator';
 import { useToast } from '../context/ToastContext';
 
+// The document is laid out at A4 width (96dpi). On narrow screens start zoomed out so the whole page width is visible.
+const DOC_WIDTH_PX = 794;
+const fitZoom = () => {
+  if (typeof window === 'undefined') return 1;
+  const available = window.innerWidth - 24;
+  return available < DOC_WIDTH_PX ? Math.max(0.3, Math.floor((available / DOC_WIDTH_PX) * 10) / 10) : 1;
+};
+
 export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
   const { showToast } = useToast();
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
 
@@ -51,6 +59,10 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
 
   return (
     <div
+      className="qpm-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Quotation preview ${quotation.quotationNo || ''}`}
       style={{
         position: 'fixed',
         inset: 0,
@@ -66,7 +78,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
     >
       {/* Modal Container */}
       <div
-        className="glass-panel-gold animate-fade-in"
+        className="glass-panel-gold animate-fade-in qpm-dialog"
         style={{
           width: '95vw',
           maxWidth: '1200px',
@@ -82,6 +94,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
       >
         {/* Top Control Bar */}
         <div
+          className="qpm-bar"
           style={{
             padding: '14px 20px',
             backgroundColor: 'rgba(15, 23, 42, 0.95)',
@@ -120,18 +133,18 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
           </div>
 
           {/* Center Document Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          <div className="qpm-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8' }}>
               📄 Full Quotation Document
             </span>
           </div>
 
           {/* Right Action Buttons & Zoom */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="qpm-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {/* Zoom Controls */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginRight: '6px' }}>
               <button
-                onClick={() => setZoomLevel(prev => Math.max(0.6, prev - 0.1))}
+                onClick={() => setZoomLevel(prev => Math.max(0.3, Math.round((prev - 0.1) * 10) / 10))}
                 className="btn btn-outline btn-sm btn-icon"
                 title="Zoom Out"
               >
@@ -141,7 +154,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
                 {Math.round(zoomLevel * 100)}%
               </span>
               <button
-                onClick={() => setZoomLevel(prev => Math.min(1.4, prev + 0.1))}
+                onClick={() => setZoomLevel(prev => Math.min(1.4, Math.round((prev + 0.1) * 10) / 10))}
                 className="btn btn-outline btn-sm btn-icon"
                 title="Zoom In"
               >
@@ -192,9 +205,10 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
 
         {/* Scrollable Document Area */}
         <div
+          className="qpm-body"
           style={{
             flex: 1,
-            overflowY: 'auto',
+            overflow: 'auto',
             padding: '24px',
             backgroundColor: '#0a0e1a',
             display: 'flex',
@@ -202,13 +216,8 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
             alignItems: 'center'
           }}
         >
-          <div
-            style={{
-              transform: `scale(${zoomLevel})`,
-              transformOrigin: 'top center',
-              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-            }}
-          >
+          {/* `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom horizontal scroll. */}
+          <div style={{ zoom: zoomLevel }}>
             <QuotationDocumentView
               quotation={quotation}
               pageNumber={null}

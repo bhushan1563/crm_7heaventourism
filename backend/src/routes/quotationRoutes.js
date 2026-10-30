@@ -19,7 +19,7 @@ const findQuotation = (req) => findQuotationDocument(req.params.id);
 
 router.use(protect);
 
-router.get('/stats', getQuotationStats);
+router.get('/stats', checkRights('quotations', 'canRead'), getQuotationStats);
 router.get('/', checkRights('quotations', 'canRead'), getQuotations);
 router.get('/:id', checkRights('quotations', 'canRead'), getQuotationById);
 router.post('/', checkRights('quotations', 'canCreate'), createQuotation);

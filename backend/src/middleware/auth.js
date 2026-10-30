@@ -1,84 +1,76 @@
 import jwt from 'jsonwebtoken';
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
+import { config } from '../config/env.js';
+import { isAdminRole } from '../utils/security.js';
+
+export const RIGHT_MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
+
+const FLAGS = ['canCreate', 'canRead', 'canUpdate', 'canDelete', 'canDownload', 'canEditOthers'];
+
+const allowAll = () => Object.fromEntries(FLAGS.map((flag) => [flag, true]));
+
+// Fallback when a module has no stored rights: "All data can be seen by any user", nothing else.
+const readOnly = () => Object.fromEntries(FLAGS.map((flag) => [flag, flag === 'canRead']));
+
+const flagsOf = (right) => Object.fromEntries(FLAGS.map((flag) => [flag, Boolean(right[flag])]));
+
+/** Merges rights for a user: Admin = everything, else per-user override > role default > read-only. */
+export const resolveRights = (user, rights) => {
+  const userId = String(user._id);
+  const userRights = rights.filter((r) => r.userId === userId);
+  const roleRights = rights.filter((r) => r.userRole === user.role);
+
+  const merged = {};
+  for (const mod of RIGHT_MODULES) {
+    if (isAdminRole(user.role)) {
+      merged[mod] = allowAll();
+      continue;
+    }
+    const own = userRights.find((r) => r.module === mod);
+    const byRole = roleRights.find((r) => r.module === mod);
+    merged[mod] = own ? flagsOf(own) : byRole ? flagsOf(byRole) : readOnly();
+  }
+  return merged;
+};
+
+// Auth failures use a real 401 so the web app's interceptor signs the user out when a session expires.
+const unauthorized = (res, message) => res.status(401).json({ success: false, message });
 
 export const protect = async (req, res, next) => {
-  let token;
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
 
   if (!token) {
-    return res.status(200).json({ success: false, message: 'Not authorized to access this route, token missing.' });
+    return unauthorized(res, 'Not authorized to access this route, token missing.');
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
+  } catch {
+    return unauthorized(res, 'Invalid or expired session token. Please log in again.');
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'seven_heaven_jwt_secret_super_key_2026_luxury_travel');
     const user = await UserModel.findById(decoded.id).select('-password');
 
-    if (!user) {
-      return res.status(200).json({ success: false, message: 'User belonging to this token no longer exists.' });
+    if (!user || user.deleted) {
+      return unauthorized(res, 'User belonging to this token no longer exists.');
     }
 
     if (!user.active) {
-      return res.status(200).json({ success: false, message: 'User account has been deactivated. Please contact your administrator.' });
+      return unauthorized(res, 'User account has been deactivated. Please contact your administrator.');
     }
 
-    // Fetch user specific rights or role rights
-    const userRights = await RightModel.find({ userId: String(user._id) });
-    const roleRights = await RightModel.find({ userRole: user.role });
-    
-    // Merge rights (user specific overrides role)
-    const mergedRights = {};
-    const modules = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
-    
-    modules.forEach(mod => {
-      const uRight = userRights.find(r => r.module === mod);
-      const rRight = roleRights.find(r => r.module === mod);
-      
-      if (user.role === 'Admin' || user.role === 'SuperAdmin') {
-        mergedRights[mod] = {
-          canCreate: true,
-          canRead: true,
-          canUpdate: true,
-          canDelete: true,
-          canDownload: true,
-          canEditOthers: true
-        };
-      } else if (uRight) {
-        mergedRights[mod] = {
-          canCreate: uRight.canCreate,
-          canRead: uRight.canRead,
-          canUpdate: uRight.canUpdate,
-          canDelete: uRight.canDelete,
-          canDownload: uRight.canDownload,
-          canEditOthers: uRight.canEditOthers
-        };
-      } else if (rRight) {
-        mergedRights[mod] = {
-          canCreate: rRight.canCreate,
-          canRead: rRight.canRead,
-          canUpdate: rRight.canUpdate,
-          canDelete: rRight.canDelete,
-          canDownload: rRight.canDownload,
-          canEditOthers: rRight.canEditOthers
-        };
-      } else {
-        mergedRights[mod] = {
-          canCreate: false,
-          canRead: true, // "All data can be seen by any user"
-          canUpdate: false,
-          canDelete: false,
-          canDownload: false,
-          canEditOthers: false
-        };
-      }
-    });
+    const rights = await RightModel.find({
+      $or: [{ userId: String(user._id) }, { userRole: user.role }]
+    }).lean();
 
     req.user = user;
-    req.userRights = mergedRights;
+    req.userRights = resolveRights(user, rights);
     next();
   } catch (err) {
-    return res.status(200).json({ success: false, message: 'Invalid or expired session token. Please log in again.' });
+    next(err);
   }
 };

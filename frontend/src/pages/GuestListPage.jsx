@@ -488,7 +488,7 @@ export const GuestListPage = () => {
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div className="page-actions">
           {/* Export Dropdown with permission enforcement */}
           <ExportButton
             moduleName="guest_list"
@@ -532,7 +532,7 @@ export const GuestListPage = () => {
         }}
       >
         {/* Search */}
-        <div style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
+        <div className="filter-search" style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
           <input
             type="text"
@@ -569,7 +569,7 @@ export const GuestListPage = () => {
         </div>
 
         {/* Status Filter Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+        <div className="filter-pills">
           <button
             onClick={() => setStatusFilter('ALL')}
             className={`btn btn-sm ${statusFilter === 'ALL' ? 'btn-gold' : 'btn-outline'}`}
@@ -593,8 +593,8 @@ export const GuestListPage = () => {
       </div>
 
       {/* Guest Table */}
-      <div className="table-container" style={{ width: '100%', overflowX: 'hidden' }}>
-        <table className="luxury-table" style={{ width: '100%' }}>
+      <div className="table-container" style={{ width: '100%' }}>
+        <table className="luxury-table table-stack" style={{ width: '100%' }}>
           <thead>
             <tr>
               <th style={{ width: '82px' }}>Sr No</th>
@@ -630,7 +630,7 @@ export const GuestListPage = () => {
                 return (
                   <tr key={guest._id || guest.srNo}>
                     {/* A. Sr No */}
-                    <td>
+                    <td data-label="Sr No">
                       <span
                         style={{
                           fontWeight: 700,
@@ -648,12 +648,12 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* B. Date of Inquiry Generate */}
-                    <td style={{ color: '#64748B', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    <td data-label="Inquiry Date" style={{ color: '#64748B', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                       {formatDate(guest.inquiryDate)}
                     </td>
 
                     {/* C. Guest Names */}
-                    <td>
+                    <td data-label="Guest">
                       <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.825rem' }}>
                         {guest.guestNames}
                       </div>
@@ -665,7 +665,7 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* D. Mail Id & Contact number */}
-                    <td>
+                    <td data-label="Contact">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#0F172A' }}>
                           <Phone size={11} color="#10B981" />
@@ -681,7 +681,7 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* E. Destination */}
-                    <td>
+                    <td data-label="Destination">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: '#0F172A', fontSize: '0.775rem' }}>
                         <MapPin size={12} color="#2563EB" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{guest.destination}</span>
@@ -689,7 +689,7 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* F. Travel Date */}
-                    <td>
+                    <td data-label="Travel Date">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                         <Calendar size={12} color="#0288D1" />
                         <span>{formatDate(guest.travelDate)}</span>
@@ -697,7 +697,7 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* G. Status (Quick Switcher Dropdown) */}
-                    <td>
+                    <td data-label="Status">
                       {(() => {
                         const stStyle = getStatusStyle(guest.status);
                         return (
@@ -765,21 +765,21 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* H. Sales */}
-                    <td>
+                    <td data-label="Sales">
                       <span style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {guest.sales}
                       </span>
                     </td>
 
                     {/* I. Ops */}
-                    <td>
+                    <td data-label="Ops">
                       <span style={{ fontSize: '0.75rem', color: '#0D9488', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {guest.ops}
                       </span>
                     </td>
 
                     {/* Actions */}
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px' }}>
                         {/* Notify & Follow-up Button */}
                         <button

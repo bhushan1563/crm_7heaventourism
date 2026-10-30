@@ -25,17 +25,7 @@ export const ToastProvider = ({ children }) => {
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {/* Toast Render Container */}
-      <div style={{
-        position: 'fixed',
-        top: '20px',
-        right: '20px',
-        zIndex: 9999,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-        maxWidth: '420px',
-        pointerEvents: 'none'
-      }}>
+      <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => {
           let bg = '#1e293b';
           let border = 'rgba(255,255,255,0.1)';
@@ -62,22 +52,11 @@ export const ToastProvider = ({ children }) => {
           return (
             <div
               key={toast.id}
-              className="animate-fade-in"
+              className="toast-item animate-fade-in"
               style={{
-                pointerEvents: 'auto',
                 background: bg,
-                backdropFilter: 'blur(12px)',
                 border: `1px solid ${border}`,
-                borderLeft: `4px solid ${accent}`,
-                borderRadius: '10px',
-                padding: '12px 16px',
-                color: '#f8fafc',
-                fontSize: '0.875rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)',
-                minWidth: '280px'
+                borderLeft: `4px solid ${accent}`
               }}
             >
               <div style={{ flexShrink: 0 }}>{icon}</div>

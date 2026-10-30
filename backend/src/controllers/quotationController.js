@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import QuotationModel from '../models/Quotation.js';
 import { findGuestDocument } from './guestController.js';
+import { containsRegex, omit, queryString } from '../utils/security.js';
 
 export const findQuotationDocument = async (id) => {
   if (!id) return null;
@@ -11,16 +12,25 @@ export const findQuotationDocument = async (id) => {
   return QuotationModel.findOne({ quotationNo: id });
 };
 
+// Fields the server owns: never accepted from the request body when creating or updating a quotation.
+const PROTECTED_QUOTATION_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'deleted', 'createdBy', 'createdByName'];
+
 const buildQuotationFilter = (query = {}) => {
   const filter = {};
   filter.deleted = false;
-  if (query.status) filter.status = query.status;
-  if (query.destination) filter.destination = new RegExp(query.destination, 'i');
-  if (query.sales) filter.sales = new RegExp(query.sales, 'i');
-  if (query.ops) filter.ops = new RegExp(query.ops, 'i');
-  if (query.guestId) filter.guestId = query.guestId;
-  if (query.search) {
-    const regex = new RegExp(query.search, 'i');
+  const status = queryString(query.status);
+  const destination = queryString(query.destination);
+  const sales = queryString(query.sales);
+  const ops = queryString(query.ops);
+  const guestId = queryString(query.guestId);
+  const search = queryString(query.search);
+  if (status) filter.status = status;
+  if (destination) filter.destination = containsRegex(destination);
+  if (sales) filter.sales = containsRegex(sales);
+  if (ops) filter.ops = containsRegex(ops);
+  if (guestId) filter.guestId = guestId;
+  if (search) {
+    const regex = containsRegex(search);
     filter.$or = [
       { quotationNo: regex },
       { clientName: regex },
@@ -84,7 +94,7 @@ export const createQuotation = async (req, res) => {
     const createdByName = `${req.user.firstName} ${req.user.lastName}`.trim();
 
     const quotationData = {
-      ...req.body,
+      ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
       quotationNo,
       createdBy,
       createdByName,
@@ -108,7 +118,7 @@ export const updateQuotation = async (req, res) => {
   try {
     const existing = await findQuotationDocument(req.params.id);
     const updated = existing
-      ? await QuotationModel.findByIdAndUpdate(existing._id, req.body, { new: true })
+      ? await QuotationModel.findByIdAndUpdate(existing._id, omit(req.body, PROTECTED_QUOTATION_FIELDS), { new: true })
       : null;
     if (!updated) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
@@ -327,24 +337,31 @@ export const convertFromInquiry = async (req, res) => {
 
 export const getQuotationStats = async (req, res) => {
   try {
-    const quotations = await QuotationModel.find({ deleted: false }).sort({ createdAt: -1 });
-    const total = quotations.length;
-    const drafts = quotations.filter(q => q.status === 'Draft').length;
-    const followUps = quotations.filter(q => q.status === 'Follow up').length;
-    const sent = quotations.filter(q => q.status === 'Sent').length;
-    const confirmed = quotations.filter(q => q.status === 'Confirmed').length;
-    const revised = quotations.filter(q => q.status === 'Revised').length;
-    const expired = quotations.filter(q => q.status === 'Expired').length;
-    const cancelled = quotations.filter(q => q.status === 'Cancelled').length;
+    // Counted and summed by MongoDB instead of loading every quotation (with its full itinerary) into memory.
+    const [byStatus, valueRows] = await Promise.all([
+      QuotationModel.aggregate([{ $match: { deleted: false } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+      QuotationModel.aggregate([
+        { $match: { deleted: false } },
+        {
+          $group: {
+            _id: null,
+            // grandTotal when set, otherwise the per-person total (same rule as before)
+            value: { $sum: { $cond: [{ $gt: ['$pricing.grandTotal', 0] }, '$pricing.grandTotal', { $ifNull: ['$pricing.totalCostPerPerson', 0] }] } }
+          }
+        }
+      ])
+    ]);
 
-    let totalQuotedValue = 0;
-    quotations.forEach(q => {
-      if (q.pricing && q.pricing.grandTotal) {
-        totalQuotedValue += Number(q.pricing.grandTotal);
-      } else if (q.pricing && q.pricing.totalCostPerPerson) {
-        totalQuotedValue += Number(q.pricing.totalCostPerPerson);
-      }
-    });
+    const countFor = (status) => byStatus.find((row) => row._id === status)?.count || 0;
+    const total = byStatus.reduce((sum, row) => sum + row.count, 0);
+    const drafts = countFor('Draft');
+    const followUps = countFor('Follow up');
+    const sent = countFor('Sent');
+    const confirmed = countFor('Confirmed');
+    const revised = countFor('Revised');
+    const expired = countFor('Expired');
+    const cancelled = countFor('Cancelled');
+    const totalQuotedValue = valueRows[0]?.value || 0;
 
     res.json({
       success: true,

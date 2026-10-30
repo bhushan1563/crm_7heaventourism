@@ -11,13 +11,14 @@ import {
   ChevronRight,
   LogOut,
   Sparkles,
-  FileText
+  FileText,
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ConfirmDialog from './ConfirmDialog';
 import logo from '../assets/logo.webp';
 
-export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
+export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobile = false, isOpen = false, onClose = () => {} }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -81,19 +82,9 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
 
   return (
     <aside
-      style={{
-        width: isCollapsed ? '80px' : '260px',
-        height: '100vh',
-        background: '#0F172A',
-        borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'sticky',
-        top: 0,
-        transition: 'width 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
-        zIndex: 50,
-        overflowX: 'hidden'
-      }}
+      id="app-sidebar"
+      className={`app-sidebar${isCollapsed ? ' is-collapsed' : ''}${isOpen ? ' is-open' : ''}`}
+      aria-label="Sidebar"
     >
       {/* Brand Header */}
       <div
@@ -159,26 +150,29 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         )}
 
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          type="button"
+          className="sidebar-icon-btn"
+          onClick={() => (isMobile ? onClose() : setIsCollapsed(!isCollapsed))}
           style={{
             background: 'rgba(255, 255, 255, 0.05)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             color: '#94A3B8',
             borderRadius: '8px',
-            padding: '5px',
+            padding: isMobile ? '9px' : '5px',
             cursor: 'pointer',
             display: isCollapsed ? 'none' : 'flex',
             alignItems: 'center',
             justifyContent: 'center'
           }}
-          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          title={isMobile ? 'Close menu' : isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          aria-label={isMobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
-          <ChevronLeft size={16} />
+          {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
         </button>
       </div>
 
       {/* Navigation Links */}
-      <div style={{ flex: 1, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+      <nav className="sidebar-nav" aria-label="Main navigation">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
@@ -187,10 +181,13 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             <NavLink
               key={item.to}
               to={item.to}
+              className="sidebar-link"
+              onClick={() => isMobile && onClose()}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
+                minHeight: '44px',
                 padding: '11px 14px',
                 borderRadius: '10px',
                 textDecoration: 'none',
@@ -239,7 +236,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
             </NavLink>
           );
         })}
-      </div>
+      </nav>
 
       {/* User Info & Logout Footer */}
       <div
@@ -302,7 +299,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 display: 'flex',
                 transition: 'opacity 0.2s'
               }}
-              title="Sign Out"
+              title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
             >
               <LogOut size={17} />
             </button>
@@ -318,7 +315,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
                 cursor: 'pointer',
                 padding: '8px'
               }}
-              title="Sign Out"
+              title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
             >
               <LogOut size={18} />
             </button>
@@ -331,7 +328,7 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed }) => {
         isOpen={isLogoutConfirmOpen}
         onClose={() => setIsLogoutConfirmOpen(false)}
         onConfirm={handleLogoutConfirm}
-        title="Sign Out"
+        title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
         message="Are you sure you want to sign out from 7Heaven?"
         confirmText="Yes, Sign Out"
         cancelText="Cancel"

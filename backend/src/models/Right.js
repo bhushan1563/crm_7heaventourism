@@ -45,5 +45,9 @@ const rightSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Every authenticated request loads rights by user and by role.
+rightSchema.index({ userId: 1, module: 1 });
+rightSchema.index({ userRole: 1, module: 1 });
+
 export const RightModel = mongoose.model('Right', rightSchema);
 export default RightModel;

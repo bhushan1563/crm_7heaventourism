@@ -122,5 +122,8 @@ const guestSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// List screens always filter on `deleted` and sort newest-first.
+guestSchema.index({ deleted: 1, createdAt: -1 });
+
 export const GuestModel = mongoose.model('Guest', guestSchema);
 export default GuestModel;

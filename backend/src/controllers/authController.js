@@ -2,12 +2,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
+import { config } from '../config/env.js';
 
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'seven_heaven_jwt_secret_super_key_2026_luxury_travel', {
-    expiresIn: '7d'
-  });
-};
+const generateToken = (id) =>
+  jwt.sign({ id }, config.jwtSecret, { algorithm: 'HS256', expiresIn: config.jwtExpiresIn });
 
 const publicUser = (user) => {
   const obj = user.toObject ? user.toObject() : { ...user };
@@ -15,61 +13,63 @@ const publicUser = (user) => {
   return obj;
 };
 
+// A real bcrypt hash of a random value. Compared against when the email is unknown, so "no such user"
+// and "wrong password" take the same time and can't be told apart by timing.
+const DUMMY_HASH = bcrypt.hashSync('7heaven-timing-equalizer', 10);
+
+const INVALID_CREDENTIALS = 'Invalid email or password.';
+
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
 
     if (!email || !password) {
       return res.status(200).json({ success: false, message: 'Please provide both email and password.' });
     }
 
-    const user = await UserModel.findOne({ email: email.trim().toLowerCase() ,deleted: false});
-
-    if (!user) {
-      return res.status(200).json({ success: false, message: 'Invalid credentials. User not found.' });
+    // Reject objects/arrays (`{"$ne": null}`) before they reach the query.
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(200).json({ success: false, message: INVALID_CREDENTIALS });
     }
 
+    const user = await UserModel.findOne({ email: email.trim().toLowerCase(), deleted: false });
+
+    const isMatch = await bcrypt.compare(password, user ? user.password : DUMMY_HASH);
+    if (!user || !isMatch) {
+      return res.status(200).json({ success: false, message: INVALID_CREDENTIALS });
+    }
+
+    // Only reveal the account state after the password has been proven correct.
     if (!user.active) {
       return res.status(200).json({ success: false, message: 'Your account is deactivated. Contact system administrator.' });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      return res.status(200).json({ success: false, message: 'Invalid credentials. Password incorrect.' });
-    }
-
     const token = generateToken(user._id);
 
-    const userRights = await RightModel.find({ userId: String(user._id) });
-    const roleRights = await RightModel.find({ userRole: user.role });
+    const userId = String(user._id);
+    const rights = await RightModel.find({ $or: [{ userId }, { userRole: user.role }] }).lean();
 
+    res.locals.loginSucceeded = true; // tells the login rate limiter this attempt should not count against the user
     res.json({
       success: true,
       token,
       user: publicUser(user),
       rights: {
-        userRights,
-        roleRights
+        userRights: rights.filter((r) => r.userId === userId),
+        roleRights: rights.filter((r) => r.userRole === user.role)
       }
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(200).json({ success: false, message: 'Server error during login: ' + error.message });
+    res.status(200).json({ success: false, message: 'Server error during login. Please try again.' });
   }
 };
 
 export const getMe = async (req, res) => {
-  try {
-    const user = await UserModel.findById(req.user._id).select('-password');
-    if (!user) {
-      return res.status(200).json({ success: false, message: 'User not found' });
-    }
-    res.json({
-      success: true,
-      user,
-      rights: req.userRights
-    });
-  } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
-  }
+  // protect() already loaded the user (without the password hash) and merged the rights.
+  res.json({
+    success: true,
+    user: req.user,
+    rights: req.userRights
+  });
 };

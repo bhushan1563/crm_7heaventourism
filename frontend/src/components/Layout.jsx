@@ -1,21 +1,56 @@
-import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import React, { Suspense, useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
+import ErrorBoundary from './ErrorBoundary';
+import PageLoader from './PageLoader';
+import { useMediaQuery, MOBILE_NAV_QUERY } from '../hooks/useMediaQuery';
 
 export const Layout = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
+  const isMobile = useMediaQuery(MOBILE_NAV_QUERY);
+  const [isCollapsed, setIsCollapsed] = useState(false); // desktop: icons-only sidebar
+  const [mobileOpen, setMobileOpen] = useState(false); // phone / tablet: drawer
+
+  // The drawer closes whenever you navigate, or when the window grows into the desktop layout.
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname, isMobile]);
+
+  useEffect(() => {
+    if (!mobileOpen) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') setMobileOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [mobileOpen]);
+
+  const toggleSidebar = () => {
+    if (isMobile) setMobileOpen((open) => !open);
+    else setIsCollapsed((collapsed) => !collapsed);
+  };
 
   return (
-    <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden' }}>
-      {/* Left Sidebar */}
-      <Sidebar isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />
+    <div className="app-shell">
+      <Sidebar
+        isCollapsed={isCollapsed && !isMobile}
+        setIsCollapsed={setIsCollapsed}
+        isMobile={isMobile}
+        isOpen={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+      />
 
-      {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
-        <Navbar onToggleSidebar={() => setIsCollapsed(!isCollapsed)} />
-        <main style={{ flex: 1, padding: '20px 24px', overflowY: 'auto' }}>
-          <Outlet />
+      {isMobile && mobileOpen && <div className="sidebar-backdrop" onClick={() => setMobileOpen(false)} aria-hidden="true" />}
+
+      <div className="app-main">
+        <Navbar onToggleSidebar={toggleSidebar} isMenuOpen={isMobile ? mobileOpen : !isCollapsed} />
+        <main className="app-content" id="main-content">
+          <ErrorBoundary resetKey={location.pathname}>
+            <Suspense fallback={<PageLoader />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

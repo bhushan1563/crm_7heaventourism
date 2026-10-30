@@ -1,17 +1,35 @@
 import mongoose from 'mongoose';
 import SupplierModel from '../models/Supplier.js';
+import { containsRegex, pick, queryString } from '../utils/security.js';
 
 export const findSupplierDocument = async (id) => {
   if (!id || !mongoose.isValidObjectId(id)) return null;
   return SupplierModel.findById(id);
 };
 
+// Fields a client may change through PUT /suppliers/:id. Ownership, audit and delete flags are server-controlled.
+const UPDATABLE_SUPPLIER_FIELDS = [
+  'supplierName',
+  'category',
+  'contactPerson',
+  'email',
+  'phone',
+  'city',
+  'country',
+  'services',
+  'rating',
+  'active',
+  'notes'
+];
+
 const buildSupplierFilter = (query = {}) => {
   const filter = {};
   filter.deleted = false;
-  if (query.category) filter.category = query.category;
-  if (query.search) {
-    const regex = new RegExp(query.search, 'i');
+  const category = queryString(query.category);
+  const search = queryString(query.search);
+  if (category) filter.category = category;
+  if (search) {
+    const regex = containsRegex(search);
     filter.$or = [
       { supplierName: regex },
       { contactPerson: regex },
@@ -117,7 +135,7 @@ export const updateSupplier = async (req, res) => {
     }
 
     const updateData = {
-      ...req.body,
+      ...pick(req.body, UPDATABLE_SUPPLIER_FIELDS),
       updatedBy: req.user._id,
       updatedByName: `${req.user.firstName} ${req.user.lastName}`
     };
@@ -155,15 +173,19 @@ export const deleteSupplier = async (req, res) => {
 
 export const getSupplierStats = async (req, res) => {
   try {
-    const suppliers = await SupplierModel.find({ deleted: false }).sort({ createdAt: -1 });
+    const [byCategory, activeCount] = await Promise.all([
+      SupplierModel.aggregate([{ $match: { deleted: false } }, { $group: { _id: '$category', count: { $sum: 1 } } }]),
+      SupplierModel.countDocuments({ deleted: false, active: true })
+    ]);
+    const countFor = (category) => byCategory.find((row) => row._id === category)?.count || 0;
     const stats = {
-      total: suppliers.length,
-      domestic: suppliers.filter(s => s.category === 'Domestic').length,
-      international: suppliers.filter(s => s.category === 'International').length,
-      flightConsolidator: suppliers.filter(s => s.category === 'Flight Consolidator').length,
-      visa: suppliers.filter(s => s.category === 'Visa').length,
-      general: suppliers.filter(s => s.category === 'General').length,
-      activeCount: suppliers.filter(s => s.active).length
+      total: byCategory.reduce((sum, row) => sum + row.count, 0),
+      domestic: countFor('Domestic'),
+      international: countFor('International'),
+      flightConsolidator: countFor('Flight Consolidator'),
+      visa: countFor('Visa'),
+      general: countFor('General'),
+      activeCount
     };
     res.json({ success: true, data: stats });
   } catch (error) {

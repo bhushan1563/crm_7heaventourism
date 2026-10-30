@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import GuestModel from '../models/Guest.js';
+import { containsRegex, pick, queryString } from '../utils/security.js';
 
 export const findGuestDocument = async (id) => {
   if (!id) return null;
@@ -10,15 +11,38 @@ export const findGuestDocument = async (id) => {
   return GuestModel.findOne({ srNo: id });
 };
 
+// Fields a client may change through PUT /guests/:id. Ownership, audit, lock and delete flags are server-controlled.
+const UPDATABLE_GUEST_FIELDS = [
+  'inquiryDate',
+  'guestNames',
+  'email',
+  'contactNumber',
+  'destination',
+  'travelDate',
+  'status',
+  'sales',
+  'salesId',
+  'ops',
+  'opsId',
+  'paxCount',
+  'budget',
+  'notes'
+];
+
 const buildGuestFilter = (query = {}) => {
   const filter = {};
   filter.deleted = false;
-  if (query.status) filter.status = query.status;
-  if (query.destination) filter.destination = new RegExp(query.destination, 'i');
-  if (query.sales) filter.sales = new RegExp(query.sales, 'i');
-  if (query.ops) filter.ops = new RegExp(query.ops, 'i');
-  if (query.search) {
-    const regex = new RegExp(query.search, 'i');
+  const status = queryString(query.status);
+  const destination = queryString(query.destination);
+  const sales = queryString(query.sales);
+  const ops = queryString(query.ops);
+  const search = queryString(query.search);
+  if (status) filter.status = status;
+  if (destination) filter.destination = containsRegex(destination);
+  if (sales) filter.sales = containsRegex(sales);
+  if (ops) filter.ops = containsRegex(ops);
+  if (search) {
+    const regex = containsRegex(search);
     filter.$or = [
       { guestNames: regex },
       { srNo: regex },
@@ -140,7 +164,7 @@ export const updateGuest = async (req, res) => {
     }
 
     const updateData = {
-      ...req.body,
+      ...pick(req.body, UPDATABLE_GUEST_FIELDS),
       updatedBy: req.user._id,
       updatedByName: `${req.user.firstName} ${req.user.lastName}`
     };
@@ -257,22 +281,28 @@ export const deleteGuest = async (req, res) => {
 
 export const getGuestStats = async (req, res) => {
   try {
-    const guests = await GuestModel.find({ deleted: false }).sort({ createdAt: -1 });
+    // Counted by MongoDB instead of loading every inquiry into memory.
+    const [byStatus, byDestination] = await Promise.all([
+      GuestModel.aggregate([{ $match: { deleted: false } }, { $group: { _id: '$status', count: { $sum: 1 } } }]),
+      GuestModel.aggregate([{ $match: { deleted: false } }, { $group: { _id: '$destination', count: { $sum: 1 } } }])
+    ]);
+
+    const countFor = (status) => byStatus.find((row) => row._id === status)?.count || 0;
     const stats = {
-      total: guests.length,
-      underProcess: guests.filter(g => g.status === 'Under Process').length,
-      followUp: guests.filter(g => g.status === 'Follow up').length,
-      quoted: guests.filter(g => g.status === 'Quoted').length,
-      confirmed: guests.filter(g => g.status === 'Confirmed').length,
-      confirmedAndPaid: guests.filter(g => g.status === 'Confirmed & Payment received').length,
-      travelled: guests.filter(g => g.status === 'Travelled').length,
-      cancelled: guests.filter(g => g.status === 'Cancelled').length,
+      total: byStatus.reduce((sum, row) => sum + row.count, 0),
+      underProcess: countFor('Under Process'),
+      followUp: countFor('Follow up'),
+      quoted: countFor('Quoted'),
+      confirmed: countFor('Confirmed'),
+      confirmedAndPaid: countFor('Confirmed & Payment received'),
+      travelled: countFor('Travelled'),
+      cancelled: countFor('Cancelled'),
       topDestinations: {}
     };
 
-    guests.forEach(g => {
-      const dest = g.destination || 'Unspecified';
-      stats.topDestinations[dest] = (stats.topDestinations[dest] || 0) + 1;
+    byDestination.forEach((row) => {
+      const dest = row._id || 'Unspecified';
+      stats.topDestinations[dest] = (stats.topDestinations[dest] || 0) + row.count;
     });
 
     res.json({ success: true, data: stats });

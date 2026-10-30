@@ -209,7 +209,7 @@ export const SupplierListPage = () => {
           </h2>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="page-actions">
           <ExportButton
             moduleName="supplier_list"
             data={filteredSuppliers.map(s => ({
@@ -248,12 +248,8 @@ export const SupplierListPage = () => {
 
       {/* 5-Category Navigation Tabs */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          flexWrap: 'wrap'
-        }}
+        className="filter-pills"
+        style={{ gap: '8px' }}
       >
         {SUPPLIER_CATEGORY_OPTIONS.map((cat) => {
           const isSelected = selectedCategory === cat.value;
@@ -319,8 +315,8 @@ export const SupplierListPage = () => {
       </div>
 
       {/* Suppliers Table */}
-      <div className="table-container" style={{ width: '100%', overflowX: 'hidden' }}>
-        <table className="luxury-table" style={{ width: '100%' }}>
+      <div className="table-container" style={{ width: '100%' }}>
+        <table className="luxury-table table-stack" style={{ width: '100%' }}>
           <thead>
             <tr>
               <th style={{ width: '16%' }}>Supplier Name</th>
@@ -353,7 +349,7 @@ export const SupplierListPage = () => {
 
                 return (
                   <tr key={sup._id}>
-                    <td>
+                    <td data-label="Supplier">
                       <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {sup.supplierName}
                       </div>
@@ -362,7 +358,7 @@ export const SupplierListPage = () => {
                       </div>
                     </td>
 
-                    <td>
+                    <td data-label="Category">
                       <span
                         style={{
                           fontSize: '0.7rem',
@@ -391,7 +387,7 @@ export const SupplierListPage = () => {
                       </span>
                     </td>
 
-                    <td>
+                    <td data-label="Contact">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                         <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {sup.contactPerson}
@@ -409,20 +405,20 @@ export const SupplierListPage = () => {
                       </div>
                     </td>
 
-                    <td>
+                    <td data-label="Location">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <MapPin size={12} color="#2563EB" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sup.city ? `${sup.city}, ` : ''}{sup.country}</span>
                       </div>
                     </td>
 
-                    <td style={{ maxWidth: '160px' }}>
+                    <td data-label="Services" style={{ maxWidth: '160px' }}>
                       <div style={{ fontSize: '0.75rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sup.services}>
                         {sup.services || ''}
                       </div>
                     </td>
 
-                    <td>
+                    <td data-label="Rating">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#F59E0B' }}>
                         {[...Array(sup.rating || 5)].map((_, i) => (
                           <Star key={i} size={11} fill="#F59E0B" color="#F59E0B" />
@@ -430,7 +426,7 @@ export const SupplierListPage = () => {
                       </div>
                     </td>
 
-                    <td>
+                    <td data-label="Status">
                       <span
                         style={{
                           display: 'inline-block',
@@ -448,7 +444,7 @@ export const SupplierListPage = () => {
                       </span>
                     </td>
 
-                    <td style={{ textAlign: 'right' }}>
+                    <td data-label="" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
                         {isEditable ? (
                           <button
