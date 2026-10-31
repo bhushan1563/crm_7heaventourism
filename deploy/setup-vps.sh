@@ -237,6 +237,8 @@ fi
 # ------------------------------------------------------------------------------------------------ 5. build + start
 say "5/7 Install, build and start"
 as_app "npm ci --include=dev"
+# Test the database BEFORE starting anything: a typo in the connection string or a blocked IP would otherwise leave a crash-looping app.
+as_app "node scripts/check-db.mjs" || die "The database check failed (explained above). Fix MONGODB_URI with:  nano $ENV_PATH   then run this script again - it will not overwrite that file."
 as_app "npm run build"
 as_app "pm2 startOrReload deploy/ecosystem.config.cjs --update-env"
 as_app "pm2 save"

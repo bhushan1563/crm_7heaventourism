@@ -23,7 +23,8 @@
     "import-csv": "node scripts/import-legacy-csv.mjs",
     "backup-db": "node scripts/backup-db.mjs",
     "restore-db": "node scripts/restore-db.mjs",
-    "package": "node scripts/package-release.mjs"
+    "package": "node scripts/package-release.mjs",
+    "check-db": "node scripts/check-db.mjs"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",
