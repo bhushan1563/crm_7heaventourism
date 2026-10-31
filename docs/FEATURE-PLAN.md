@@ -39,7 +39,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 0.5 Test infrastructure: property-based tests, in-memory-database integration tests in CI
 
 ### Step 1: Itinerary library (R5, part of R9)
-- [ ] 1.1 Model + API (CRUD, duplicate, archive, search, pagination) with rights
+- [x] 1.1 Model + API (CRUD, duplicate, archive, search, pagination) with rights
 - [ ] 1.2 Library screens (list, search, editor with day-wise photos and formatting)
 - [ ] 1.3 Export to Word (.docx) and PDF with photos
 - [ ] 1.4 Insert a saved itinerary into a quotation (copy, editable); photos + formatting render in the quotation preview/PDF
