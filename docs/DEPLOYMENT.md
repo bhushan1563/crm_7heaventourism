@@ -85,13 +85,43 @@ Then:
 ### A2. Updating later
 
 ```bash
-runuser -l crm -c 'bash /var/www/7heaven-crm/deploy/deploy.sh'      # git pull, npm ci, tests, build, zero-downtime PM2 reload, health check
+runuser -l crm -c 'bash /var/www/7heaven-crm/deploy/deploy.sh'      # git pull, npm ci, tests, build, PM2 restart (a few seconds of downtime), health check
 ```
 
 It stops and prints the app log if the new version does not become healthy. `SKIP_TESTS=1` skips the (database-free, ~15 s) test run.
 Installed from a zip instead of Git? Upload the new zip, `unzip -o` it over `/var/www/7heaven-crm`
 (keep `backend/.env`; the zip does not contain one), `chown -R crm:crm /var/www/7heaven-crm`, then run `deploy.sh` (it skips `git pull`
 when there is no `.git` folder).
+
+### A2b. Automatic deployment (CI/CD with GitHub Actions)
+
+Pushing to GitHub does **not** change the live site by itself. This pipeline makes it do so:
+
+```
+git push to main --> GitHub runs the tests + build --> (pass) --> GitHub connects to the server --> deploy.sh --> live (~2 min)
+```
+
+Pull requests only run the tests. The workflow is `.github/workflows/deploy.yml`; it is skipped with a notice until the secrets below exist.
+**One-time setup** (about 5 minutes):
+
+1. On the server, as root: `cd /var/www/7heaven-crm && git pull` (as `crm`: `runuser -l crm -c 'cd /var/www/7heaven-crm && git pull --ff-only'`), then
+   `bash /var/www/7heaven-crm/deploy/setup-cicd.sh`.
+   It creates a key that is allowed to do **one thing only** - run `deploy.sh` - and prints three values. The private key is shown once and not kept on the server.
+2. GitHub -> your repository -> **Settings -> Secrets and variables -> Actions -> New repository secret**: create `DEPLOY_HOST`, `DEPLOY_HOST_KEY`
+   and `DEPLOY_SSH_KEY` with the values the script printed (`DEPLOY_PORT` too if it printed one). Optional, on the *Variables* tab:
+   `SITE_URL` = `https://your-domain`, so every deploy ends with a check of the public site.
+3. GitHub -> **Actions** tab -> *CI/CD* -> **Run workflow**. Green = live. From now on every push to `main` deploys.
+
+Good to know:
+- **Every push to `main` goes live**, mistakes included. Work on a branch and merge when ready (the merge is what deploys), or protect `main`
+  (Settings -> Branches) so changes must pass the tests via a pull request first.
+- A failed test stops the deploy. A failed deploy (the app does not come back healthy) turns the run red and prints the app log in the Actions log; the
+  previous build files are replaced, so fix forward by pushing a fix, or `git revert` the bad commit and push.
+- The deploy builds on the server, the tests run on GitHub (so the server skips them). Deploys run one at a time.
+- **Rotate or revoke:** `bash deploy/setup-cicd.sh --rotate` issues a new key (the old stops working at once). To switch it off completely, delete the line ending in
+  `7heaven-github-deploy` from `/root/.ssh/authorized_keys`. The server also needs to accept SSH from GitHub's runners (port 22 from anywhere; if you restrict
+  SSH by IP in the Hostinger firewall, this will not connect).
+- A database change is not part of a deploy: the pipeline only updates the code. Data stays in Atlas.
 
 ### A3. Doing it by hand (what the script automates)
 

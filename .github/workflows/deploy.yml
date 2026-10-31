@@ -1,0 +1,101 @@
+# Continuous integration + deployment.
+#   - every push and pull request to main: install, run the tests, build the web app
+#   - every push to main (or the "Run workflow" button): once the tests pass, deploy to the server over SSH
+# The server side is prepared once with deploy/setup-cicd.sh. See docs/DEPLOYMENT.md > Automatic deployment.
+# Until the DEPLOY_* secrets exist, the deploy job just says so and is skipped.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: false # never cancel a deploy that is already running
+
+jobs:
+  test:
+    name: Test and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --include=dev
+      - name: Test (needs no database)
+        run: npm test
+      - name: Build the web app
+        run: npm run build
+
+  deploy:
+    name: Deploy to the server
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production
+    steps:
+      - name: Check deploy settings
+        id: cfg
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+        run: |
+          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_HOST_KEY" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Deploy skipped - add the secrets DEPLOY_HOST, DEPLOY_HOST_KEY and DEPLOY_SSH_KEY (see docs/DEPLOYMENT.md > Automatic deployment)."
+          fi
+
+      - name: Deploy over SSH
+        if: steps.cfg.outputs.ready == 'true'
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          port="${DEPLOY_PORT:-22}"
+          # known_hosts pins the server's own host key, so the key and the commands can only ever go to YOUR server.
+          if [ "$port" = "22" ]; then host_entry="$DEPLOY_HOST"; else host_entry="[$DEPLOY_HOST]:$port"; fi
+          printf '%s %s\n' "$host_entry" "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          # The server-side key is restricted to one command (deploy/setup-cicd.sh), so the word after the host is only a label.
+          ssh -i ~/.ssh/deploy_key -p "$port" \
+            -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
+            -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
+            "root@${DEPLOY_HOST}" deploy
+
+      - name: Smoke test the public site
+        if: steps.cfg.outputs.ready == 'true' && vars.SITE_URL != ''
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          for attempt in 1 2 3 4 5 6; do
+            if curl -fsS "${SITE_URL%/}/api/health" | grep -q '"database":"connected"'; then
+              echo "${SITE_URL%/} is healthy."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::${SITE_URL%/}/api/health did not report a connected database."
+          exit 1
+
+      - name: Remove the key from the runner
+        if: always()
+        run: rm -f ~/.ssh/deploy_key ~/.ssh/known_hosts
