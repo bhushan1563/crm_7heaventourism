@@ -70,16 +70,37 @@ jobs:
           set -euo pipefail
           umask 077
           mkdir -p ~/.ssh
+
+          # Values pasted into GitHub's web form often carry a stray newline or space: clean them up first.
+          host="$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]')"
+          port="$(printf '%s' "${DEPLOY_PORT:-22}" | tr -d '[:space:]')"; port="${port:-22}"
+          # Accept "ssh-ed25519 AAAA...", with or without a host name in front of it.
+          hostkey="$(printf '%s' "$DEPLOY_HOST_KEY" | tr -s '[:space:]' ' ' | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^(ssh|ecdsa)-/) { print $i, $(i + 1); exit } }')"
+          if [ -z "$host" ] || [ "$(printf '%s' "$hostkey" | wc -w)" != 2 ]; then
+            echo "::error::DEPLOY_HOST must be the server address, and DEPLOY_HOST_KEY must look like: ssh-ed25519 AAAAC3Nza..."
+            exit 1
+          fi
+
           printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          port="${DEPLOY_PORT:-22}"
+          if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
+            echo "::error::DEPLOY_SSH_KEY is not a valid private key. Paste every line from -----BEGIN OPENSSH PRIVATE KEY----- to -----END OPENSSH PRIVATE KEY-----, with no spaces added."
+            exit 1
+          fi
+
           # known_hosts pins the server's own host key, so the key and the commands can only ever go to YOUR server.
-          if [ "$port" = "22" ]; then host_entry="$DEPLOY_HOST"; else host_entry="[$DEPLOY_HOST]:$port"; fi
-          printf '%s %s\n' "$host_entry" "$DEPLOY_HOST_KEY" > ~/.ssh/known_hosts
+          if [ "$port" = "22" ]; then host_entry="$host"; else host_entry="[$host]:$port"; fi
+          printf '%s %s\n' "$host_entry" "$hostkey" > ~/.ssh/known_hosts
+
+          # Fingerprints are public information; showing them makes a mismatch easy to spot against the server
+          # (on the server:  ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub   and   ssh-keygen -l -f /root/.ssh/authorized_keys).
+          echo "SSH port $port; trusted server key       : $(ssh-keygen -l -f ~/.ssh/known_hosts | cut -d' ' -f2)"
+          echo "Deploy key offered                    : $(ssh-keygen -l -f ~/.ssh/deploy_key | cut -d' ' -f2)"
+
           # The server-side key is restricted to one command (deploy/setup-cicd.sh), so the word after the host is only a label.
           ssh -i ~/.ssh/deploy_key -p "$port" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            "root@${DEPLOY_HOST}" deploy
+            "root@${host}" deploy
 
       - name: Smoke test the public site
         if: steps.cfg.outputs.ready == 'true' && vars.SITE_URL != ''
