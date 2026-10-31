@@ -82,14 +82,16 @@ jobs:
           fi
 
           # Rebuild the private key in the exact layout OpenSSH wants. Pasting into a web form can flatten the line breaks, add
-          # spaces or indentation, or turn the dashes into other characters; none of that matters for the base64 payload itself.
+          # spaces or indentation, change the dashes, or leave out the BEGIN/END lines; none of that matters for the base64 payload.
           raw="$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r' | tr '\n' ' ')"
-          case "$raw" in
-            *"BEGIN OPENSSH PRIVATE KEY"*"END OPENSSH PRIVATE KEY"*) ;;
-            *) echo "::error::DEPLOY_SSH_KEY must contain the lines -----BEGIN OPENSSH PRIVATE KEY----- ... -----END OPENSSH PRIVATE KEY-----. Paste the whole block."; exit 1 ;;
-          esac
-          payload="${raw#*BEGIN OPENSSH PRIVATE KEY}"
-          payload="${payload%%END OPENSSH PRIVATE KEY*}"
+          lines="$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r' | grep -c . || true)"
+          has_begin=no; has_end=no
+          case "$raw" in *"BEGIN OPENSSH PRIVATE KEY"*) has_begin=yes ;; esac
+          case "$raw" in *"END OPENSSH PRIVATE KEY"*) has_end=yes ;; esac
+          payload="$raw"
+          if [ "$has_begin" = yes ]; then payload="${payload#*BEGIN OPENSSH PRIVATE KEY}"; fi
+          if [ "$has_end" = yes ]; then payload="${payload%%END OPENSSH PRIVATE KEY*}"; fi
+          payload="${payload//OPENSSH PRIVATE KEY/}"
           payload="$(printf '%s' "$payload" | tr -cd 'A-Za-z0-9+/=')"
           {
             echo '-----BEGIN OPENSSH PRIVATE KEY-----'
@@ -97,9 +99,10 @@ jobs:
             echo
             echo '-----END OPENSSH PRIVATE KEY-----'
           } > ~/.ssh/deploy_key
-          echo "DEPLOY_SSH_KEY: ${#payload} characters of key data found (a complete key made by deploy/setup-cicd.sh has 336)"
+          detail="${#payload} characters of key data in $lines lines; BEGIN line: $has_begin, END line: $has_end"
+          echo "DEPLOY_SSH_KEY: $detail (a complete key from deploy/setup-cicd.sh has 336 characters in 6 lines)"
           if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
-            echo "::error::DEPLOY_SSH_KEY has ${#payload} characters of key data but should have 336, or a character is wrong. Copy the key again, from -----BEGIN to -----END, without retyping it."
+            echo "::error::DEPLOY_SSH_KEY is not a usable private key: $detail. Expected 336 characters, BEGIN line: yes, END line: yes. Copy the whole block again, from -----BEGIN to -----END, without retyping it."
             exit 1
           fi
 
@@ -113,10 +116,19 @@ jobs:
           echo "Deploy key offered                    : $(ssh-keygen -l -f ~/.ssh/deploy_key | cut -d' ' -f2)"
 
           # The server-side key is restricted to one command (deploy/setup-cicd.sh), so the word after the host is only a label.
+          # Keep a copy of what the server says, and put the reason in the run summary when it fails.
+          set +e
           ssh -i ~/.ssh/deploy_key -p "$port" \
             -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$HOME/.ssh/known_hosts" \
             -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            "root@${host}" deploy
+            "root@${host}" deploy 2>&1 | tee "$HOME/deploy.log"
+          rc="${PIPESTATUS[0]}"
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            reason="$(tail -n 5 "$HOME/deploy.log" | tr -d '\r' | sed 's/%/%25/g' | awk '{ printf "%s%%0A", $0 }')"
+            echo "::error title=Deploy failed (exit $rc)::$reason"
+            exit "$rc"
+          fi
 
       - name: Smoke test the public site
         if: steps.cfg.outputs.ready == 'true' && vars.SITE_URL != ''

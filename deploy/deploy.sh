@@ -42,5 +42,5 @@ for attempt in $(seq 1 20); do
 done
 
 echo "The app did not become healthy within 40 s. Last log lines:" >&2
-pm2 logs 7heaven-crm --lines 40 --nostream >&2 || true
+pm2 logs 7heaven-crm --err --lines 40 --nostream >&2 || true
 exit 1
