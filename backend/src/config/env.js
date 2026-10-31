@@ -55,6 +55,8 @@ export const config = {
   // Defaults to 1 in production and 0 in development, where nothing sits in front and X-Forwarded-For could be spoofed.
   trustProxy: process.env.TRUST_PROXY !== undefined ? Number(process.env.TRUST_PROXY) || 0 : isProduction ? 1 : 0,
   dnsServers: list(process.env.DNS_SERVERS),
+  // Photos live in the same database, so cap them to leave room for the data itself (Atlas free tier = 512 MB in total).
+  mediaQuotaMb: int(process.env.MEDIA_QUOTA_MB, 350),
   // Optional first-run bootstrap: creates this Admin only when the users collection is empty.
   adminEmail: (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
   adminPassword: process.env.ADMIN_PASSWORD || ''

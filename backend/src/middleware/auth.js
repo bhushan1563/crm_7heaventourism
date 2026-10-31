@@ -3,19 +3,13 @@ import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
 import { config } from '../config/env.js';
 import { isAdminRole } from '../utils/security.js';
+import { RIGHT_FLAGS, RIGHT_MODULES, allRights, defaultRightsFor } from '../config/rights.js';
 
-export const RIGHT_MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
+export { RIGHT_MODULES };
 
-const FLAGS = ['canCreate', 'canRead', 'canUpdate', 'canDelete', 'canDownload', 'canEditOthers'];
+const flagsOf = (right) => Object.fromEntries(RIGHT_FLAGS.map((flag) => [flag, Boolean(right[flag])]));
 
-const allowAll = () => Object.fromEntries(FLAGS.map((flag) => [flag, true]));
-
-// Fallback when a module has no stored rights: "All data can be seen by any user", nothing else.
-const readOnly = () => Object.fromEntries(FLAGS.map((flag) => [flag, flag === 'canRead']));
-
-const flagsOf = (right) => Object.fromEntries(FLAGS.map((flag) => [flag, Boolean(right[flag])]));
-
-/** Merges rights for a user: Admin = everything, else per-user override > role default > read-only. */
+/** Merges rights for a user: Admin = everything, else per-user override > stored role rights > built-in role default. */
 export const resolveRights = (user, rights) => {
   const userId = String(user._id);
   const userRights = rights.filter((r) => r.userId === userId);
@@ -24,12 +18,12 @@ export const resolveRights = (user, rights) => {
   const merged = {};
   for (const mod of RIGHT_MODULES) {
     if (isAdminRole(user.role)) {
-      merged[mod] = allowAll();
+      merged[mod] = allRights();
       continue;
     }
     const own = userRights.find((r) => r.module === mod);
     const byRole = roleRights.find((r) => r.module === mod);
-    merged[mod] = own ? flagsOf(own) : byRole ? flagsOf(byRole) : readOnly();
+    merged[mod] = own ? flagsOf(own) : byRole ? flagsOf(byRole) : defaultRightsFor(user.role, mod);
   }
   return merged;
 };

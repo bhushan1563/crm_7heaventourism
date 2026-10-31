@@ -2,8 +2,8 @@ import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
 import { queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { RIGHT_MODULES as MODULES, allRights, defaultRightsFor } from '../config/rights.js';
 
-const MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
 const EDITABLE_ROLES = ['Sales', 'Ops', 'Viewer'];
 
 const permissionFlags = (p = {}) => ({
@@ -72,14 +72,7 @@ export const getAllRightsMatrix = async (req, res) => {
         const rRight = roleRights.find(r => r.module === mod);
 
         if (user.role === 'Admin' || user.role === 'SuperAdmin') {
-          modulePermissions[mod] = {
-            canCreate: true,
-            canRead: true,
-            canUpdate: true,
-            canDelete: true,
-            canDownload: true,
-            canEditOthers: true,
-          };
+          modulePermissions[mod] = allRights();
         } else if (uRight) {
           modulePermissions[mod] = {
             canCreate: uRight.canCreate,
@@ -99,14 +92,7 @@ export const getAllRightsMatrix = async (req, res) => {
             canEditOthers: rRight.canEditOthers,
           };
         } else {
-          modulePermissions[mod] = {
-            canCreate: false,
-            canRead: true,
-            canUpdate: false,
-            canDelete: false,
-            canDownload: false,
-            canEditOthers: false,
-          };
+          modulePermissions[mod] = defaultRightsFor(user.role, mod);
         }
       });
 
