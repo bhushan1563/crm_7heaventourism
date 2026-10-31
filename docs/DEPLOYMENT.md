@@ -149,6 +149,8 @@ A *subdomain* such as `crm.yourcompany.in` only needs **one DNS record**; your m
    The CRM's existing address keeps working. Run it again for more names.
 4. Open `https://crm.yourcompany.in` and sign in. Optional: set the GitHub variable `SITE_URL` to that address.
 
+If the script stops with "Another nginx site on this server already answers to <domain>", an older site on the server (for example an earlier version of the app) already uses that name, and nginx always serves a name from the first site that lists it. If that older site is not needed for this name, run the same command again with `--take-over`: it saves the older site's file to `/root/nginx-backup-<time>/`, renames only this one domain inside its `server_name` line(s), and carries on. To undo: copy the saved file back over the original, `nginx -t && systemctl reload nginx`.
+
 Notes: browsers keep a separate login per address, so sign in again on the new one. The Android app and any bookmarks that point at the old address keep working.
 
 ### A3. Doing it by hand (what the script automates)
