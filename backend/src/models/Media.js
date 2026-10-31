@@ -5,14 +5,14 @@ import mongoose from 'mongoose';
 const mediaSchema = new mongoose.Schema(
   {
     // Unguessable public name: the photo URL is /media/<token>. Knowing it is the only way to fetch the photo.
-    token: { type: String, required: true, unique: true, index: true },
+    token: { type: String, required: true, unique: true },
     mime: { type: String, required: true, enum: ['image/jpeg', 'image/png', 'image/webp'] },
     width: { type: Number, required: true },
     height: { type: Number, required: true },
     size: { type: Number, required: true }, // bytes of `data`
     thumbMime: { type: String, default: '' },
     thumbSize: { type: Number, default: 0 },
-    sha256: { type: String, required: true, index: true }, // same photo uploaded twice is stored once
+    sha256: { type: String, required: true, unique: true }, // same photo uploaded twice is stored once (also under a race)
     purpose: { type: String, enum: ['hotel', 'itinerary', 'quotation'], required: true },
     data: { type: Buffer, required: true, select: false },
     thumb: { type: Buffer, select: false },

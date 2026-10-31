@@ -32,11 +32,11 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 ## 3. Build order and checklist
 
 ### Step 0: Foundations
-- [ ] 0.1 Rights: single module list; add `hotels`, `itineraries`; role defaults; Rights screen shows them; record-ownership mapping
-- [ ] 0.2 Media service in Atlas: model, upload, serve, quota, dedupe, usage, orphan clean-up
-- [ ] 0.3 Rich-text sanitiser (server) + client renderer
-- [ ] 0.4 UI building blocks: photo uploader (client resize, progress, errors), rich-text editor, photo gallery/lightbox
-- [ ] 0.5 Test infrastructure: property-based tests, in-memory-database integration tests in CI
+- [x] 0.1 Rights: single module list; add `hotels`, `itineraries`; role defaults; Rights screen shows them; record-ownership mapping
+- [x] 0.2 Media service in Atlas: model, upload, serve, quota, dedupe, usage, orphan clean-up
+- [x] 0.3 Rich-text sanitiser (server) + client renderer
+- [x] 0.4 UI building blocks: photo uploader (client resize, progress, errors), rich-text editor, photo gallery/lightbox
+- [x] 0.5 Test infrastructure: property-based tests, in-memory-database integration tests in CI
 
 ### Step 1: Itinerary library (R5, part of R9)
 - [ ] 1.1 Model + API (CRUD, duplicate, archive, search, pagination) with rights

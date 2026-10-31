@@ -195,3 +195,11 @@ test('clean-up: only photos nothing refers to, and older than the grace period, 
   assert.equal(await MediaModel.countDocuments({ token: { $in: [kept, fresh] } }), 2);
   assert.equal((await app.call(`/media/${orphan}`)).status, 404);
 });
+
+test('dedupe holds under a race: eight identical uploads at once store the photo once and all get the same token', async () => {
+  const image = jpg(1234, 765, 4321);
+  const results = await Promise.all(Array.from({ length: 8 }, () => upload(sales.token, { image, purpose: 'hotel' })));
+  assert.ok(results.every((r) => r.body.success), results.map((r) => r.body.message).join(' | '));
+  assert.equal(new Set(results.map((r) => r.body.data.token)).size, 1);
+  assert.equal(await MediaModel.countDocuments({ width: 1234, height: 765 }), 1);
+});

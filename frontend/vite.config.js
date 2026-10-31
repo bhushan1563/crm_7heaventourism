@@ -11,6 +11,8 @@ export default defineConfig(({ mode }) => {
       'process.env.REACT_APP_APIURL': JSON.stringify(env.REACT_APP_APIURL ?? ''),
       'process.env': {}
     },
+    // Component and logic tests run in a simulated browser (jsdom).
+    test: { environment: 'jsdom', include: ['src/**/*.test.{js,jsx}'], restoreMocks: true, setupFiles: ['./src/test/setup.js'] },
     build: {
       target: 'es2020',
       sourcemap: false,

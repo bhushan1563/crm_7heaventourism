@@ -106,19 +106,27 @@ export const uploadMedia = async (req, res) => {
       );
     }
 
-    const created = await MediaModel.create({
-      token: newToken(),
-      mime: info.mime,
-      width: info.width,
-      height: info.height,
-      size: file.size,
-      sha256,
-      purpose,
-      data: file.buffer,
-      ...(thumb ? { thumb: thumb.data, thumbMime: thumb.mime, thumbSize: thumb.size } : {}),
-      createdBy: String(req.user._id),
-      createdByName: `${req.user.firstName} ${req.user.lastName}`.trim()
-    });
+    let created;
+    try {
+      created = await MediaModel.create({
+        token: newToken(),
+        mime: info.mime,
+        width: info.width,
+        height: info.height,
+        size: file.size,
+        sha256,
+        purpose,
+        data: file.buffer,
+        ...(thumb ? { thumb: thumb.data, thumbMime: thumb.mime, thumbSize: thumb.size } : {}),
+        createdBy: String(req.user._id),
+        createdByName: `${req.user.firstName} ${req.user.lastName}`.trim()
+      });
+    } catch (error) {
+      // Someone uploaded the very same photo at the very same moment: the unique index let one of us win, so use theirs.
+      if (error?.code !== 11000) throw error;
+      created = await MediaModel.findOne({ sha256 }).select('token mime width height size thumbSize');
+      if (!created) throw error;
+    }
 
     res.status(200).json({ success: true, message: 'Photo added.', data: toResponse(created) });
   } catch (error) {
