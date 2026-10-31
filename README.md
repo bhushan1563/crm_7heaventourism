@@ -19,7 +19,7 @@ user has a **My Profile** page (photo, name, phone, password) under the account 
 │  └─ .env.production    API URL for builds (empty = same origin)
 ├─ api/index.js          Vercel serverless entry (wraps backend/src/server.js)
 ├─ vercel.json           Vercel build, routing and security headers
-├─ deploy/               Hostinger VPS: setup-vps.sh (server setup), setup-cicd.sh (auto-deploy key), deploy.sh (update), PM2, Nginx
+├─ deploy/               Hostinger VPS: setup-vps.sh (server setup), setup-cicd.sh (auto-deploy key), add-domain.sh (own domain + HTTPS), deploy.sh, PM2, Nginx
 ├─ scripts/              create-admin, import-legacy-csv, backup-db / restore-db, package-release, vercel-postbuild
 ├─ docs/DEPLOYMENT.md    Step-by-step: Hostinger VPS, Hostinger Node.js hosting, Vercel, backups, troubleshooting
 └─ package.json          workspaces + root scripts (single install, single lockfile)
@@ -150,6 +150,8 @@ That installs Node, Nginx, PM2 and the firewall, creates a locked-down `crm` use
 builds and starts the app (restarts on crash and reboot), configures Nginx, gets a free HTTPS certificate and schedules a daily database
 backup. Later updates: `runuser -l crm -c 'bash /var/www/7heaven-crm/deploy/deploy.sh'`.
 Also documented: Hostinger Node.js web hosting (upload the zip) and Vercel.
+
+**Your own domain:** add an `A` record for the subdomain at your DNS provider, then `bash deploy/add-domain.sh --domain crm.yourcompany.in --email you@yourcompany.in` on the server (HTTPS included; see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), *Your own domain name*).
 
 **Automatic deployment:** `.github/workflows/deploy.yml` tests every push and, on `main`, deploys to the server over a restricted SSH key.
 One-time server step: `bash deploy/setup-cicd.sh`, then add the printed secrets in GitHub (see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md), *Automatic deployment*).

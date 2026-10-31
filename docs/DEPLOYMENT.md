@@ -126,6 +126,31 @@ Good to know:
   SSH by IP in the Hostinger firewall, this will not connect).
 - A database change is not part of a deploy: the pipeline only updates the code. Data stays in Atlas.
 
+### A2c. Your own domain name (example: `crm.yourcompany.in` with the domain at GoDaddy)
+
+A *subdomain* such as `crm.yourcompany.in` only needs **one DNS record**; your main website and e-mail keep working untouched.
+
+1. **Add the record at the company that runs your DNS.** Check who that is: the domain's name servers (`nslookup -type=NS yourcompany.in`).
+   For GoDaddy (`ns##.domaincontrol.com`): *My Products -> your domain -> DNS* (reset the browser zoom with Ctrl+0 if it looks tiny) ->
+   **Add New Record**:
+
+   | Type | Name | Value | TTL |
+   |---|---|---|---|
+   | `A` | `crm` (just this word, not the full domain) | your server's IP address | 600 seconds (or the smallest offered) |
+
+   Save. Leave every other record alone: `@` and `www` belong to your website, `MX`/`autodiscover`/`enterprise*` to e-mail.
+   A `crm` record that already exists as a `CNAME` must be deleted first (a name cannot be both).
+2. **Wait for it to spread** (usually 5-30 minutes; GoDaddy shows it immediately). Check: `nslookup crm.yourcompany.in 8.8.8.8` must show your server's IP.
+3. **On the server, as root, one command** (it checks DNS first and changes nothing if the record is not there yet):
+   ```bash
+   bash /var/www/7heaven-crm/deploy/add-domain.sh --domain crm.yourcompany.in --email you@yourcompany.in
+   ```
+   It adds an nginx site for the name, gets a free HTTPS certificate (renews automatically), redirects `http` to `https`, and tests the result.
+   The CRM's existing address keeps working. Run it again for more names.
+4. Open `https://crm.yourcompany.in` and sign in. Optional: set the GitHub variable `SITE_URL` to that address.
+
+Notes: browsers keep a separate login per address, so sign in again on the new one. The Android app and any bookmarks that point at the old address keep working.
+
 ### A3. Doing it by hand (what the script automates)
 
 ```bash
