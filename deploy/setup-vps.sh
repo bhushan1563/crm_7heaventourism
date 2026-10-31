@@ -144,9 +144,26 @@ if [ "$DRY" = 0 ]; then
   SSH_PORTS="${detected:-22}"
   SSH_PORTS="${SSH_PORTS% }"
 fi
-for port in $SSH_PORTS; do run ufw allow "${port}/tcp"; done
-run ufw allow 'Nginx Full'
-run ufw --force enable
+
+# Turning the firewall on cuts off anything else this server already serves on the internet (another app on its own port).
+# So: if the firewall is off and other public ports are open, leave it off and say so.
+SKIP_UFW=0
+if [ "$DRY" = 0 ] && ! ufw status 2>/dev/null | grep -q '^Status: active'; then
+  keep="80|443|$(echo "$SSH_PORTS" | tr ' ' '|')"
+  others="$(ss -tlnH 2>/dev/null | awk '{ addr = $4; port = addr; sub(/^.*:/, "", port); sub(/:[0-9]+$/, "", addr); if (addr ~ /^127\./ || addr == "[::1]") next; print port }' | sort -un | grep -vxE "$keep" | tr '\n' ' ')" || true
+  if [ -n "${others// /}" ]; then
+    SKIP_UFW=1
+    warn "Other programs listen on public ports (${others% }). The firewall is OFF, so they keep working, and enabling it would block them."
+    warn "To turn it on yourself later:  ufw allow <port>/tcp  for each port you still need (22 80 443 ${others% }), then  ufw enable"
+  fi
+fi
+if [ "$SKIP_UFW" = 1 ]; then
+  ok "firewall left as it was"
+else
+  for port in $SSH_PORTS; do run ufw allow "${port}/tcp"; done
+  run ufw allow 'Nginx Full'
+  run ufw --force enable
+fi
 warn "Hostinger also has a firewall in hPanel > VPS > Security. Make sure it allows TCP ${SSH_PORTS// /, }, 80 and 443."
 
 # ------------------------------------------------------------------------------------------------ 3. user + code
@@ -185,6 +202,14 @@ else
     read -r -s -p "Paste your MongoDB connection string (input hidden): " URI; echo
   fi
   [ "$DRY" = 1 ] && URI="${URI:-mongodb+srv://<user>:<password>@<cluster>/7heaven_crm}"
+
+  # Another program may already use port 5000 (e.g. an older API on the same server): take the next free port instead.
+  if [ "$DRY" = 0 ]; then
+    port_busy() { ss -tlnH 2>/dev/null | awk '{ n = split($4, p, ":"); print p[n] }' | grep -qx "$1"; }
+    wanted="$APP_PORT"
+    while port_busy "$APP_PORT"; do APP_PORT=$((APP_PORT + 1)); done
+    [ "$APP_PORT" = "$wanted" ] || warn "Port $wanted is already used by another program on this server; the CRM will use port $APP_PORT."
+  fi
   case "$URI" in mongodb://*|mongodb+srv://*) ;; *) die "That does not look like a MongoDB connection string (should start with mongodb:// or mongodb+srv://)" ;; esac
 
   if [ "$DRY" = 1 ]; then
@@ -244,7 +269,14 @@ else
   sed "s#127\.0\.0\.1:5000#127.0.0.1:${APP_PORT}#" "$APP_DIR/deploy/nginx/7heaven-proxy.conf" > /etc/nginx/snippets/7heaven-proxy.conf
   sed "s#crm\.example\.com#${DOMAIN}#g" "$APP_DIR/deploy/nginx/7heaven-crm.conf" > /etc/nginx/sites-available/7heaven-crm
   ln -sf /etc/nginx/sites-available/7heaven-crm /etc/nginx/sites-enabled/7heaven-crm
-  rm -f /etc/nginx/sites-enabled/default
+  # Only remove nginx's stock welcome page; a customised "default" may be serving someone's existing site.
+  if grep -qs 'index.nginx-debian.html' /etc/nginx/sites-available/default; then
+    rm -f /etc/nginx/sites-enabled/default
+  else
+    warn "Keeping the existing nginx 'default' site (it is not the stock welcome page)."
+  fi
+  others_sites="$(ls /etc/nginx/sites-enabled 2>/dev/null | grep -vx -e 7heaven-crm -e default | tr '\n' ' ')" || true
+  [ -z "${others_sites// /}" ] || ok "other nginx sites on this server were left untouched: ${others_sites% }"
   nginx -t
   systemctl enable --now nginx
   systemctl reload nginx
@@ -259,14 +291,18 @@ if [ "$SSL" = 0 ]; then
 elif [ "$DRY" = 1 ]; then
   printf '  [dry-run] check %s resolves to this server, then: certbot --nginx -d %s -m %s --agree-tos --no-eff-email --redirect -n\n' "$DOMAIN" "$DOMAIN" "$EMAIL"
 else
-  RESOLVED="$(getent ahostsv4 "$DOMAIN" 2>/dev/null | awk '{ print $1; exit }')"
-  if [ -n "$SERVER_IP" ] && [ "$RESOLVED" = "$SERVER_IP" ]; then
-    certbot --nginx -d "$DOMAIN" -m "$EMAIL" --agree-tos --no-eff-email --redirect -n
+  # Ask a PUBLIC resolver: the server's own resolver reads /etc/hosts, which maps this machine's hostname to 127.0.1.1
+  # and would hide the real DNS record (that made an earlier version skip HTTPS on Hostinger's own *.hstgr.cloud name).
+  RESOLVED="$(curl -fsS --max-time 8 "https://dns.google/resolve?name=${DOMAIN}&type=A" 2>/dev/null | grep -oE '"data": ?"[0-9.]+"' | grep -oE '[0-9]+(\.[0-9]+){3}' | tr '\n' ' ' || true)"
+  if [ -n "$RESOLVED" ] && [ -n "$SERVER_IP" ] && [[ " $RESOLVED " != *" $SERVER_IP "* ]]; then
+    warn "DNS: $DOMAIN points to '${RESOLVED% }' but this server is '$SERVER_IP'."
+    warn "Point the domain's A record at this server, wait a few minutes, then run:"
+    warn "  certbot --nginx -d $DOMAIN -m $EMAIL --agree-tos --redirect"
+  elif certbot --nginx -d "$DOMAIN" -m "$EMAIL" --agree-tos --no-eff-email --redirect -n; then
     ok "HTTPS enabled; the certificate renews automatically"
   else
-    warn "DNS: $DOMAIN resolves to '${RESOLVED:-nothing}' but this server is '${SERVER_IP:-unknown}'."
-    warn "Point the domain's A record at this server, wait a few minutes, then run:"
-    warn "  sudo certbot --nginx -d $DOMAIN -m $EMAIL --agree-tos --redirect"
+    warn "certbot could not get a certificate (the messages above say why; DNS and firewall port 80 are the usual causes). Retry with:"
+    warn "  certbot --nginx -d $DOMAIN -m $EMAIL --agree-tos --redirect"
   fi
 fi
 
@@ -274,12 +310,16 @@ fi
 if [ "$DRY" = 0 ]; then
   say "Checking the app"
   healthy=0
+  body=""
   for _ in $(seq 1 20); do
-    if curl -fsS "http://127.0.0.1:${APP_PORT}/api/health" >/dev/null 2>&1; then healthy=1; break; fi
+    body="$(curl -fsS "http://127.0.0.1:${APP_PORT}/api/health" 2>/dev/null || true)"
+    # Only OUR app reports the database state; any other program answering on this port must not count as success.
+    case "$body" in *'"database":"connected"'*) healthy=1; break ;; esac
     sleep 2
   done
-  if [ "$healthy" = 1 ]; then ok "healthy: $(curl -fsS "http://127.0.0.1:${APP_PORT}/api/health")"; else
-    warn "The app is not answering yet. See:  runuser -l $APP_USER -c 'pm2 logs 7heaven-crm --lines 50 --nostream'"
+  if [ "$healthy" = 1 ]; then ok "healthy: $body"; else
+    if [ -n "$body" ]; then warn "Something else answers on port $APP_PORT (it is not the CRM): $body"; fi
+    warn "The CRM is not healthy yet. See:  runuser -l $APP_USER -c 'pm2 logs 7heaven-crm --lines 50 --nostream'"
   fi
 fi
 

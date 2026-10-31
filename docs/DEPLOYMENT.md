@@ -224,6 +224,8 @@ npm run backup-db -- --dir /var/backups/7heaven --keep 14
 | Symptom | Likely cause and fix |
 |---|---|
 | Browser shows **502 Bad Gateway** | The app is not running: `runuser -l crm -c 'pm2 status'` / `runuser -l crm -c 'pm2 logs 7heaven-crm --lines 50 --nostream'`. Usually a missing/placeholder `JWT_SECRET` or an unreachable database. |
+| Page says **`Cannot GET /`**, or `/api/health` has no `"database"` field | Another program (e.g. an older API on the same server) already uses the port, so you are talking to it, not the CRM. Check with `ss -tlnp \| grep :5000`. Give the CRM a free port: set `PORT=5100` in `backend/.env`, change the port in `/etc/nginx/snippets/7heaven-proxy.conf`, `nginx -t && systemctl reload nginx`, restart with `runuser -l crm -c 'pm2 restart 7heaven-crm --update-env'`. (`setup-vps.sh` now picks a free port itself.) |
+| An old site/app on the same server stopped working after setup | The script leaves existing nginx sites alone, and leaves the firewall off when it finds other public ports. If you enabled `ufw` yourself, allow the old app's port: `ufw allow <port>/tcp`. |
 | `/api/health` says **503, database disconnected** | Atlas *Network Access* does not include this server's IP, wrong user/password in `MONGODB_URI` (`bad auth`), or the password has unencoded special characters. |
 | Log: `querySrv ECONNREFUSED` | The server's DNS cannot resolve Atlas SRV records. Add `DNS_SERVERS=8.8.8.8,8.8.4.4` to `backend/.env`, `pm2 restart 7heaven-crm --update-env`. |
 | App exits at start: `JWT_SECRET` ... | Production refuses to start without a real secret. Set it in `backend/.env` (VPS) or the panel's environment variables (B / Vercel). |

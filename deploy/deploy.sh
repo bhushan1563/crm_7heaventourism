@@ -33,7 +33,8 @@ PORT_VALUE="${PORT_VALUE:-5000}"
 
 step "Checking it came back up (http://127.0.0.1:${PORT_VALUE}/api/health)"
 for attempt in $(seq 1 20); do
-  if curl -fsS "http://127.0.0.1:${PORT_VALUE}/api/health" >/dev/null 2>&1; then
+  # Our app reports the database state; another program answering on this port must not count as success.
+  if curl -fsS "http://127.0.0.1:${PORT_VALUE}/api/health" 2>/dev/null | grep -q '"database":"connected"'; then
     echo "Healthy after ${attempt} check(s). Deployed."
     exit 0
   fi
