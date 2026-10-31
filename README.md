@@ -60,6 +60,8 @@ npm start          # http://localhost:5000  -> web app + API from the same proce
 | `npm run build:vercel` | Vercel build: web app + copies the APK into `dist/static` |
 | `npm run create-admin -- <email> <password> [first] [last]` | create an Admin user (idempotent, password >= 8 chars) |
 | `npm run import-csv -- "<folder>" [--dry-run]` | import the app's CSV exports into the database (see below) |
+| `npm run check-db` | test the database connection like the app does and explain failures (read-only) |
+| `npm run reset-password -- <email>` | set a new password for a user (asked at a hidden prompt, or read from standard input) |
 | `npm run backup-db [-- --dir <folder> --keep <n>]` | save every collection to compressed files in `backups/` (git-ignored), keeping the newest `n` (default 14) |
 | `npm run restore-db -- <backup folder> --yes [--drop]` | load a backup; refuses to overwrite existing data unless `--drop` is given |
 | `npm run package [-- --no-apk]` | build `release/7heaven-crm-v<version>-<date>.zip` for uploading to a server (no secrets, no customer data) |

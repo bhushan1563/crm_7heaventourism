@@ -24,7 +24,8 @@
     "backup-db": "node scripts/backup-db.mjs",
     "restore-db": "node scripts/restore-db.mjs",
     "package": "node scripts/package-release.mjs",
-    "check-db": "node scripts/check-db.mjs"
+    "check-db": "node scripts/check-db.mjs",
+    "reset-password": "node scripts/reset-password.mjs"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",
