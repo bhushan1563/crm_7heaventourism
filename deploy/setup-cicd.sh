@@ -90,7 +90,7 @@ ${c_bold}Add these as GitHub secrets${c_off}
 ${c_bold}1) Name: DEPLOY_HOST${c_off}
 $SHOW_HOST
 
-${c_bold}2) Name: DEPLOY_HOST_KEY${c_off}
+${c_bold}2) Name: DEPLOY_HOST_KEY${c_off}   (optional but recommended: it pins your server's identity)
 $SHOW_HOSTKEY
 
 ${c_bold}3) Name: DEPLOY_SSH_KEY${c_off}   (everything below, including the BEGIN and END lines)

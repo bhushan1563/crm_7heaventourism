@@ -107,9 +107,12 @@ Pull requests only run the tests. The workflow is `.github/workflows/deploy.yml`
 1. On the server, as root: `cd /var/www/7heaven-crm && git pull` (as `crm`: `runuser -l crm -c 'cd /var/www/7heaven-crm && git pull --ff-only'`), then
    `bash /var/www/7heaven-crm/deploy/setup-cicd.sh`.
    It creates a key that is allowed to do **one thing only** - run `deploy.sh` - and prints three values. The private key is shown once and not kept on the server.
-2. GitHub -> your repository -> **Settings -> Secrets and variables -> Actions -> New repository secret**: create `DEPLOY_HOST`, `DEPLOY_HOST_KEY`
-   and `DEPLOY_SSH_KEY` with the values the script printed (`DEPLOY_PORT` too if it printed one). Optional, on the *Variables* tab:
-   `SITE_URL` = `https://your-domain`, so every deploy ends with a check of the public site.
+2. GitHub -> your repository -> **Settings -> Secrets and variables -> Actions -> New repository secret**: create `DEPLOY_HOST` and `DEPLOY_SSH_KEY`
+   (and `DEPLOY_HOST_KEY`, `DEPLOY_PORT` if the script printed them) with the values the script printed. Before connecting, the pipeline fetches the
+   server's SSH host key and requires it to match `DEPLOY_HOST_KEY` **or** the fingerprint stored as `DEFAULT_HOST_FINGERPRINT` in
+   `.github/workflows/deploy.yml` (set it to your server's: `ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub` on the server, second column; update both
+   if the server is ever reinstalled). The key text is rebuilt tolerantly, so extra spaces, flattened lines or a missing BEGIN/END line do not matter.
+   Optional, on the *Variables* tab: `SITE_URL` = `https://your-domain`, so every deploy ends with a check of the public site.
 3. GitHub -> **Actions** tab -> *CI/CD* -> **Run workflow**. Green = live. From now on every push to `main` deploys.
 
 Good to know:

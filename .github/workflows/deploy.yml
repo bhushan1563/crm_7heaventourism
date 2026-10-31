@@ -50,13 +50,13 @@ jobs:
         env:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
         run: |
-          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_HOST_KEY" ]; then
+          # DEPLOY_HOST_KEY is optional: without a usable one the fingerprint stored in the deploy step is trusted.
+          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_SSH_KEY" ]; then
             echo "ready=true" >> "$GITHUB_OUTPUT"
           else
             echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Deploy skipped - add the secrets DEPLOY_HOST, DEPLOY_HOST_KEY and DEPLOY_SSH_KEY (see docs/DEPLOYMENT.md > Automatic deployment)."
+            echo "::warning::Deploy skipped - add the secrets DEPLOY_HOST and DEPLOY_SSH_KEY (DEPLOY_HOST_KEY is optional); see docs/DEPLOYMENT.md > Automatic deployment."
           fi
 
       - name: Deploy over SSH
@@ -66,6 +66,9 @@ jobs:
           DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_HOST_KEY: ${{ secrets.DEPLOY_HOST_KEY }}
+          # Public fingerprint of the server's ED25519 host key (the one `ssh` showed at the first login). Only used when the
+          # DEPLOY_HOST_KEY secret is missing or unusable; replace it if the server is ever reinstalled.
+          DEFAULT_HOST_FINGERPRINT: SHA256:s6ky7Iqys9BZapHERiBpV3L6Fci0zOpIDKSCzuK/ioY
         run: |
           set -euo pipefail
           umask 077
@@ -74,11 +77,29 @@ jobs:
           # Values pasted into GitHub's web form often carry a stray newline or space: clean them up first.
           host="$(printf '%s' "$DEPLOY_HOST" | tr -d '[:space:]')"
           port="$(printf '%s' "${DEPLOY_PORT:-22}" | tr -d '[:space:]')"; port="${port:-22}"
-          # Accept "ssh-ed25519 AAAA...", with or without a host name in front of it.
-          hostkey="$(printf '%s' "$DEPLOY_HOST_KEY" | tr -s '[:space:]' ' ' | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^(ssh|ecdsa)-/) { print $i, $(i + 1); exit } }')"
-          if [ -z "$host" ] || [ "$(printf '%s' "$hostkey" | wc -w)" != 2 ]; then
-            echo "::error::DEPLOY_HOST must be the server address, and DEPLOY_HOST_KEY must look like: ssh-ed25519 AAAAC3Nza..."
+          if [ -z "$host" ]; then
+            echo "::error::DEPLOY_HOST must be the address of your server (for example its IP address)."
             exit 1
+          fi
+
+          # Which server identity do we trust? The server must PROVE it by presenting exactly this key, so a wrong value can
+          # only ever make the deploy fail; it can never send the key or the commands to another machine.
+          #   1) DEPLOY_HOST_KEY (secret): "ssh-ed25519 AAAA..." (what deploy/setup-cicd.sh prints) or a "SHA256:..." fingerprint
+          #   2) otherwise the fingerprint stored in this workflow (DEFAULT_HOST_FINGERPRINT)
+          # The server is accepted if it presents EITHER of these two keys (a typo in one cannot lock the pipeline out).
+          secret_fp=""
+          hostkey="$(printf '%s' "$DEPLOY_HOST_KEY" | tr -s '[:space:]' ' ' | awk '{ for (i = 1; i <= NF; i++) if ($i ~ /^(ssh|ecdsa)-/) { print $i, $(i + 1); exit } }')"
+          if [ "$(printf '%s' "$hostkey" | wc -w)" = 2 ]; then
+            printf '%s\n' "$hostkey" > "$HOME/pin.pub"
+            secret_fp="$(ssh-keygen -l -f "$HOME/pin.pub" 2> /dev/null | awk '{ print $2 }')" || true
+          fi
+          if [ -z "$secret_fp" ]; then
+            secret_fp="$(printf '%s' "$DEPLOY_HOST_KEY" | grep -oE 'SHA256:[A-Za-z0-9+/]{43}' | head -n1 || true)"
+          fi
+          trusted="$DEFAULT_HOST_FINGERPRINT"
+          if [ -n "$secret_fp" ]; then trusted="$secret_fp $trusted"; fi
+          if [ -z "$secret_fp" ]; then
+            echo "::warning title=DEPLOY_HOST_KEY is not a usable host key::It has ${#DEPLOY_HOST_KEY} characters and is not a valid 'ssh-ed25519 AAAA...' line or SHA256 fingerprint, so only the fingerprint stored in the workflow is trusted. Re-save the secret from /etc/ssh/ssh_host_ed25519_key.pub on the server, or ignore this notice."
           fi
 
           # Rebuild the private key in the exact layout OpenSSH wants. Pasting into a web form can flatten the line breaks, add
@@ -106,14 +127,38 @@ jobs:
             exit 1
           fi
 
-          # known_hosts pins the server's own host key, so the key and the commands can only ever go to YOUR server.
-          if [ "$port" = "22" ]; then host_entry="$host"; else host_entry="[$host]:$port"; fi
-          printf '%s %s\n' "$host_entry" "$hostkey" > ~/.ssh/known_hosts
+          # Fetch the server's real host keys and keep only the one whose fingerprint is the trusted one. ssh then connects
+          # with strict checking against exactly that key, so the key and the commands can only ever go to YOUR server.
+          ssh-keyscan -T 10 -p "$port" "$host" > "$HOME/scanned_hosts" 2> /dev/null || true
+          if [ ! -s "$HOME/scanned_hosts" ]; then
+            echo "::error::The server did not give out an SSH host key on port $port. Check DEPLOY_HOST (the server's address), that SSH is reachable from the internet (hosting firewall), and DEPLOY_PORT if SSH is not on port 22."
+            exit 1
+          fi
+          : > ~/.ssh/known_hosts
+          seen=""
+          while IFS= read -r line; do
+            case "$line" in ''|'#'*) continue ;; esac
+            printf '%s\n' "$line" > "$HOME/one_host_key"
+            fp="$(ssh-keygen -l -f "$HOME/one_host_key" 2> /dev/null | awk '{ print $2 }')" || true
+            seen="$seen $fp"
+            if [ -n "$fp" ]; then
+              case " $trusted " in *" $fp "*) printf '%s\n' "$line" >> ~/.ssh/known_hosts ;; esac
+            fi
+          done < "$HOME/scanned_hosts"
 
-          # Fingerprints are public information; showing them makes a mismatch easy to spot against the server
-          # (on the server:  ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub   and   ssh-keygen -l -f /root/.ssh/authorized_keys).
-          echo "SSH port $port; trusted server key       : $(ssh-keygen -l -f ~/.ssh/known_hosts | cut -d' ' -f2)"
-          echo "Deploy key offered                    : $(ssh-keygen -l -f ~/.ssh/deploy_key | cut -d' ' -f2)"
+          # Fingerprints are public information; they make any mismatch easy to read.
+          # On the server:  ssh-keygen -l -f /etc/ssh/ssh_host_ed25519_key.pub     and     ssh-keygen -l -f /root/.ssh/authorized_keys
+          deploy_fp="$(ssh-keygen -l -f ~/.ssh/deploy_key | cut -d' ' -f2)"
+          echo "SSH port $port; trusted server keys      : $trusted"
+          echo "Server presents                       :$seen"
+          echo "Deploy key offered                    : $deploy_fp"
+          if [ ! -s ~/.ssh/known_hosts ]; then
+            echo "::error title=The server's SSH host key does not match::Trusted: $trusted. The server presents:$seen. If the server was reinstalled, update DEPLOY_HOST_KEY (and DEFAULT_HOST_FINGERPRINT in the workflow) from /etc/ssh/ssh_host_ed25519_key.pub; otherwise DEPLOY_HOST points at the wrong machine."
+            exit 1
+          fi
+          if [ -n "$secret_fp" ]; then
+            case "$seen" in *" $secret_fp"*) ;; *) echo "::warning title=DEPLOY_HOST_KEY does not match the server::The server was accepted through the fingerprint stored in the workflow. The DEPLOY_HOST_KEY secret probably has a typo; you can ignore this or re-save it." ;; esac
+          fi
 
           # The server-side key is restricted to one command (deploy/setup-cicd.sh), so the word after the host is only a label.
           # Keep a copy of what the server says, and put the reason in the run summary when it fails.
