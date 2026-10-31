@@ -30,14 +30,14 @@ Everything below the line "Prepare" is needed by **A and B**.
 
 ---
 
-## A. Hostinger VPS (Ubuntu 22.04 / 24.04)
+## A. Hostinger VPS (Ubuntu 22.04 / 24.04 / 26.04)
 
 ```
 Browser --HTTPS--> Nginx (80/443) --> Node 127.0.0.1:5000 (PM2) --> serves the web app + /api + /static
                                                           └--> MongoDB Atlas
 ```
 
-Order the VPS with the plain **Ubuntu 22.04 / 24.04** operating system (not a control-panel template). 1 vCPU / 2 GB RAM is comfortable;
+Order the VPS with the plain **Ubuntu 22.04 / 24.04 / 26.04** operating system (not a control-panel template). 1 vCPU / 2 GB RAM is comfortable;
 the OCR scanner uses a few hundred MB while it reads an image.
 
 ### A1. One-command setup
@@ -79,13 +79,13 @@ Then:
 - **Hostinger firewall:** hPanel -> VPS -> Security / Firewall must allow TCP 22 (SSH), 80 and 443 as well, if you use that firewall.
 - **Atlas:** add the server's public IP to *Network Access* (the script prints it) and remove `0.0.0.0/0`.
 - **First admin** (only if the database is brand new and empty):
-  `sudo -u crm bash -lc "cd /var/www/7heaven-crm && npm run create-admin -- you@example.com 'a-strong-password'"`
+  `runuser -l crm -c "cd /var/www/7heaven-crm && npm run create-admin -- you@example.com 'a-strong-password'"`
 - Open `https://crm.example.com`, sign in.
 
 ### A2. Updating later
 
 ```bash
-sudo -u crm bash /var/www/7heaven-crm/deploy/deploy.sh      # git pull, npm ci, tests, build, zero-downtime PM2 reload, health check
+runuser -l crm -c 'bash /var/www/7heaven-crm/deploy/deploy.sh'      # git pull, npm ci, tests, build, zero-downtime PM2 reload, health check
 ```
 
 It stops and prints the app log if the new version does not become healthy. `SKIP_TESTS=1` skips the (database-free, ~15 s) test run.
@@ -102,10 +102,10 @@ curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y node
 
 useradd --system --create-home --shell /bin/bash crm
 git clone <repo> /var/www/7heaven-crm && chown -R crm:crm /var/www/7heaven-crm
-sudo -u crm bash -lc 'cd /var/www/7heaven-crm && cp backend/.env.example backend/.env && chmod 600 backend/.env'
+runuser -l crm -c 'cd /var/www/7heaven-crm && cp backend/.env.example backend/.env && chmod 600 backend/.env'
 nano /var/www/7heaven-crm/backend/.env      # NODE_ENV=production  HOST=127.0.0.1  PORT=5000  MONGODB_URI=...  JWT_SECRET=$(openssl rand -hex 48)
 
-sudo -u crm bash -lc 'cd /var/www/7heaven-crm && npm ci --include=dev && npm run build \
+runuser -l crm -c 'cd /var/www/7heaven-crm && npm ci --include=dev && npm run build \
   && pm2 startOrReload deploy/ecosystem.config.cjs && pm2 save'
 pm2 startup systemd -u crm --hp /home/crm          # makes PM2 start at boot
 curl -s http://127.0.0.1:5000/api/health           # {"status":"healthy",...}
@@ -123,14 +123,14 @@ signs everyone out once. Use `www.` as well? Add `-d www.YOUR.DOMAIN` to certbot
 
 ### A4. Everyday operations
 
-| Task | Command (run as root; PM2 belongs to the `crm` user, hence `sudo -u crm`) |
+| Task | Command (run as root; PM2 belongs to the `crm` user, hence `runuser -l crm -c '...'`) |
 |---|---|
-| Status | `sudo -u crm pm2 status` |
-| Live logs | `sudo -u crm pm2 logs 7heaven-crm` |
-| Restart | `sudo -u crm pm2 restart 7heaven-crm` |
+| Status | `runuser -l crm -c 'pm2 status'` |
+| Live logs | `runuser -l crm -c 'pm2 logs 7heaven-crm'` (Ctrl+C to leave) |
+| Restart | `runuser -l crm -c 'pm2 restart 7heaven-crm'` |
 | Health | `curl -s http://127.0.0.1:5000/api/health` (503 while the database is unreachable - good for an uptime monitor on `https://YOUR.DOMAIN/api/health`) |
 | Nginx errors | `tail -n 50 /var/log/nginx/error.log` |
-| Back up now | `sudo -u crm bash -lc 'cd /var/www/7heaven-crm && node scripts/backup-db.mjs --dir /var/backups/7heaven'` |
+| Back up now | `runuser -l crm -c 'cd /var/www/7heaven-crm && node scripts/backup-db.mjs --dir /var/backups/7heaven'` |
 
 The app runs as a **single process** on purpose: the OCR scanner is memory-hungry and the login rate limiter keeps its counters in memory.
 PM2 restarts it above 900 MB. On a reload it drains in-flight requests and closes the database cleanly. Logs never contain the database URI or any secret.
@@ -211,9 +211,9 @@ npm run backup-db -- --dir /var/backups/7heaven --keep 14
   ```
 - **Real restore** (replaces what is there): stop the app, restore, start it again so indexes are rebuilt:
   ```bash
-  sudo -u crm pm2 stop 7heaven-crm
-  sudo -u crm bash -lc 'cd /var/www/7heaven-crm && node scripts/restore-db.mjs /var/backups/7heaven/<stamp> --yes --drop'
-  sudo -u crm pm2 start 7heaven-crm
+  runuser -l crm -c 'pm2 stop 7heaven-crm'
+  runuser -l crm -c 'cd /var/www/7heaven-crm && node scripts/restore-db.mjs /var/backups/7heaven/<stamp> --yes --drop'
+  runuser -l crm -c 'pm2 start 7heaven-crm'
   ```
   Without `--drop` the restore refuses to touch a collection that already contains data; without `--yes` it only shows what it would do.
 
@@ -223,7 +223,7 @@ npm run backup-db -- --dir /var/backups/7heaven --keep 14
 
 | Symptom | Likely cause and fix |
 |---|---|
-| Browser shows **502 Bad Gateway** | The app is not running: `sudo -u crm pm2 status` / `pm2 logs 7heaven-crm --lines 50`. Usually a missing/placeholder `JWT_SECRET` or an unreachable database. |
+| Browser shows **502 Bad Gateway** | The app is not running: `runuser -l crm -c 'pm2 status'` / `runuser -l crm -c 'pm2 logs 7heaven-crm --lines 50 --nostream'`. Usually a missing/placeholder `JWT_SECRET` or an unreachable database. |
 | `/api/health` says **503, database disconnected** | Atlas *Network Access* does not include this server's IP, wrong user/password in `MONGODB_URI` (`bad auth`), or the password has unencoded special characters. |
 | Log: `querySrv ECONNREFUSED` | The server's DNS cannot resolve Atlas SRV records. Add `DNS_SERVERS=8.8.8.8,8.8.4.4` to `backend/.env`, `pm2 restart 7heaven-crm --update-env`. |
 | App exits at start: `JWT_SECRET` ... | Production refuses to start without a real secret. Set it in `backend/.env` (VPS) or the panel's environment variables (B / Vercel). |

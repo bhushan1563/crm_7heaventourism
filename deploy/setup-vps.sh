@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# One-command setup of a fresh Ubuntu 22.04 / 24.04 server (Hostinger VPS) for 7Heaven CRM.
+# One-command setup of a fresh Ubuntu 22.04 / 24.04 / 26.04 server (Hostinger VPS) for 7Heaven CRM.
 #
-#   sudo bash deploy/setup-vps.sh --domain crm.example.com --email you@example.com
+#   bash deploy/setup-vps.sh --domain crm.example.com --email you@example.com      (as root; non-root: prefix with sudo)
 #
 # What it does (safe to run again; it skips what is already done):
 #   1. installs Nginx, Certbot, Git, Node 22 and PM2, and turns on the firewall (SSH + web only)
@@ -55,7 +55,8 @@ as_app() {
   if [ "$DRY" = 1 ]; then
     printf '  [dry-run as %s] %s\n' "$APP_USER" "$*"
   else
-    sudo -u "$APP_USER" -H bash -lc "cd '$APP_DIR' && $*"
+    # runuser (util-linux) instead of sudo: Ubuntu 25.10+ ships sudo-rs, which lacks some sudo options. This script runs as root anyway.
+    runuser -l "$APP_USER" -c "cd '$APP_DIR' && $*"
   fi
 }
 
@@ -113,13 +114,20 @@ NODE_MAJOR="$(node -p 'process.versions.node.split(".")[0]' 2>/dev/null || echo 
 if [ "${NODE_MAJOR:-0}" -lt 20 ]; then
   say "Installing Node.js 22"
   if [ "$DRY" = 1 ]; then
-    printf '  [dry-run] curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt-get install -y nodejs\n'
+    printf '  [dry-run] curl -fsSL https://deb.nodesource.com/setup_22.x | bash -; prefer NodeSource over the distro package; apt-get install -y nodejs\n'
   else
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+    # Newer Ubuntu releases carry their own "nodejs" that sorts above NodeSource's and has NO bundled npm. Prefer NodeSource's.
+    printf 'Package: nodejs\nPin: origin deb.nodesource.com\nPin-Priority: 600\n' > /etc/apt/preferences.d/nodesource
+    apt-get update -y
     apt-get install -y nodejs
   fi
 else
   ok "Node.js $(node -v) already installed"
+fi
+if [ "$DRY" = 0 ] && ! command -v npm >/dev/null 2>&1; then
+  warn "npm was not installed with Node.js; installing it from the Ubuntu repository"
+  apt-get install -y npm
 fi
 if ! command -v pm2 >/dev/null 2>&1; then
   run npm install -g pm2
@@ -173,7 +181,7 @@ if [ "$DRY" = 0 ] && [ -f "$ENV_PATH" ]; then
 else
   URI="${MONGODB_URI:-}"
   if [ -z "$URI" ] && [ "$DRY" = 0 ]; then
-    [ -t 0 ] || die "MONGODB_URI is not set and there is no terminal to ask on. Run:  MONGODB_URI='mongodb+srv://...' sudo -E bash deploy/setup-vps.sh ..."
+    [ -t 0 ] || die "MONGODB_URI is not set and there is no terminal to ask on. Run as root:  MONGODB_URI='mongodb+srv://...' bash deploy/setup-vps.sh ..."
     read -r -s -p "Paste your MongoDB connection string (input hidden): " URI; echo
   fi
   [ "$DRY" = 1 ] && URI="${URI:-mongodb+srv://<user>:<password>@<cluster>/7heaven_crm}"
@@ -271,7 +279,7 @@ if [ "$DRY" = 0 ]; then
     sleep 2
   done
   if [ "$healthy" = 1 ]; then ok "healthy: $(curl -fsS "http://127.0.0.1:${APP_PORT}/api/health")"; else
-    warn "The app is not answering yet. See:  sudo -u $APP_USER pm2 logs 7heaven-crm --lines 50"
+    warn "The app is not answering yet. See:  runuser -l $APP_USER -c 'pm2 logs 7heaven-crm --lines 50 --nostream'"
   fi
 fi
 
@@ -282,8 +290,8 @@ cat <<DONE
 ${c_bold}Next steps${c_off}
   1. MongoDB Atlas > Network Access: allow this server ($IP_HINT) and remove 0.0.0.0/0.
   2. Open https://$DOMAIN and sign in. (Brand-new database? create the first admin:
-       sudo -u $APP_USER bash -lc "cd $APP_DIR && npm run create-admin -- you@example.com 'a-strong-password'")
-  3. Update later with one command:   sudo -u $APP_USER bash $APP_DIR/deploy/deploy.sh
+       runuser -l $APP_USER -c "cd $APP_DIR && npm run create-admin -- you@example.com 'a-strong-password'")
+  3. Update later with one command:   runuser -l $APP_USER -c 'bash $APP_DIR/deploy/deploy.sh'
   4. A database backup runs daily at 03:15 into /var/backups/7heaven (14 kept). Copy them off this server now and then,
      and test a restore once:  see docs/DEPLOYMENT.md > Backups.
 DONE

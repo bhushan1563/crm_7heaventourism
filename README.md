@@ -137,7 +137,7 @@ first paint, so there is no flash. When adding a new screen, prefer the CSS vari
 
 ## Deploying
 
-Full guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). In short, on a fresh Hostinger VPS (Ubuntu 22.04 / 24.04) with your domain's A record pointing at it:
+Full guide: [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). In short, on a fresh Hostinger VPS (Ubuntu 22.04 / 24.04 / 26.04) with your domain's A record pointing at it:
 
 ```bash
 git clone <your repo url> /root/7heaven-src && cd /root/7heaven-src          # or upload + unzip the file from `npm run package`
@@ -146,5 +146,5 @@ MONGODB_URI='mongodb+srv://...' bash deploy/setup-vps.sh --domain crm.example.co
 
 That installs Node, Nginx, PM2 and the firewall, creates a locked-down `crm` user, writes `backend/.env` with a random `JWT_SECRET`,
 builds and starts the app (restarts on crash and reboot), configures Nginx, gets a free HTTPS certificate and schedules a daily database
-backup. Later updates: `sudo -u crm bash /var/www/7heaven-crm/deploy/deploy.sh`.
+backup. Later updates: `runuser -l crm -c 'bash /var/www/7heaven-crm/deploy/deploy.sh'`.
 Also documented: Hostinger Node.js web hosting (upload the zip) and Vercel.
