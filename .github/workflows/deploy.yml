@@ -81,9 +81,25 @@ jobs:
             exit 1
           fi
 
-          printf '%s\n' "$DEPLOY_SSH_KEY" | tr -d '\r' > ~/.ssh/deploy_key
+          # Rebuild the private key in the exact layout OpenSSH wants. Pasting into a web form can flatten the line breaks, add
+          # spaces or indentation, or turn the dashes into other characters; none of that matters for the base64 payload itself.
+          raw="$(printf '%s' "$DEPLOY_SSH_KEY" | tr -d '\r' | tr '\n' ' ')"
+          case "$raw" in
+            *"BEGIN OPENSSH PRIVATE KEY"*"END OPENSSH PRIVATE KEY"*) ;;
+            *) echo "::error::DEPLOY_SSH_KEY must contain the lines -----BEGIN OPENSSH PRIVATE KEY----- ... -----END OPENSSH PRIVATE KEY-----. Paste the whole block."; exit 1 ;;
+          esac
+          payload="${raw#*BEGIN OPENSSH PRIVATE KEY}"
+          payload="${payload%%END OPENSSH PRIVATE KEY*}"
+          payload="$(printf '%s' "$payload" | tr -cd 'A-Za-z0-9+/=')"
+          {
+            echo '-----BEGIN OPENSSH PRIVATE KEY-----'
+            printf '%s' "$payload" | fold -w 70
+            echo
+            echo '-----END OPENSSH PRIVATE KEY-----'
+          } > ~/.ssh/deploy_key
+          echo "DEPLOY_SSH_KEY: ${#payload} characters of key data found (a complete key made by deploy/setup-cicd.sh has 336)"
           if ! ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null 2>&1; then
-            echo "::error::DEPLOY_SSH_KEY is not a valid private key. Paste every line from -----BEGIN OPENSSH PRIVATE KEY----- to -----END OPENSSH PRIVATE KEY-----, with no spaces added."
+            echo "::error::DEPLOY_SSH_KEY has ${#payload} characters of key data but should have 336, or a character is wrong. Copy the key again, from -----BEGIN to -----END, without retyping it."
             exit 1
           fi
 
