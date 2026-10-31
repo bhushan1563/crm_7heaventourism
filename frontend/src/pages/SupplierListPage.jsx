@@ -23,6 +23,8 @@ import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExportButton from '../components/ExportButton';
 import { SUPPLIER_CATEGORIES, SUPPLIER_CATEGORY_OPTIONS, SUPPLIER_RATINGS } from '../config';
+import { getErrorMessage } from '../services/api';
+import CategoryIcon from '../components/CategoryIcon';
 
 export const SupplierListPage = () => {
   const { user, can, canEditRecord } = useAuth();
@@ -66,7 +68,7 @@ export const SupplierListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading suppliers: ' + err.message, 'error');
+      showToast('Error loading suppliers: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -148,7 +150,7 @@ export const SupplierListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to create supplier: ' + err.message, 'error');
+      showToast('Failed to create supplier: ' + getErrorMessage(err), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -173,7 +175,7 @@ export const SupplierListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to update supplier: ' + err.message, 'error');
+      showToast('Failed to update supplier: ' + getErrorMessage(err), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -193,7 +195,7 @@ export const SupplierListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to delete supplier: ' + err.message, 'error');
+      showToast('Failed to delete supplier: ' + getErrorMessage(err), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -202,11 +204,13 @@ export const SupplierListPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', fontFamily: 'var(--font-headline)' }}>
-            Supplier Directory
-          </h2>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">Supplier Directory</h2>
+            <span className="count-chip">{filteredSuppliers.length} {filteredSuppliers.length === 1 ? 'supplier' : 'suppliers'}</span>
+          </div>
+          <p className="page-subtitle">Hotels, transfers, consolidators and visa partners in one place.</p>
         </div>
 
         <div className="page-actions">
@@ -268,9 +272,9 @@ export const SupplierListPage = () => {
                 gap: '7px',
                 padding: '7px 14px',
                 borderRadius: '9px',
-                border: isSelected ? '1px solid #2563EB' : '1px solid #E2E8F0',
-                background: isSelected ? '#2563EB' : '#FFFFFF',
-                color: isSelected ? '#FFFFFF' : '#475569',
+                border: isSelected ? '1px solid #2563EB' : '1px solid var(--bd-E2E8F0)',
+                background: isSelected ? '#2563EB' : 'var(--bg-FFFFFF)',
+                color: isSelected ? '#FFFFFF' : 'var(--fg-475569)',
                 fontWeight: isSelected ? 700 : 600,
                 fontSize: '0.8rem',
                 fontFamily: 'var(--font-headline)',
@@ -280,15 +284,15 @@ export const SupplierListPage = () => {
                 whiteSpace: 'nowrap'
               }}
             >
-              <span>{cat.icon}</span>
+              <CategoryIcon category={cat.value} size={14} />
               <span>{cat.label}</span>
               <span
                 style={{
                   fontSize: '0.68rem',
                   padding: '2px 6px',
                   borderRadius: '9999px',
-                  background: isSelected ? 'rgba(255, 255, 255, 0.25)' : '#F1F5F9',
-                  color: isSelected ? '#FFFFFF' : '#64748B',
+                  background: isSelected ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-F1F5F9)',
+                  color: isSelected ? '#FFFFFF' : 'var(--fg-64748B)',
                   fontWeight: 700
                 }}
               >
@@ -302,7 +306,7 @@ export const SupplierListPage = () => {
       {/* Search Bar */}
       <div className="glass-panel" style={{ padding: '12px 16px' }}>
         <div style={{ position: 'relative', width: '100%' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-64748B)' }} />
           <input
             type="text"
             className="form-input"
@@ -332,13 +336,13 @@ export const SupplierListPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   Loading supplier directory...
                 </td>
               </tr>
             ) : filteredSuppliers.length === 0 ? (
               <tr>
-                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="9" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   No suppliers found in this category.
                 </td>
               </tr>
@@ -350,10 +354,10 @@ export const SupplierListPage = () => {
                 return (
                   <tr key={sup._id}>
                     <td data-label="Supplier">
-                      <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {sup.supplierName}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748B', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
                         Added by: {sup.createdByName || 'Admin'}
                       </div>
                     </td>
@@ -367,17 +371,17 @@ export const SupplierListPage = () => {
                           borderRadius: '6px',
                           whiteSpace: 'nowrap',
                           background:
-                            sup.category === 'Domestic' ? '#EFF6FF' :
+                            sup.category === 'Domestic' ? 'var(--bg-EFF6FF)' :
                               sup.category === 'International' ? '#E1F5FE' :
                                 sup.category === 'Flight Consolidator' ? '#E0F7FA' :
                                   sup.category === 'Visa' ? '#DCFCE7' : '#F1F5F9',
                           color:
-                            sup.category === 'Domestic' ? '#2563EB' :
+                            sup.category === 'Domestic' ? 'var(--fg-2563EB)' :
                               sup.category === 'International' ? '#0288D1' :
                                 sup.category === 'Flight Consolidator' ? '#00838F' :
                                   sup.category === 'Visa' ? '#15803D' : '#475569',
                           border:
-                            sup.category === 'Domestic' ? '1px solid #BFDBFE' :
+                            sup.category === 'Domestic' ? '1px solid var(--bd-BFDBFE)' :
                               sup.category === 'International' ? '1px solid #B3E5FC' :
                                 sup.category === 'Flight Consolidator' ? '1px solid #B2EBF2' :
                                   sup.category === 'Visa' ? '1px solid #BBF7D0' : '1px solid #E2E8F0'
@@ -389,15 +393,15 @@ export const SupplierListPage = () => {
 
                     <td data-label="Contact">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                        <span style={{ fontWeight: 600, color: '#0F172A', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ fontWeight: 600, color: 'var(--fg-0F172A)', fontSize: '0.8rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {sup.contactPerson}
                         </span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#0F172A', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: 'var(--fg-0F172A)', whiteSpace: 'nowrap' }}>
                           <Phone size={11} color="#10B981" style={{ flexShrink: 0 }} />
                           <span>{sup.phone}</span>
                         </div>
                         {sup.email && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', color: '#2563EB', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.7rem', color: 'var(--fg-2563EB)', maxWidth: '160px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <Mail size={11} color="#2563EB" style={{ flexShrink: 0 }} />
                             <span>{sup.email}</span>
                           </div>
@@ -406,20 +410,20 @@ export const SupplierListPage = () => {
                     </td>
 
                     <td data-label="Location">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: '#334155', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '0.75rem', color: 'var(--fg-334155)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         <MapPin size={12} color="#2563EB" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sup.city ? `${sup.city}, ` : ''}{sup.country}</span>
                       </div>
                     </td>
 
                     <td data-label="Services" style={{ maxWidth: '160px' }}>
-                      <div style={{ fontSize: '0.75rem', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sup.services}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--fg-475569)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sup.services}>
                         {sup.services || ''}
                       </div>
                     </td>
 
                     <td data-label="Rating">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#F59E0B' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: 'var(--fg-F59E0B)' }}>
                         {[...Array(sup.rating || 5)].map((_, i) => (
                           <Star key={i} size={11} fill="#F59E0B" color="#F59E0B" />
                         ))}
@@ -435,9 +439,9 @@ export const SupplierListPage = () => {
                           fontSize: '0.7rem',
                           fontWeight: 700,
                           whiteSpace: 'nowrap',
-                          background: sup.active ? '#DCFCE7' : '#F1F5F9',
-                          color: sup.active ? '#15803D' : '#64748B',
-                          border: sup.active ? '1px solid #BBF7D0' : '1px solid #E2E8F0'
+                          background: sup.active ? 'var(--bg-DCFCE7)' : 'var(--bg-F1F5F9)',
+                          color: sup.active ? 'var(--fg-15803D)' : 'var(--fg-64748B)',
+                          border: sup.active ? '1px solid var(--bd-BBF7D0)' : '1px solid var(--bd-E2E8F0)'
                         }}
                       >
                         {sup.active ? 'Active' : 'Inactive'}
@@ -456,7 +460,7 @@ export const SupplierListPage = () => {
                             <Edit2 size={12} color="#2563EB" />
                           </button>
                         ) : (
-                          <span title="Locked: Created by another member" style={{ padding: '4px', color: '#94A3B8' }}>
+                          <span title="Locked: Created by another member" style={{ padding: '4px', color: 'var(--fg-94A3B8)' }}>
                             <Lock size={12} />
                           </span>
                         )}
@@ -723,7 +727,7 @@ export const SupplierListPage = () => {
               />
               <span className="slider"></span>
             </label>
-            <span style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--fg-344054)', fontWeight: 600 }}>
               Vendor is Active & Available
             </span>
           </div>

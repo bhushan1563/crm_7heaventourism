@@ -20,9 +20,13 @@
     "build:vercel": "npm run build -w frontend && node scripts/vercel-postbuild.mjs",
     "create-admin": "node scripts/create-admin.mjs",
     "test": "npm test -w backend",
-    "import-csv": "node scripts/import-legacy-csv.mjs"
+    "import-csv": "node scripts/import-legacy-csv.mjs",
+    "backup-db": "node scripts/backup-db.mjs",
+    "restore-db": "node scripts/restore-db.mjs",
+    "package": "node scripts/package-release.mjs"
   },
   "devDependencies": {
-    "concurrently": "^10.0.5"
+    "concurrently": "^10.0.5",
+    "fflate": "^0.8.3"
   }
 }

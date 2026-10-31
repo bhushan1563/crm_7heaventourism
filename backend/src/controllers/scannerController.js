@@ -1,4 +1,9 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import Tesseract from 'tesseract.js';
+
+// eng.traineddata ships in backend/. Pointing the cache there makes OCR work from any working directory and offline.
+const OCR_OPTIONS = { cachePath: path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..') };
 
 // Regex patterns for entity parsing
 const EMAIL_REGEX = /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/i;
@@ -81,7 +86,7 @@ export const processScan = async (req, res) => {
     else if (req.file && req.file.buffer) {
       scanType = 'file_upload';
       try {
-        const ocrResult = await Tesseract.recognize(req.file.buffer, 'eng');
+        const ocrResult = await Tesseract.recognize(req.file.buffer, 'eng', OCR_OPTIONS);
         rawText = ocrResult?.data?.text || '';
       } catch (ocrErr) {
         console.error('Tesseract file OCR error:', ocrErr);
@@ -95,7 +100,7 @@ export const processScan = async (req, res) => {
       const imageBuffer = Buffer.from(base64Data, 'base64');
       
       try {
-        const ocrResult = await Tesseract.recognize(imageBuffer, 'eng');
+        const ocrResult = await Tesseract.recognize(imageBuffer, 'eng', OCR_OPTIONS);
         rawText = ocrResult?.data?.text || '';
       } catch (ocrErr) {
         console.error('Tesseract base64 OCR error:', ocrErr);

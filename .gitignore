@@ -18,3 +18,7 @@ Thumbs.db
 old data/
 *.csv
 !**/fixtures/*.csv
+
+# database backups and release bundles (customer data / build output)
+backups/
+release/

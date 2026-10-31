@@ -118,8 +118,8 @@ export const GuestFollowUpModal = ({
         {/* Guest Summary Card */}
         <div
           style={{
-            background: '#F8FAFC',
-            border: '1px solid #E2E8F0',
+            background: 'var(--bg-F8FAFC)',
+            border: '1px solid var(--bd-E2E8F0)',
             borderRadius: '12px',
             padding: '14px 16px',
             display: 'grid',
@@ -129,25 +129,25 @@ export const GuestFollowUpModal = ({
           }}
         >
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.725rem', fontWeight: 600 }}>Guest & Contact</div>
-            <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{guest.guestNames}</div>
-            <div style={{ color: '#2563EB', fontWeight: 600, fontSize: '0.8rem' }}>{guest.contactNumber}</div>
+            <div style={{ color: 'var(--fg-64748B)', fontSize: '0.725rem', fontWeight: 600 }}>Guest & Contact</div>
+            <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', marginTop: '2px' }}>{guest.guestNames}</div>
+            <div style={{ color: 'var(--fg-2563EB)', fontWeight: 600, fontSize: '0.8rem' }}>{guest.contactNumber}</div>
           </div>
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.725rem', fontWeight: 600 }}>Destination & Pax</div>
-            <div style={{ fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>{guest.destination}</div>
-            <div style={{ color: '#475569' }}>{guest.paxCount || 2} Pax • {formatDate(guest.travelDate)}</div>
+            <div style={{ color: 'var(--fg-64748B)', fontSize: '0.725rem', fontWeight: 600 }}>Destination & Pax</div>
+            <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', marginTop: '2px' }}>{guest.destination}</div>
+            <div style={{ color: 'var(--fg-475569)' }}>{guest.paxCount || 2} Pax • {formatDate(guest.travelDate)}</div>
           </div>
           <div>
-            <div style={{ color: '#64748B', fontSize: '0.725rem', fontWeight: 600 }}>Assigned Team</div>
-            <div style={{ color: '#0F172A', fontWeight: 600, marginTop: '2px' }}>Sales: <strong style={{ color: '#2563EB' }}>{guest.sales}</strong></div>
-            <div style={{ color: '#0F172A', fontWeight: 600 }}>Ops: <strong style={{ color: '#0D9488' }}>{guest.ops}</strong></div>
+            <div style={{ color: 'var(--fg-64748B)', fontSize: '0.725rem', fontWeight: 600 }}>Assigned Team</div>
+            <div style={{ color: 'var(--fg-0F172A)', fontWeight: 600, marginTop: '2px' }}>Sales: <strong style={{ color: 'var(--fg-2563EB)' }}>{guest.sales}</strong></div>
+            <div style={{ color: 'var(--fg-0F172A)', fontWeight: 600 }}>Ops: <strong style={{ color: 'var(--fg-0D9488)' }}>{guest.ops}</strong></div>
           </div>
         </div>
 
         {/* Quick Launch Action Buttons */}
         <div>
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>
+          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--fg-475569)', marginBottom: '8px' }}>
             1-Click Quick Connect:
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
@@ -220,8 +220,8 @@ export const GuestFollowUpModal = ({
         </div>
 
         {/* Log Interaction Section */}
-        <form onSubmit={handleSaveFollowUpLog} style={{ borderTop: '1px solid #E2E8F0', paddingTop: '14px' }}>
-          <div style={{ fontSize: '0.825rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
+        <form onSubmit={handleSaveFollowUpLog} style={{ borderTop: '1px solid var(--bd-E2E8F0)', paddingTop: '14px' }}>
+          <div style={{ fontSize: '0.825rem', fontWeight: 700, color: 'var(--fg-0F172A)', marginBottom: '8px' }}>
             Log Interaction in Guest History:
           </div>
 
@@ -246,7 +246,7 @@ export const GuestFollowUpModal = ({
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#475569', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: 'var(--fg-475569)', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={updateStatus}
@@ -276,8 +276,8 @@ export const GuestFollowUpModal = ({
 
         {/* Past Follow-up History Timeline */}
         {guest.followUpNotes && guest.followUpNotes.length > 0 && (
-          <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.775rem', fontWeight: 700, color: '#64748B', marginBottom: '8px' }}>
+          <div style={{ borderTop: '1px solid var(--bd-E2E8F0)', paddingTop: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.775rem', fontWeight: 700, color: 'var(--fg-64748B)', marginBottom: '8px' }}>
               <History size={13} />
               <span>Past Follow-up Logs ({guest.followUpNotes.length})</span>
             </div>
@@ -286,8 +286,8 @@ export const GuestFollowUpModal = ({
                 <div
                   key={idx}
                   style={{
-                    background: '#F8FAFC',
-                    border: '1px solid #F1F5F9',
+                    background: 'var(--bg-F8FAFC)',
+                    border: '1px solid var(--bd-F1F5F9)',
                     borderRadius: '8px',
                     padding: '6px 10px',
                     fontSize: '0.75rem',
@@ -296,11 +296,11 @@ export const GuestFollowUpModal = ({
                     gap: '2px'
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B', fontSize: '0.7rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--fg-64748B)', fontSize: '0.7rem' }}>
                     <span><strong>{log.by || 'Staff'}</strong> via <em>{log.channel || 'Interaction'}</em></span>
                     <span>{log.date ? new Date(log.date).toLocaleString() : ''}</span>
                   </div>
-                  <div style={{ color: '#0F172A' }}>{log.note}</div>
+                  <div style={{ color: 'var(--fg-0F172A)' }}>{log.note}</div>
                 </div>
               ))}
             </div>

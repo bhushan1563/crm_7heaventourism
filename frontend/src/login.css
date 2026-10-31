@@ -1,0 +1,276 @@
+/* Login screen: brand panel on the left, sign-in card on the right. Stacks below 1024px. */
+
+.login-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  background: var(--bg-primary);
+}
+
+/* ---------- Brand panel ---------- */
+.login-hero {
+  flex: 1.05;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 48px 64px;
+  color: #FFFFFF;
+  background:
+    radial-gradient(900px 500px at 0% 0%, rgba(37, 99, 235, 0.35), transparent 60%),
+    radial-gradient(700px 480px at 100% 100%, rgba(14, 154, 167, 0.22), transparent 60%),
+    #0E1726;
+  overflow: hidden;
+}
+
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.login-brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.login-brand-logo img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.login-brand-name {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.login-brand-tag {
+  font-size: 0.68rem;
+  color: #8D9AB0;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.login-hero-copy {
+  max-width: 520px;
+}
+
+.login-eyebrow {
+  display: inline-block;
+  padding: 5px 12px;
+  border-radius: 9999px;
+  background: rgba(96, 165, 250, 0.14);
+  border: 1px solid rgba(96, 165, 250, 0.3);
+  color: #A8CBFF;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-bottom: 18px;
+}
+
+.login-hero-copy h2 {
+  font-size: 2.5rem;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #FFFFFF;
+  margin-bottom: 16px;
+}
+
+.login-hero-copy p {
+  font-size: 1rem;
+  line-height: 1.65;
+  color: #A9B4C6;
+  margin-bottom: 30px;
+}
+
+.login-features {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.login-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.login-feature-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.login-feature-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #F2F4F7;
+}
+
+.login-feature-text {
+  font-size: 0.75rem;
+  color: #8D9AB0;
+}
+
+.login-hero-footer {
+  font-size: 0.78rem;
+  color: #6B7A91;
+}
+
+/* ---------- Form column ---------- */
+.login-form-col {
+  flex: 0.95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 420px;
+  padding: 36px;
+  border-radius: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-md);
+}
+
+.login-card-head {
+  margin-bottom: 26px;
+}
+
+.login-card-head h3 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.login-card-head p {
+  margin-top: 6px;
+  font-size: 0.875rem;
+  color: var(--neutral-gray);
+}
+
+.login-field {
+  position: relative;
+}
+
+.login-field .form-input {
+  padding-left: 40px;
+  min-height: 42px;
+}
+
+.login-field-icon {
+  position: absolute;
+  left: 13px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.login-field-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.login-field-toggle:hover {
+  background: var(--surface-3);
+  color: var(--neutral-muted);
+}
+
+.login-submit {
+  width: 100%;
+  min-height: 42px;
+  font-size: 0.9rem;
+}
+
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-color);
+}
+
+/* ---------- Tablet / phone: single column, brand strip on top ---------- */
+@media (max-width: 1023.98px) {
+  .login-shell {
+    flex-direction: column;
+  }
+
+  .login-hero {
+    flex: none;
+    padding: 24px 24px 22px;
+    gap: 0;
+  }
+
+  /* The marketing copy is dropped on small screens: the form is what people came for. */
+  .login-hero-copy,
+  .login-hero-footer {
+    display: none;
+  }
+
+  .login-form-col {
+    flex: 1;
+    align-items: flex-start;
+    padding: 24px 16px 40px;
+  }
+
+  .login-card {
+    padding: 28px 22px;
+  }
+}
+
+@media (max-width: 639.98px) {
+  .login-brand-name {
+    font-size: 1.15rem;
+  }
+}

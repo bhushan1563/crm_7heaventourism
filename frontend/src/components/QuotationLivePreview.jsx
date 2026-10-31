@@ -38,10 +38,10 @@ export const QuotationLivePreview = ({ quotation }) => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          backgroundColor: '#f8fafc'
+          backgroundColor: 'var(--bg-F8FAFC)'
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: '#0284c7' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: 'var(--fg-0284C7)' }}>
           <Sparkles size={15} />
           <span>Real-Time PDF Document Preview</span>
         </div>

@@ -88,7 +88,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
           borderRadius: '16px',
           overflow: 'hidden',
           backgroundColor: '#0d1322',
-          border: '1px solid rgba(212, 175, 55, 0.35)',
+          border: '1px solid rgba(255, 255, 255, 0.14)',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
         }}
       >
@@ -98,7 +98,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
           style={{
             padding: '14px 20px',
             backgroundColor: 'rgba(15, 23, 42, 0.95)',
-            borderBottom: '1px solid rgba(212, 175, 55, 0.2)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',

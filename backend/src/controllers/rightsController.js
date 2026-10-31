@@ -1,6 +1,7 @@
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
 import { queryString } from '../utils/security.js';
+import { friendlyMessage } from '../utils/errors.js';
 
 const MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
 const EDITABLE_ROLES = ['Sales', 'Ops', 'Viewer'];
@@ -51,7 +52,7 @@ export const getRights = async (req, res) => {
       data: rights
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to fetch rights: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch rights') });
   }
 };
 
@@ -126,7 +127,7 @@ export const getAllRightsMatrix = async (req, res) => {
       data: matrix
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to build rights matrix: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to build rights matrix') });
   }
 };
 
@@ -164,7 +165,7 @@ export const updateRight = async (req, res) => {
       data: saved
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to update rights: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to update rights') });
   }
 };
 
@@ -227,6 +228,6 @@ export const bulkUpdateUserRights = async (req, res) => {
       data: results
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to bulk update rights: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to bulk update rights') });
   }
 };

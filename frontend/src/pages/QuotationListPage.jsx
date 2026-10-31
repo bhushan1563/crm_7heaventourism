@@ -35,6 +35,7 @@ import QuotationDocumentView from '../components/QuotationDocumentView';
 import { generateQuotationPDF } from '../utils/quotationPdfGenerator';
 import { formatDate } from '../utils/dateHelper';
 import { QUOTATION_STATUS_TABS } from '../config';
+import { getErrorMessage } from '../services/api';
 
 const STATUS_TABS = QUOTATION_STATUS_TABS;
 
@@ -86,7 +87,7 @@ export const QuotationListPage = () => {
         showToast(statsRes.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading quotations: ' + err.message, 'error');
+      showToast('Error loading quotations: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -126,7 +127,7 @@ export const QuotationListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to duplicate quotation: ' + err.message, 'error');
+      showToast('Failed to duplicate quotation: ' + getErrorMessage(err), 'error');
     }
   };
 
@@ -144,7 +145,7 @@ export const QuotationListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to update status: ' + err.message, 'error');
+      showToast('Failed to update status: ' + getErrorMessage(err), 'error');
     } finally {
       setIsUpdatingFollowUp(false);
     }
@@ -164,7 +165,7 @@ export const QuotationListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to delete quotation: ' + err.message, 'error');
+      showToast('Failed to delete quotation: ' + getErrorMessage(err), 'error');
     } finally {
       setIsDeleting(false);
     }
@@ -185,7 +186,7 @@ export const QuotationListPage = () => {
       showToast(`Quotation ${quote.quotationNo} PDF downloaded successfully!`, 'success');
     } catch (err) {
       console.error('Direct download error:', err);
-      showToast('Failed to download PDF: ' + err.message, 'error');
+      showToast('Failed to download PDF: ' + getErrorMessage(err), 'error');
     } finally {
       setDownloadingId(null);
       setDirectDownloadQuote(null);
@@ -198,21 +199,13 @@ export const QuotationListPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* Top Header Banner */}
-      <div
-        className="glass-panel-azure animate-fade-in rs-banner"
-        style={{
-          borderRadius: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '16px'
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>
-            Quotations & Proposals
-          </h1>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">Quotations &amp; Proposals</h2>
+            <span className="count-chip">{filteredQuotations.length} {filteredQuotations.length === 1 ? 'quotation' : 'quotations'}</span>
+          </div>
+          <p className="page-subtitle">Build, send and track itineraries and pricing.</p>
         </div>
 
         <div className="page-actions">
@@ -260,21 +253,21 @@ export const QuotationListPage = () => {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#e0f2fe',
-              border: '1px solid #bae6fd',
+              background: 'var(--bg-E0F2FE)',
+              border: '1px solid var(--bd-BAE6FD)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#00a6f4'
+              color: 'var(--fg-00A6F4)'
             }}
           >
             <FileText size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>
               Total Quotations
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fg-0F172A)', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
               {stats?.total || quotations.length}
             </div>
           </div>
@@ -287,21 +280,21 @@ export const QuotationListPage = () => {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#DCFCE7',
-              border: '1px solid #BBF7D0',
+              background: 'var(--bg-DCFCE7)',
+              border: '1px solid var(--bd-BBF7D0)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#15803D'
+              color: 'var(--fg-15803D)'
             }}
           >
             <CheckCircle2 size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>
               Confirmed Quotes
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#15803D', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fg-15803D)', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
               {stats?.confirmed || quotations.filter(q => q.status === 'Confirmed').length}
             </div>
           </div>
@@ -314,21 +307,21 @@ export const QuotationListPage = () => {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#EFF6FF',
-              border: '1px solid #BFDBFE',
+              background: 'var(--bg-EFF6FF)',
+              border: '1px solid var(--bd-BFDBFE)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#2563EB'
+              color: 'var(--fg-2563EB)'
             }}
           >
             <DollarSign size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>
               Quoted Pipeline
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fg-2563EB)', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
               ₹{(stats?.totalQuotedValue || 0).toLocaleString('en-IN')}
             </div>
           </div>
@@ -341,21 +334,21 @@ export const QuotationListPage = () => {
               width: '44px',
               height: '44px',
               borderRadius: '12px',
-              background: '#FEF3C7',
-              border: '1px solid #FDE68A',
+              background: 'var(--bg-FEF3C7)',
+              border: '1px solid var(--bd-FDE68A)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#D97706'
+              color: 'var(--fg-D97706)'
             }}
           >
             <Clock size={22} />
           </div>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>
               Drafts / In-Flight
             </div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#D97706', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--fg-D97706)', marginTop: '2px', fontFamily: 'var(--font-headline)' }}>
               {(stats?.drafts || 0) + (stats?.sent || 0)}
             </div>
           </div>
@@ -383,11 +376,11 @@ export const QuotationListPage = () => {
               style={{
                 padding: '7px 14px',
                 borderRadius: '8px',
-                border: statusFilter === tab ? '1px solid #2563EB' : '1px solid #E2E8F0',
+                border: statusFilter === tab ? '1px solid #2563EB' : '1px solid var(--bd-E2E8F0)',
                 fontSize: '0.8rem',
                 fontWeight: statusFilter === tab ? 700 : 600,
-                background: statusFilter === tab ? '#2563EB' : '#FFFFFF',
-                color: statusFilter === tab ? '#FFFFFF' : '#475569',
+                background: statusFilter === tab ? '#2563EB' : 'var(--bg-FFFFFF)',
+                color: statusFilter === tab ? '#FFFFFF' : 'var(--fg-475569)',
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
                 boxShadow: statusFilter === tab ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
@@ -403,7 +396,7 @@ export const QuotationListPage = () => {
         <div className="filter-search" style={{ position: 'relative', minWidth: '260px', maxWidth: '380px', flex: 1 }}>
           <Search
             size={16}
-            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }}
+            style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-64748B)' }}
           />
           <input
             type="text"
@@ -434,17 +427,17 @@ export const QuotationListPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
-                  <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px auto', color: '#0ea5e9' }} />
+                <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
+                  <Loader2 size={24} className="animate-spin" style={{ margin: '0 auto 8px auto', color: 'var(--fg-0EA5E9)' }} />
                   <div>Loading luxury quotations...</div>
                 </td>
               </tr>
             ) : filteredQuotations.length === 0 ? (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan={8} style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   <FileText size={32} style={{ margin: '0 auto 10px auto', opacity: 0.4 }} />
-                  <div style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>No quotations found</div>
-                  <div style={{ fontSize: '0.825rem', marginTop: '4px', color: '#64748b' }}>
+                  <div style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--fg-0F172A)' }}>No quotations found</div>
+                  <div style={{ fontSize: '0.825rem', marginTop: '4px', color: 'var(--fg-64748B)' }}>
                     {searchQuery || statusFilter !== 'ALL'
                       ? 'Try adjusting your filters or search terms.'
                       : 'Click "+ Create New Quotation" to generate your first itinerary PDF.'}
@@ -460,7 +453,7 @@ export const QuotationListPage = () => {
                   <tr key={q._id} className="table-row-hover">
                     {/* Quotation No & Type */}
                     <td data-label="Quotation">
-                      <div style={{ fontWeight: 700, color: '#0284c7', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-0284C7)', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         {q.quotationNo}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', flexWrap: 'wrap' }}>
@@ -470,15 +463,15 @@ export const QuotationListPage = () => {
                             fontWeight: 700,
                             padding: '1px 5px',
                             borderRadius: '3px',
-                            backgroundColor: q.quotationType === 'Only Hotel' ? '#ecfdf5' : (q.quotationType === 'Events / Corporate' ? '#fdf4ff' : '#e0f2fe'),
-                            color: q.quotationType === 'Only Hotel' ? '#047857' : (q.quotationType === 'Events / Corporate' ? '#a21caf' : '#0369a1'),
+                            backgroundColor: q.quotationType === 'Only Hotel' ? 'var(--bg-ECFDF5)' : (q.quotationType === 'Events / Corporate' ? 'var(--bg-FDF4FF)' : 'var(--bg-E0F2FE)'),
+                            color: q.quotationType === 'Only Hotel' ? 'var(--fg-047857)' : (q.quotationType === 'Events / Corporate' ? 'var(--fg-A21CAF)' : 'var(--fg-0369A1)'),
                             border: '1px solid currentColor',
                             whiteSpace: 'nowrap'
                           }}
                         >
                           {q.quotationType || 'Package'}
                         </span>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
                           {new Date(q.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -486,27 +479,27 @@ export const QuotationListPage = () => {
 
                     {/* Client & Pax */}
                     <td data-label="Client">
-                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.clientName}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--fg-64748B)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', whiteSpace: 'nowrap' }}>
                         <Users size={11} style={{ flexShrink: 0 }} /> <span>{q.paxDetails || ''}</span>
                       </div>
                     </td>
 
                     {/* Destination & Duration */}
                     <td data-label="Destination">
-                      <div style={{ fontWeight: 700, color: '#00a6f4', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-00A6F4)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.destination}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--fg-64748B)', marginTop: '2px', whiteSpace: 'nowrap' }}>
                         {q.duration || ''}
                       </div>
                     </td>
 
                     {/* Travel Date */}
                     <td data-label="Travel Date">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#334155', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--fg-334155)', whiteSpace: 'nowrap' }}>
                         <Calendar size={12} color="#00a6f4" style={{ flexShrink: 0 }} />
                         <span>{q.travelDate ? formatDate(q.travelDate) : 'Not specified'}</span>
                       </div>
@@ -514,21 +507,21 @@ export const QuotationListPage = () => {
 
                     {/* Pricing */}
                     <td data-label="Pricing">
-                      <div style={{ fontWeight: 700, color: '#059669', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-059669)', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         ₹{(q.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
                       </div>
-                      <div style={{ fontSize: '0.68rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
                         {q.pricing?.grandTotal ? `Total: ₹${q.pricing.grandTotal.toLocaleString('en-IN')}` : 'Incl. GST'}
                       </div>
                     </td>
 
                     {/* Assigned Team */}
                     <td data-label="Team">
-                      <div style={{ fontSize: '0.75rem', color: '#0f172a', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ color: '#64748b' }}>Sales:</span> {q.sales || 'Unassigned'}
+                      <div style={{ fontSize: '0.75rem', color: 'var(--fg-0F172A)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ color: 'var(--fg-64748B)' }}>Sales:</span> {q.sales || 'Unassigned'}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span style={{ color: '#64748b' }}>Ops:</span> {q.ops || 'Unassigned'}
+                      <div style={{ fontSize: '0.7rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span style={{ color: 'var(--fg-64748B)' }}>Ops:</span> {q.ops || 'Unassigned'}
                       </div>
                     </td>
 
@@ -546,7 +539,7 @@ export const QuotationListPage = () => {
                             onClick={() => setFollowUpItem(q)}
                             className="btn btn-outline btn-sm btn-icon"
                             title="Mark for Follow up"
-                            style={{ color: '#EA580C', borderColor: '#FED7AA', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            style={{ color: 'var(--fg-EA580C)', borderColor: 'var(--bd-FED7AA)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
                           >
                             <PhoneForwarded size={13} color="#EA580C" />
                           </button>
@@ -601,7 +594,7 @@ export const QuotationListPage = () => {
                             <Edit size={13} />
                           </button>
                         ) : (
-                          <span title="Locked for Assigned Staff" style={{ padding: '4px', color: '#DC2626', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
+                          <span title="Locked for Assigned Staff" style={{ padding: '4px', color: 'var(--fg-DC2626)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
                             <Lock size={13} />
                           </span>
                         )}

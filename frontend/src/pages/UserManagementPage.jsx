@@ -21,6 +21,8 @@ import { USER_ROLES, USER_ROLE_FILTERS } from '../config';
 import Modal from '../components/Modal';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExportButton from '../components/ExportButton';
+import { getErrorMessage } from '../services/api';
+import Avatar from '../components/Avatar';
 
 export const UserManagementPage = () => {
   const { user: currentUser, can } = useAuth();
@@ -60,7 +62,7 @@ export const UserManagementPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading users: ' + err.message, 'error');
+      showToast('Error loading users: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -103,7 +105,7 @@ export const UserManagementPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to toggle status', 'error');
+      showToast(getErrorMessage(err, 'Failed to toggle status'), 'error');
     }
   };
 
@@ -153,7 +155,7 @@ export const UserManagementPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to create user', 'error');
+      showToast(getErrorMessage(err, 'Failed to create user'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -176,7 +178,7 @@ export const UserManagementPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update user', 'error');
+      showToast(getErrorMessage(err, 'Failed to update user'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -196,7 +198,7 @@ export const UserManagementPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete user', 'error');
+      showToast(getErrorMessage(err, 'Failed to delete user'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -205,37 +207,13 @@ export const UserManagementPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header & Controls */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '20px 24px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-          position: 'relative',
-          zIndex: 20
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 700 }}>
-              User Management
-            </h2>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '9999px',
-                background: 'rgba(212, 175, 55, 0.15)',
-                color: '#f5df88'
-              }}
-            >
-              {filteredUsers.length} Unlimited Users Active
-            </span>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">User Management</h2>
+            <span className="count-chip">{filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}</span>
           </div>
+          <p className="page-subtitle">Create staff accounts and assign roles.</p>
         </div>
 
         <div className="page-actions">
@@ -284,7 +262,7 @@ export const UserManagementPage = () => {
         }}
       >
         <div className="filter-search" style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-64748B)' }} />
           <input
             type="text"
             className="form-input"
@@ -325,13 +303,13 @@ export const UserManagementPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   Loading user directory...
                 </td>
               </tr>
             ) : filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   No users found.
                 </td>
               </tr>
@@ -340,28 +318,13 @@ export const UserManagementPage = () => {
                   <tr key={u._id}>
                     <td data-label="User">
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div
-                          style={{
-                            width: '34px',
-                            height: '34px',
-                            borderRadius: '50%',
-                            background: u.role === 'Admin' ? 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' : '#EFF6FF',
-                            color: u.role === 'Admin' ? '#FFFFFF' : '#2563EB',
-                            fontWeight: 700,
-                            fontSize: '0.85rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {u.firstName ? u.firstName[0] : 'U'}
-                        </div>
+                        <Avatar user={u} size={34} />
                         <div>
-                          <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.875rem' }}>
+                          <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.875rem' }}>
                             {u.firstName} {u.lastName}
                           </div>
                           {u.phone && (
-                            <div style={{ fontSize: '0.725rem', color: '#64748B' }}>
+                            <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)' }}>
                               {u.phone}
                             </div>
                           )}
@@ -370,17 +333,17 @@ export const UserManagementPage = () => {
                     </td>
 
                     <td data-label="Email">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: '#475569' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.825rem', color: 'var(--fg-475569)' }}>
                         <Mail size={13} color="#2563EB" />
                         <span>{u.email}</span>
                       </div>
                     </td>
 
-                    <td data-label="First Name" style={{ color: '#0F172A', fontWeight: 600 }}>
+                    <td data-label="First Name" style={{ color: 'var(--fg-0F172A)', fontWeight: 600 }}>
                       {u.firstName}
                     </td>
 
-                    <td data-label="Last Name" style={{ color: '#0F172A', fontWeight: 600 }}>
+                    <td data-label="Last Name" style={{ color: 'var(--fg-0F172A)', fontWeight: 600 }}>
                       {u.lastName}
                     </td>
 
@@ -392,15 +355,15 @@ export const UserManagementPage = () => {
                           padding: '3px 8px',
                           borderRadius: '6px',
                           background:
-                            u.role === 'Admin' ? '#EFF6FF' :
+                            u.role === 'Admin' ? 'var(--bg-EFF6FF)' :
                               u.role === 'Sales' ? '#E0F7FA' :
                                 u.role === 'Ops' ? '#DCFCE7' : '#F1F5F9',
                           color:
-                            u.role === 'Admin' ? '#2563EB' :
+                            u.role === 'Admin' ? 'var(--fg-2563EB)' :
                               u.role === 'Sales' ? '#00838F' :
                                 u.role === 'Ops' ? '#15803D' : '#475569',
                           border:
-                            u.role === 'Admin' ? '1px solid #BFDBFE' :
+                            u.role === 'Admin' ? '1px solid var(--bd-BFDBFE)' :
                               u.role === 'Sales' ? '1px solid #B2EBF2' :
                                 u.role === 'Ops' ? '1px solid #BBF7D0' : '1px solid #E2E8F0'
                         }}
@@ -425,7 +388,7 @@ export const UserManagementPage = () => {
                           style={{
                             fontSize: '0.75rem',
                             fontWeight: 600,
-                            color: u.active ? '#34d399' : '#94a3b8'
+                            color: u.active ? 'var(--chip-green-fg)' : 'var(--fg-94A3B8)'
                           }}
                         >
                           {u.active ? 'Active' : 'Inactive'}
@@ -526,11 +489,13 @@ export const UserManagementPage = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div className="form-group">
-              <label className="form-label">Password *</label>
+              <label className="form-label">Password * <span style={{ fontWeight: 400, color: 'var(--fg-94A3B8)' }}>(min. 8 characters)</span></label>
               <input
                 type="password"
                 className="form-input"
                 placeholder="••••••••"
+                minLength={8}
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 required
@@ -558,7 +523,7 @@ export const UserManagementPage = () => {
               />
               <span className="slider"></span>
             </label>
-            <span style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--fg-344054)', fontWeight: 600 }}>
               User is Active & Granted Access
             </span>
           </div>
@@ -641,11 +606,13 @@ export const UserManagementPage = () => {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
             <div className="form-group">
-              <label className="form-label">New Password (Leave blank to keep current)</label>
+              <label className="form-label">New Password <span style={{ fontWeight: 400, color: 'var(--fg-94A3B8)' }}>(leave blank to keep current; min. 8 characters)</span></label>
               <input
                 type="password"
                 className="form-input"
                 placeholder="••••••••"
+                minLength={8}
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               />
@@ -671,7 +638,7 @@ export const UserManagementPage = () => {
               />
               <span className="slider"></span>
             </label>
-            <span style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: 600 }}>
+            <span style={{ fontSize: '0.85rem', color: 'var(--fg-344054)', fontWeight: 600 }}>
               User Account Active
             </span>
           </div>

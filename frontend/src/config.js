@@ -68,24 +68,24 @@ export const RIGHTS_MODULES = [
 
 
 export const SUPPLIER_CATEGORIES = [
-    { value: 'Domestic', label: 'Domestic', icon: '🏠', color: '#2563EB' },
-    { value: 'International', label: 'International', icon: '✈️', color: '#0288D1' },
-    { value: 'Flight Consolidator', label: 'Flight Consolidator', icon: '🛫', color: '#26C6DA' },
-    { value: 'Visa', label: 'Visa', icon: '🛂', color: '#10B981' },
-    { value: 'General', label: 'General', icon: '🌐', color: '#64748B' }
+    { value: 'Domestic', label: 'Domestic', color: '#2563EB' },
+    { value: 'International', label: 'International', color: '#0288D1' },
+    { value: 'Flight Consolidator', label: 'Flight Consolidator', color: '#26C6DA' },
+    { value: 'Visa', label: 'Visa', color: '#10B981' },
+    { value: 'General', label: 'General', color: '#64748B' }
 ];
 
 export const SUPPLIER_CATEGORY_OPTIONS = [
-    { value: 'ALL', label: 'All Suppliers', icon: '🌐' },
+    { value: 'ALL', label: 'All Suppliers' },
     ...SUPPLIER_CATEGORIES
 ];
 
 export const SUPPLIER_RATINGS = [
-    { value: '5', label: '⭐⭐⭐⭐⭐ 5 Stars' },
-    { value: '4', label: '⭐⭐⭐⭐ 4 Stars' },
-    { value: '3', label: '⭐⭐⭐ 3 Stars' },
-    { value: '2', label: '⭐⭐ 2 Stars' },
-    { value: '1', label: '⭐ 1 Star' }
+    { value: '5', label: '5 Stars - Excellent' },
+    { value: '4', label: '4 Stars - Very good' },
+    { value: '3', label: '3 Stars - Good' },
+    { value: '2', label: '2 Stars - Fair' },
+    { value: '1', label: '1 Star - Poor' }
 ];
 
 export const FOLLOW_UP_TEMPLATES = [

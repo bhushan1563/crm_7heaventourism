@@ -22,8 +22,8 @@ export const NotFoundPage = () => {
           width: '72px',
           height: '72px',
           borderRadius: '50%',
-          background: '#EFF6FF',
-          color: '#2563EB',
+          background: 'var(--bg-EFF6FF)',
+          color: 'var(--fg-2563EB)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -32,7 +32,7 @@ export const NotFoundPage = () => {
       >
         <Compass size={36} />
       </div>
-      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px', fontFamily: 'var(--font-headline)' }}>
+      <h2 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--fg-0F172A)', marginBottom: '8px', fontFamily: 'var(--font-headline)' }}>
         404 - Page Not Found
       </h2>
       <button onClick={() => navigate('/dashboard')} className="btn btn-primary">

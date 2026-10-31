@@ -1,0 +1,117 @@
+/* ==========================================================================
+   Theme tokens: light (default) and dark.
+   The dark block is scoped with html[data-theme='dark'] so it always out-ranks the base :root tokens in index.css.
+   data-theme is set before first paint by public/theme-init.js and kept in sync by ThemeContext.
+   (The per-colour --fg-* / --bg-* / --bd-* variables used by the screens' inline styles are in theme-colors.css.)
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --surface: #FFFFFF;
+  --surface-2: #F9FAFB;
+  --surface-3: #F2F4F7;
+  --tint-red-field: #FFFBFA;
+
+  /* Brand-coloured text / borders that must stay readable on both themes */
+  --primary-text: #1D4ED8;
+  --primary-border: #B2CCFF;
+  --primary-border-soft: #D6E4FF;
+  --primary-tint-hover: #DBEAFE;
+
+  /* Misc controls */
+  --border-hover: #98A2B3;
+  --scrollbar: #C5CCD8;
+  --scrollbar-hover: #98A2B3;
+  --switch-off: #D0D5DD;
+
+  /* Status chips and tinted panels: background / text / border */
+  --chip-amber-bg: #FFFAEB;  --chip-amber-fg: #B54708;  --chip-amber-bd: #FEDF89;
+  --chip-orange-bg: #FFF4ED; --chip-orange-fg: #B93815; --chip-orange-bd: #F9DBAF;
+  --chip-blue-bg: #EFF8FF;   --chip-blue-fg: #175CD3;   --chip-blue-bd: #B2DDFF;
+  --chip-purple-bg: #F4F3FF; --chip-purple-fg: #5925DC; --chip-purple-bd: #D9D6FE;
+  --chip-green-bg: #ECFDF3;  --chip-green-fg: #027A48;  --chip-green-bd: #ABEFC6;
+  --chip-teal-bg: #F0FDF9;   --chip-teal-fg: #107569;   --chip-teal-bd: #99F6E0;
+  --chip-red-bg: #FEF3F2;    --chip-red-fg: #B42318;    --chip-red-bd: #FECDCA;
+}
+
+html[data-theme='dark'] {
+  color-scheme: dark; /* native controls, scrollbars and date pickers follow */
+
+  --bg-primary: #0B1220;
+  --bg-secondary: #162235;
+  --bg-card: #121B2C;
+  --bg-card-hover: #162235;
+  --bg-sidebar: #080E19;
+  --bg-sidebar-active: rgba(59, 130, 246, 0.2);
+
+  --surface: #121B2C;
+  --surface-2: #162235;
+  --surface-3: #1B2A40;
+  --tint-red-field: rgba(240, 68, 56, 0.1);
+
+  --border-color: #25324A;
+  --border-strong: #31405C;
+  --border-subtle: #1D2A40;
+  --border-hover: #4A5B7A;
+
+  --text-primary: #E8ECF4;
+  --text-secondary: #B6C0D2;
+  --text-muted: #7C8AA3;
+
+  --neutral-dark: #E8ECF4;
+  --neutral-slate: #D5DCE8;
+  --neutral-muted: #C5CEDD;
+  --neutral-subtle: #B6C0D2;
+  --neutral-gray: #94A0B8;
+  --neutral-light: #1B2A40;
+
+  --primary-text: #7DB0FF;
+  --primary-tint: rgba(59, 130, 246, 0.14);
+  --primary-tint-hover: rgba(59, 130, 246, 0.24);
+  --primary-border: rgba(96, 165, 250, 0.4);
+  --primary-border-soft: rgba(96, 165, 250, 0.3);
+  --primary-glow: rgba(96, 165, 250, 0.3);
+  --secondary-tint: rgba(14, 154, 167, 0.16);
+  --tertiary-tint: rgba(14, 165, 233, 0.14);
+
+  --scrollbar: #33425E;
+  --scrollbar-hover: #4A5B7A;
+  --switch-off: #3A4A66;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 16px 40px -8px rgba(0, 0, 0, 0.65);
+
+  --chip-amber-bg: rgba(247, 144, 9, 0.14);  --chip-amber-fg: #FDB022;  --chip-amber-bd: rgba(247, 144, 9, 0.38);
+  --chip-orange-bg: rgba(255, 105, 45, 0.14); --chip-orange-fg: #FF8C5A; --chip-orange-bd: rgba(255, 105, 45, 0.38);
+  --chip-blue-bg: rgba(46, 144, 250, 0.14);  --chip-blue-fg: #6CB4FF;   --chip-blue-bd: rgba(46, 144, 250, 0.38);
+  --chip-purple-bg: rgba(122, 90, 248, 0.16); --chip-purple-fg: #A89BFF; --chip-purple-bd: rgba(122, 90, 248, 0.4);
+  --chip-green-bg: rgba(18, 183, 106, 0.14); --chip-green-fg: #47D39B;   --chip-green-bd: rgba(18, 183, 106, 0.38);
+  --chip-teal-bg: rgba(14, 154, 167, 0.16);  --chip-teal-fg: #4FD1C5;    --chip-teal-bd: rgba(14, 154, 167, 0.4);
+  --chip-red-bg: rgba(240, 68, 56, 0.14);    --chip-red-fg: #F97066;     --chip-red-bd: rgba(240, 68, 56, 0.38);
+}
+
+/* The sidebar is dark in both themes; only its shade changes. Inputs inside dark surfaces get a calmer field colour. */
+html[data-theme='dark'] .form-input,
+html[data-theme='dark'] .form-select,
+html[data-theme='dark'] .form-textarea,
+html[data-theme='dark'] .search-bar-container {
+  background: #0F1828;
+}
+
+html[data-theme='dark'] .form-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
+/* Smooth the switch, but not on first paint. */
+html.theme-ready body,
+html.theme-ready .app-navbar,
+html.theme-ready .section-card,
+html.theme-ready .glass-panel,
+html.theme-ready .kpi-card,
+html.theme-ready .table-container {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}

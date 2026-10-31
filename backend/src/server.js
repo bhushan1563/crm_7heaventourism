@@ -163,8 +163,8 @@ const startServer = async () => {
     await connectDB();
     await seedDatabase();
 
-    const server = app.listen(config.port, () => {
-      console.log(`[7Heaven] Server listening on port ${config.port} (${config.isProduction ? 'production' : 'development'})`);
+    const server = app.listen(config.port, config.host, () => {
+      console.log(`[7Heaven] Server listening on ${config.host}:${config.port} (${config.isProduction ? 'production' : 'development'})`);
     });
 
     // Let in-flight requests finish and close the database cleanly on deploys/restarts (PM2 sends SIGINT/SIGTERM).

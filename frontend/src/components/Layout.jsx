@@ -35,7 +35,6 @@ export const Layout = () => {
     <div className="app-shell">
       <Sidebar
         isCollapsed={isCollapsed && !isMobile}
-        setIsCollapsed={setIsCollapsed}
         isMobile={isMobile}
         isOpen={mobileOpen}
         onClose={() => setMobileOpen(false)}

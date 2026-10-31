@@ -18,6 +18,7 @@ import { useToast } from '../context/ToastContext';
 import rightsService from '../services/rightsService';
 import userService from '../services/userService';
 import { USER_ROLES, RIGHTS_MODULES } from '../config';
+import { getErrorMessage } from '../services/api';
 
 const emptyPermissions = () => {
   const permissions = {};
@@ -76,7 +77,7 @@ export const RightsPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to load user staff list: ' + err.message, 'error');
+      showToast('Failed to load user staff list: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -92,7 +93,7 @@ export const RightsPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading user permissions: ' + err.message, 'error');
+      showToast('Error loading user permissions: ' + getErrorMessage(err), 'error');
     }
   };
 
@@ -106,7 +107,7 @@ export const RightsPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading role permissions: ' + err.message, 'error');
+      showToast('Error loading role permissions: ' + getErrorMessage(err), 'error');
     }
   };
 
@@ -177,7 +178,7 @@ export const RightsPage = () => {
         showToast(res.message || 'Failed to save security rights.', 'error');
       }
     } catch (err) {
-      showToast('Failed to save security rights: ' + (err.response?.data?.message || err.message), 'error');
+      showToast('Failed to save security rights: ' + getErrorMessage(err), 'error');
     } finally {
       setSaving(false);
     }
@@ -186,13 +187,13 @@ export const RightsPage = () => {
   if (currentUser?.role !== 'Admin' && currentUser?.role !== 'SuperAdmin') {
     return (
       <div className="glass-panel" style={{ padding: '60px 30px', textAlign: 'center', margin: '40px auto', maxWidth: '520px' }}>
-        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#FEE2E2', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px auto' }}>
+        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'var(--bg-FEE2E2)', color: 'var(--fg-DC2626)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px auto' }}>
           <Lock size={32} />
         </div>
-        <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px', fontFamily: 'var(--font-headline)' }}>
+        <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--fg-0F172A)', marginBottom: '8px', fontFamily: 'var(--font-headline)' }}>
           Administrator Access Only
         </h2>
-        <p style={{ color: '#64748B', fontSize: '0.875rem', marginBottom: '24px', lineHeight: 1.6 }}>
+        <p style={{ color: 'var(--fg-64748B)', fontSize: '0.875rem', marginBottom: '24px', lineHeight: 1.6 }}>
           The Rights & Security policy matrix is restricted to Administrator accounts. Your current role is <strong>{currentUser?.role}</strong>.
         </p>
         <button onClick={() => window.location.href = '/dashboard'} className="btn btn-primary">
@@ -205,39 +206,16 @@ export const RightsPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header & Controls */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '20px 24px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px'
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', fontFamily: 'var(--font-headline)' }}>
-              Rights & Security Matrix
-            </h2>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '9999px',
-                background: '#DCFCE7',
-                color: '#15803D',
-                border: '1px solid #BBF7D0'
-              }}
-            >
-              Enterprise RBAC Active
-            </span>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">Rights &amp; Security Matrix</h2>
+            <span className="count-chip" style={{ background: 'var(--bg-ECFDF3)', color: 'var(--fg-027A48)', borderColor: 'var(--bd-ABEFC6)' }}>Enterprise RBAC active</span>
           </div>
+          <p className="page-subtitle">Control exactly what each person and role can see, change and download.</p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div className="page-actions">
           <button
             onClick={handleSaveRights}
             className="btn btn-primary"
@@ -312,8 +290,8 @@ export const RightsPage = () => {
                     gap: '8px',
                     padding: '8px 14px',
                     borderRadius: '10px',
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0',
+                    background: 'var(--bg-F8FAFC)',
+                    border: '1px solid var(--bd-E2E8F0)',
                     marginTop: '16px'
                   }}
                 >
@@ -325,8 +303,8 @@ export const RightsPage = () => {
                       background: selectedUser.active ? '#10B981' : '#EF4444'
                     }}
                   />
-                  <span style={{ fontSize: '0.8rem', color: '#475569' }}>
-                    Department: <strong style={{ color: '#2563EB' }}>{selectedUser.role}</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--fg-475569)' }}>
+                    Department: <strong style={{ color: 'var(--fg-2563EB)' }}>{selectedUser.role}</strong>
                   </span>
                 </div>
               )}
@@ -356,15 +334,15 @@ export const RightsPage = () => {
         className="glass-panel"
         style={{
           padding: '14px 20px',
-          background: '#EFF6FF',
-          border: '1px solid #BFDBFE',
+          background: 'var(--bg-EFF6FF)',
+          border: '1px solid var(--bd-BFDBFE)',
           display: 'flex',
           alignItems: 'center',
           gap: '12px'
         }}
       >
         <Info size={20} color="#2563EB" style={{ flexShrink: 0 }} />
-        <div style={{ fontSize: '0.8rem', color: '#1E40AF', lineHeight: 1.4 }}>
+        <div style={{ fontSize: '0.8rem', color: 'var(--fg-1E40AF)', lineHeight: 1.4 }}>
           <strong>Configured Policies:</strong> "All data can be seen by any user" (Read enabled by default). Saving <strong>One user</strong> changes only that member. Saving <strong>Whole role</strong> updates the role and every member in Sales, Ops, or Viewer. Admin stays unrestricted.
         </div>
       </div>
@@ -399,14 +377,14 @@ export const RightsPage = () => {
                   <span>Delete</span>
                 </div>
               </th>
-              <th style={{ textAlign: 'center', background: '#EFF6FF' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#2563EB' }}>
+              <th style={{ textAlign: 'center', background: 'var(--bg-EFF6FF)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--fg-2563EB)' }}>
                   <Download size={13} />
                   <span>Data Download / Export</span>
                 </div>
               </th>
-              <th style={{ textAlign: 'center', background: '#FEF2F2' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: '#DC2626' }}>
+              <th style={{ textAlign: 'center', background: 'var(--bg-FEF2F2)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', color: 'var(--fg-DC2626)' }}>
                   <Lock size={13} />
                   <span>Edit Others' Data</span>
                 </div>
@@ -421,7 +399,7 @@ export const RightsPage = () => {
               return (
                 <tr key={mod.value}>
                   <td>
-                    <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>
+                    <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.9rem' }}>
                       {mod.label}
                     </div>
                   </td>
@@ -479,7 +457,7 @@ export const RightsPage = () => {
                   </td>
 
                   {/* Special: Data Download Restriction */}
-                  <td style={{ textAlign: 'center', background: '#F8FAFC' }}>
+                  <td style={{ textAlign: 'center', background: 'var(--bg-F8FAFC)' }}>
                     <label className="switch">
                       <input
                         type="checkbox"
@@ -492,7 +470,7 @@ export const RightsPage = () => {
                   </td>
 
                   {/* Special: Edit Others' Data Restriction */}
-                  <td style={{ textAlign: 'center', background: '#FEF2F2' }}>
+                  <td style={{ textAlign: 'center', background: 'var(--bg-FEF2F2)' }}>
                     <label className="switch">
                       <input
                         type="checkbox"

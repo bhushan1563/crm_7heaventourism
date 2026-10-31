@@ -185,8 +185,8 @@ const mapQuotations = (rows) => {
     if (!status) { issue('quotation', r.__row, `${quotationNo}: unknown status "${r['Status']}", imported as Draft`); status = 'Draft'; }
     const quotationType = QUOTE_TYPES.find((t) => t.toLowerCase() === r['Type'].toLowerCase()) || 'Package';
     out.push({
-      quotationNo, quotationType, clientName: r['Client Name'], destination: r['Destination'], duration: r['Duration'] || undefined,
-      paxDetails: r['Pax'] || undefined, travelDate: parseDate(r['Travel Date']), status, sales: r['Sales Agent'], ops: r['Ops Agent'],
+      quotationNo, quotationType, clientName: r['Client Name'], destination: r['Destination'], duration: r['Duration'],
+      paxDetails: r['Pax'], travelDate: parseDate(r['Travel Date']), status, sales: r['Sales Agent'], ops: r['Ops Agent'],
       pricing: { totalCostPerPerson: num(r['Cost Per Person']), grandTotal: num(r['Grand Total']) }
     });
   }

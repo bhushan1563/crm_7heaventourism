@@ -53,10 +53,15 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const user = await UserModel.findById(decoded.id).select('-password');
+    const user = await UserModel.findById(decoded.id).select('-password -avatar');
 
     if (!user || user.deleted) {
       return unauthorized(res, 'User belonging to this token no longer exists.');
+    }
+
+    // A password change (by the user or an admin) ends every session that was issued before it.
+    if (user.passwordChangedAt && decoded.iat * 1000 < user.passwordChangedAt.getTime()) {
+      return unauthorized(res, 'Your password was changed. Please sign in again.');
     }
 
     if (!user.active) {

@@ -3,21 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users,
   Building2,
-  CheckCircle2,
   Clock,
   DollarSign,
   ScanLine,
   ArrowRight,
-  Sparkles,
   MapPin
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import StatCard from '../components/StatCard';
 import StatusBadge from '../components/StatusBadge';
+import CategoryIcon from '../components/CategoryIcon';
 import guestService from '../services/guestService';
 import supplierService from '../services/supplierService';
 import { formatDate } from '../utils/dateHelper';
+import { getErrorMessage } from '../services/api';
+
+const greeting = () => {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
 
 export const DashboardPage = () => {
   const { user } = useAuth();
@@ -42,7 +49,7 @@ export const DashboardPage = () => {
       if (sStatsRes.success) {setSupplierStats(sStatsRes.data);} else {showToast(sStatsRes.message, 'error');}
       if (guestsRes.success) {setRecentGuests(guestsRes.data.slice(0, 5));} else {showToast(guestsRes.message, 'error');}
     } catch (err) {
-      showToast('Error loading dashboard metrics: ' + err.message, 'error');
+      showToast('Error loading dashboard metrics: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -52,57 +59,56 @@ export const DashboardPage = () => {
     fetchData();
   }, []);
 
+  const stages = [
+    { label: 'Under Process', count: guestStats?.underProcess || 0, color: '#F79009' },
+    { label: 'Quoted', count: guestStats?.quoted || 0, color: '#2E90FA' },
+    { label: 'Confirmed', count: guestStats?.confirmed || 0, color: '#7A5AF8' },
+    { label: 'Confirmed & Payment received', count: guestStats?.confirmedAndPaid || 0, color: '#12B76A' },
+    { label: 'Travelled', count: guestStats?.travelled || 0, color: 'var(--fg-0E9AA7)' },
+    { label: 'Cancelled', count: guestStats?.cancelled || 0, color: '#F04438' }
+  ];
+
+  const categories = [
+    { cat: 'Domestic', count: supplierStats?.domestic || 0 },
+    { cat: 'International', count: supplierStats?.international || 0 },
+    { cat: 'Flight Consolidator', count: supplierStats?.flightConsolidator || 0 },
+    { cat: 'Visa', count: supplierStats?.visa || 0 },
+    { cat: 'General', count: supplierStats?.general || 0 }
+  ];
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-      {/* Welcome Banner */}
-      <div
-        className="glass-panel-hero animate-fade-in rs-banner"
-        style={{
-          padding: '28px 32px',
-          borderRadius: '16px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}
-      >
-        <div style={{ zIndex: 1, maxWidth: '650px' }}>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em', fontFamily: 'var(--font-headline)' }}>
-            Welcome, {user?.firstName} {user?.lastName}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }} aria-busy={loading}>
+      {/* Page header */}
+      <div className="page-header animate-fade-in">
+        <div className="page-header-text">
+          <h2 className="page-title">
+            {greeting()}, {user?.firstName}
           </h2>
-          <p style={{ color: '#94A3B8', fontSize: '0.9rem', marginTop: '6px', lineHeight: 1.5 }}>
-            Here is your live inquiry pipeline, categorized vendor records, and document scanner activity for today.
+          <p className="page-subtitle">
+            Your live inquiry pipeline, supplier directory and scanner activity at a glance.
           </p>
         </div>
 
-        <div className="page-actions" style={{ zIndex: 1 }}>
-          <button
-            onClick={() => navigate('/scanner')}
-            className="btn btn-primary"
-          >
-            <ScanLine size={16} />
-            <span>Launch Scanner</span>
-          </button>
-          <button
-            onClick={() => navigate('/guests')}
-            className="btn btn-outline"
-          >
+        <div className="page-actions">
+          <button onClick={() => navigate('/guests')} className="btn btn-outline">
             <span>View All Inquiries</span>
-            <ArrowRight size={16} />
+            <ArrowRight size={15} />
+          </button>
+          <button onClick={() => navigate('/scanner')} className="btn btn-primary">
+            <ScanLine size={15} />
+            <span>Launch Scanner</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      {/* KPI cards */}
+      <div className="kpi-grid">
         <StatCard
           title="Total Inquiries"
           value={guestStats?.total || 0}
           subtitle="All generated leads"
           icon={Users}
           color="#2563EB"
-          trend="+12% this month"
         />
 
         <StatCard
@@ -110,7 +116,7 @@ export const DashboardPage = () => {
           value={guestStats?.underProcess || 0}
           subtitle="Pending quotes & discussion"
           icon={Clock}
-          color="#F59E0B"
+          color="#F79009"
         />
 
         <StatCard
@@ -118,64 +124,52 @@ export const DashboardPage = () => {
           value={guestStats?.confirmedAndPaid || 0}
           subtitle="Ready for operations execution"
           icon={DollarSign}
-          color="#10B981"
-          trend="Highest Conversion"
+          color="#12B76A"
         />
 
         <StatCard
           title="Active Suppliers"
           value={supplierStats?.total || 0}
-          subtitle="Across 5 global categories"
+          subtitle="Across 5 supplier categories"
           icon={Building2}
-          color="#0288D1"
+          color="#0284C7"
         />
       </div>
 
-      {/* Pipeline Status Breakdown & Category Grid */}
+      {/* Pipeline breakdown + supplier categories */}
       <div className="rs-two-col" style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '20px' }}>
-        {/* Status Pipeline Visual */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <section className="section-card">
+          <div className="section-card-header">
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', fontFamily: 'var(--font-headline)' }}>
-                Inquiry Stage Distribution
-              </h3>
-              <p style={{ fontSize: '0.775rem', color: '#64748B' }}>
-                Real-time conversion tracking across life-cycle stages
-              </p>
+              <h3 className="section-card-title">Inquiry Stage Distribution</h3>
+              <p className="section-card-sub">Conversion tracking across the inquiry life-cycle</p>
             </div>
-            <span style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700, background: '#EFF6FF', padding: '4px 10px', borderRadius: '9999px' }}>
-              Live Synced
-            </span>
+            <span className="count-chip">{guestStats?.total || 0} total</span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {[
-              { label: 'Under Process', count: guestStats?.underProcess || 0, color: '#F59E0B' },
-              { label: 'Quoted', count: guestStats?.quoted || 0, color: '#2563EB' },
-              { label: 'Confirmed', count: guestStats?.confirmed || 0, color: '#8B5CF6' },
-              { label: 'Confirmed & Payment received', count: guestStats?.confirmedAndPaid || 0, color: '#10B981' },
-              { label: 'Travelled', count: guestStats?.travelled || 0, color: '#26C6DA' },
-              { label: 'Cancelled', count: guestStats?.cancelled || 0, color: '#DC2626' }
-            ].map((stage) => {
+          <div style={{ padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {stages.map((stage) => {
               const total = guestStats?.total || 1;
               const pct = Math.round((stage.count / total) * 100) || 0;
 
               return (
                 <div key={stage.label}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.825rem', marginBottom: '6px' }}>
-                    <span style={{ color: '#334155', fontWeight: 600 }}>{stage.label}</span>
-                    <span style={{ color: stage.color, fontWeight: 700 }}>
-                      {stage.count} ({pct}%)
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontSize: '0.8125rem', marginBottom: '7px' }}>
+                    <span style={{ color: 'var(--neutral-muted)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: stage.color, flexShrink: 0 }} />
+                      {stage.label}
+                    </span>
+                    <span style={{ color: 'var(--neutral-gray)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      <span style={{ color: 'var(--text-primary)' }}>{stage.count}</span> · {pct}%
                     </span>
                   </div>
-                  <div style={{ height: '8px', width: '100%', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ height: '8px', width: '100%', background: 'var(--bg-F2F4F7)', borderRadius: '9999px', overflow: 'hidden' }}>
                     <div
                       style={{
                         height: '100%',
                         width: `${pct}%`,
                         background: stage.color,
-                        borderRadius: '4px',
+                        borderRadius: '9999px',
                         transition: 'width 0.6s ease'
                       }}
                     />
@@ -184,88 +178,64 @@ export const DashboardPage = () => {
               );
             })}
           </div>
-        </div>
+        </section>
 
-        {/* Supplier Category Summary */}
-        <div className="glass-panel" style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <section className="section-card">
+          <div className="section-card-header">
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', fontFamily: 'var(--font-headline)' }}>
-                Suppliers by 5 Categories
-              </h3>
-              <p style={{ fontSize: '0.775rem', color: '#64748B' }}>
-                Vendor network segregation
-              </p>
+              <h3 className="section-card-title">Suppliers by Category</h3>
+              <p className="section-card-sub">Vendor network segregation</p>
             </div>
             <button
               onClick={() => navigate('/suppliers')}
               className="btn-icon btn-outline btn-sm"
               title="View Suppliers"
+              aria-label="View suppliers"
             >
               <ArrowRight size={14} />
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {[
-              { cat: 'Domestic', count: supplierStats?.domestic || 0, icon: '🏠', color: '#2563EB', bg: '#EFF6FF' },
-              { cat: 'International', count: supplierStats?.international || 0, icon: '✈️', color: '#0288D1', bg: '#E1F5FE' },
-              { cat: 'Flight Consolidator', count: supplierStats?.flightConsolidator || 0, icon: '🛫', color: '#26C6DA', bg: '#E0F7FA' },
-              { cat: 'Visa', count: supplierStats?.visa || 0, icon: '🛂', color: '#10B981', bg: '#ECFDF5' },
-              { cat: 'General', count: supplierStats?.general || 0, icon: '🌐', color: '#64748B', bg: '#F1F5F9' }
-            ].map((item) => (
+          <div style={{ padding: '8px 12px 12px', display: 'flex', flexDirection: 'column' }}>
+            {categories.map((item) => (
               <div
                 key={item.cat}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  padding: '10px 14px',
-                  borderRadius: '10px',
-                  background: '#F8FAFC',
-                  border: '1px solid #E2E8F0'
+                  gap: '12px',
+                  padding: '10px 8px',
+                  borderBottom: '1px solid var(--border-subtle)'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '1.1rem' }}>{item.icon}</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0F172A' }}>{item.cat}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <CategoryIcon category={item.cat} size={16} tile />
+                  <span style={{ fontSize: '0.855rem', fontWeight: 600, color: 'var(--text-primary)' }}>{item.cat}</span>
                 </div>
-                <span
-                  style={{
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    padding: '2px 10px',
-                    borderRadius: '6px',
-                    background: item.bg,
-                    color: item.color
-                  }}
-                >
-                  {item.count} Vendors
+                <span style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--neutral-subtle)' }}>
+                  {item.count} {item.count === 1 ? 'vendor' : 'vendors'}
                 </span>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       </div>
 
-      {/* Recent Inquiries Quick Table */}
-      <div className="glass-panel" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+      {/* Recent inquiries */}
+      <section className="section-card">
+        <div className="section-card-header">
           <div>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', fontFamily: 'var(--font-headline)' }}>
-              Recent Guest Inquiries
-            </h3>
+            <h3 className="section-card-title">Recent Guest Inquiries</h3>
+            <p className="section-card-sub">The five newest inquiries</p>
           </div>
-          <button
-            onClick={() => navigate('/guests')}
-            className="btn btn-secondary btn-sm"
-          >
+          <button onClick={() => navigate('/guests')} className="btn btn-secondary btn-sm">
             <span>Manage All Inquiries</span>
             <ArrowRight size={14} />
           </button>
         </div>
 
-        <div className="table-container">
+        <div className="table-container" style={{ border: 'none', borderRadius: '0 0 12px 12px', boxShadow: 'none' }}>
           <table className="luxury-table table-stack">
             <thead>
               <tr>
@@ -281,32 +251,43 @@ export const DashboardPage = () => {
             <tbody>
               {recentGuests.map((g) => (
                 <tr key={g._id || g.srNo}>
-                  <td data-label="Sr No" style={{ fontWeight: 700, color: '#2563EB' }}>{g.srNo}</td>
-                  <td data-label="Inquiry Date" style={{ color: '#64748B' }}>{formatDate(g.inquiryDate)}</td>
+                  <td data-label="Sr No" style={{ fontWeight: 650, color: 'var(--primary-text)' }}>{g.srNo}</td>
+                  <td data-label="Inquiry Date" style={{ color: 'var(--neutral-gray)' }}>{formatDate(g.inquiryDate)}</td>
                   <td data-label="Guest">
-                    <div style={{ fontWeight: 600, color: '#0F172A' }}>{g.guestNames}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{g.contactNumber}</div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{g.guestNames}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--neutral-gray)' }}>{g.contactNumber}</div>
                   </td>
                   <td data-label="Destination">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#334155' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--neutral-muted)' }}>
                       <MapPin size={13} color="#2563EB" />
                       <span>{g.destination}</span>
                     </div>
                   </td>
-                  <td data-label="Travel Date" style={{ color: '#475569' }}>{formatDate(g.travelDate)}</td>
+                  <td data-label="Travel Date" style={{ color: 'var(--neutral-subtle)' }}>{formatDate(g.travelDate)}</td>
                   <td data-label="Status">
                     <StatusBadge status={g.status} />
                   </td>
                   <td data-label="Sales / Ops">
-                    <div style={{ fontSize: '0.775rem', color: '#2563EB', fontWeight: 600 }}>Sales: {g.sales}</div>
-                    <div style={{ fontSize: '0.775rem', color: '#0D9488', fontWeight: 600 }}>Ops: {g.ops}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--neutral-subtle)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Sales</span> <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{g.sales}</strong>
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--neutral-subtle)' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>Ops</span> <strong style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{g.ops}</strong>
+                    </div>
                   </td>
                 </tr>
               ))}
+              {!loading && recentGuests.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '36px', color: 'var(--text-muted)' }}>
+                    No inquiries yet.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </div>
+      </section>
     </div>
   );
 };

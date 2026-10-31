@@ -59,7 +59,7 @@ export const ExportButton = ({
         <button
           className="btn btn-outline"
           disabled
-          style={{ opacity: 0.6, cursor: 'not-allowed', color: '#94a3b8', borderStyle: 'dashed' }}
+          style={{ opacity: 0.6, cursor: 'not-allowed', color: 'var(--fg-94A3B8)', borderStyle: 'dashed' }}
         >
           <Lock size={14} color="#f59e0b" />
           <span>Export Locked</span>
@@ -104,10 +104,10 @@ export const ExportButton = ({
             width: '190px',
             zIndex: 1000,
             padding: '6px',
-            backgroundColor: '#121829',
+            backgroundColor: 'var(--bg-FFFFFF)',
             borderRadius: '12px',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(212, 175, 55, 0.25)',
-            border: '1px solid rgba(212, 175, 55, 0.35)',
+            boxShadow: '0 12px 28px -6px rgba(16, 24, 40, 0.18), 0 0 0 1px rgba(16, 24, 40, 0.04)',
+            border: '1px solid var(--bd-E3E8EF)',
             display: 'flex',
             flexDirection: 'column',
             gap: '2px'
@@ -124,14 +124,14 @@ export const ExportButton = ({
               padding: '9px 12px',
               background: 'transparent',
               border: 'none',
-              color: '#f8fafc',
+              color: 'var(--fg-344054)',
               fontSize: '0.825rem',
               borderRadius: '8px',
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'background 0.15s ease'
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-3)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <FileSpreadsheet size={15} color="#10b981" />
@@ -149,14 +149,14 @@ export const ExportButton = ({
               padding: '9px 12px',
               background: 'transparent',
               border: 'none',
-              color: '#f8fafc',
+              color: 'var(--fg-344054)',
               fontSize: '0.825rem',
               borderRadius: '8px',
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'background 0.15s ease'
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-3)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             <FileText size={15} color="#0ea5e9" />
@@ -175,14 +175,14 @@ export const ExportButton = ({
                 padding: '9px 12px',
                 background: 'transparent',
                 border: 'none',
-                color: '#f8fafc',
+                color: 'var(--fg-344054)',
                 fontSize: '0.825rem',
                 borderRadius: '8px',
                 cursor: 'pointer',
                 textAlign: 'left',
                 transition: 'background 0.15s ease'
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--surface-3)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
             >
               <FileText size={15} color="#f43f5e" />

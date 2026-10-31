@@ -26,6 +26,7 @@ import supplierService from '../services/supplierService';
 import Modal from '../components/Modal';
 import { formatDate } from '../utils/dateHelper';
 import { SUPPLIER_CATEGORIES } from '../config';
+import { getErrorMessage } from '../services/api';
 
 export const MobileScannerPage = () => {
   const { user } = useAuth();
@@ -151,7 +152,7 @@ export const MobileScannerPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      const errMsg = err.response?.data?.message || err.message || 'OCR processing failed';
+      const errMsg = getErrorMessage(err, 'OCR processing failed');
       showToast(errMsg, 'error');
     } finally {
       setIsScanning(false);
@@ -208,7 +209,7 @@ export const MobileScannerPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error creating guest', 'error');
+      showToast(getErrorMessage(err, 'Error creating guest'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -228,7 +229,7 @@ export const MobileScannerPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error creating supplier', 'error');
+      showToast(getErrorMessage(err, 'Error creating supplier'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -237,39 +238,18 @@ export const MobileScannerPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       {/* Header */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '20px 24px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px'
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.35rem', fontWeight: 700 }}>
-              Mobile Document & Card Scanner
-            </h2>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '3px 8px',
-                borderRadius: '9999px',
-                background: 'rgba(6, 182, 212, 0.15)',
-                color: '#38bdf8'
-              }}
-            >
-              OCR AI Engine
-            </span>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">Mobile Document &amp; Card Scanner</h2>
+            <span className="count-chip" style={{ background: 'var(--bg-EFF8FF)', color: 'var(--fg-175CD3)', borderColor: 'var(--bd-B2DDFF)' }}>OCR engine</span>
           </div>
+          <p className="page-subtitle">Scan a visiting card or document and turn it into a guest or supplier record.</p>
         </div>
 
         {/* Mode Switcher */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+
+        <div className="page-actions">
           <button
             onClick={() => {
               stopCamera();
@@ -353,7 +333,7 @@ export const MobileScannerPage = () => {
                 padding: '20px',
                 border: '2px dashed #2563EB',
                 borderRadius: '14px',
-                background: '#F8FAFC',
+                background: 'var(--bg-F8FAFC)',
                 cursor: 'pointer'
               }}
               onClick={() => fileInputRef.current?.click()}
@@ -379,7 +359,7 @@ export const MobileScannerPage = () => {
                       marginBottom: '12px'
                     }}
                   />
-                  <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--fg-64748B)' }}>
                     Click to choose a different image
                   </div>
                 </div>
@@ -390,8 +370,8 @@ export const MobileScannerPage = () => {
                       width: '60px',
                       height: '60px',
                       borderRadius: '50%',
-                      background: '#EFF6FF',
-                      color: '#2563EB',
+                      background: 'var(--bg-EFF6FF)',
+                      color: 'var(--fg-2563EB)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -400,10 +380,10 @@ export const MobileScannerPage = () => {
                   >
                     <UploadCloud size={28} />
                   </div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A', marginBottom: '4px', fontFamily: 'var(--font-headline)' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--fg-0F172A)', marginBottom: '4px', fontFamily: 'var(--font-headline)' }}>
                     Upload Visiting Card or Document
                   </h4>
-                  <p style={{ fontSize: '0.775rem', color: '#64748B', maxWidth: '300px' }}>
+                  <p style={{ fontSize: '0.775rem', color: 'var(--fg-64748B)', maxWidth: '300px' }}>
                     Drag and drop or browse JPEG/PNG image files. Card OCR will extract entities automatically.
                   </p>
                 </div>
@@ -416,21 +396,21 @@ export const MobileScannerPage = () => {
         <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-headline)' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--fg-0F172A)', display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'var(--font-headline)' }}>
                 <Sparkles size={16} color="#26C6DA" />
                 <span>Extracted Entities & Metadata</span>
               </h3>
               {parsedData && (
-                <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 700, background: '#DCFCE7', padding: '2px 8px', borderRadius: '9999px' }}>
+                <span style={{ fontSize: '0.75rem', color: 'var(--fg-16A34A)', fontWeight: 700, background: 'var(--bg-DCFCE7)', padding: '2px 8px', borderRadius: '9999px' }}>
                   ✓ Parsing Complete
                 </span>
               )}
             </div>
 
             {isScanning ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#64748B' }}>
-                <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 12px auto', color: '#2563EB' }} />
-                <div style={{ fontWeight: 700, color: '#0F172A' }}>Scanning card content...</div>
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--fg-64748B)' }}>
+                <RefreshCw size={28} className="animate-spin" style={{ margin: '0 auto 12px auto', color: 'var(--fg-2563EB)' }} />
+                <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)' }}>Scanning card content...</div>
                 <div style={{ fontSize: '0.775rem', marginTop: '4px' }}>Detecting guest names, emails, phone numbers</div>
               </div>
             ) : parsedData ? (
@@ -439,50 +419,50 @@ export const MobileScannerPage = () => {
                   style={{
                     padding: '12px 14px',
                     borderRadius: '10px',
-                    background: '#F8FAFC',
-                    border: '1px solid #E2E8F0'
+                    background: 'var(--bg-F8FAFC)',
+                    border: '1px solid var(--bd-E2E8F0)'
                   }}
                 >
-                  <div style={{ fontSize: '0.725rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Extracted Name</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>Extracted Name</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--fg-0F172A)', marginTop: '2px' }}>
                     {parsedData.guestNames}
                   </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.725rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Phone Number</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10B981', marginTop: '2px' }}>
+                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-F8FAFC)', border: '1px solid var(--bd-E2E8F0)' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>Phone Number</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fg-10B981)', marginTop: '2px' }}>
                       {parsedData.contactNumber}
                     </div>
                   </div>
 
-                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.725rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Email Address</div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2563EB', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-F8FAFC)', border: '1px solid var(--bd-E2E8F0)' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>Email Address</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--fg-2563EB)', marginTop: '2px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {parsedData.email || 'None detected'}
                     </div>
                   </div>
                 </div>
 
-                <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                  <div style={{ fontSize: '0.725rem', color: '#64748B', textTransform: 'uppercase', fontWeight: 600 }}>Company / Organization</div>
-                  <div style={{ fontSize: '0.85rem', color: '#334155', marginTop: '2px', fontWeight: 500 }}>
+                <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-F8FAFC)', border: '1px solid var(--bd-E2E8F0)' }}>
+                  <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>Company / Organization</div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--fg-334155)', marginTop: '2px', fontWeight: 500 }}>
                     {parsedData.companyName || 'Not specified'}
                   </div>
                 </div>
 
                 {parsedData.rawText && (
-                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.725rem', color: '#64748B', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Raw OCR Text Detected</div>
-                    <pre style={{ fontSize: '0.75rem', color: '#334155', whiteSpace: 'pre-wrap', fontFamily: 'monospace', maxHeight: '90px', overflowY: 'auto', margin: 0 }}>
+                  <div style={{ padding: '10px 12px', borderRadius: '10px', background: 'var(--bg-F8FAFC)', border: '1px solid var(--bd-E2E8F0)' }}>
+                    <div style={{ fontSize: '0.725rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', marginBottom: '4px', fontWeight: 600 }}>Raw OCR Text Detected</div>
+                    <pre style={{ fontSize: '0.75rem', color: 'var(--fg-334155)', whiteSpace: 'pre-wrap', fontFamily: 'monospace', maxHeight: '90px', overflowY: 'auto', margin: 0 }}>
                       {parsedData.rawText}
                     </pre>
                   </div>
                 )}
               </div>
             ) : (
-              <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94A3B8' }}>
+              <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--fg-94A3B8)' }}>
                 <ScanLine size={32} style={{ margin: '0 auto 12px auto', opacity: 0.4 }} />
                 <div style={{ fontSize: '0.9rem' }}>No scanned document active</div>
                 <div style={{ fontSize: '0.775rem', marginTop: '4px' }}>Capture a card on the left or choose a sample to parse.</div>
@@ -492,7 +472,7 @@ export const MobileScannerPage = () => {
 
           {/* Action Buttons to Update App */}
           {parsedData && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '20px', borderTop: '1px solid var(--bd-E2E8F0)', paddingTop: '16px' }}>
               <button
                 onClick={handleOpenSendToGuest}
                 className="btn btn-primary"

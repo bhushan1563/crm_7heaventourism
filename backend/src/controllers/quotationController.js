@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import QuotationModel from '../models/Quotation.js';
 import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
+import { friendlyMessage } from '../utils/errors.js';
 
 export const findQuotationDocument = async (id) => {
   if (!id) return null;
@@ -67,7 +68,7 @@ export const getQuotations = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching quotations:', error);
-    res.status(200).json({ success: false, message: 'Failed to fetch quotations: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch quotations') });
   }
 };
 
@@ -83,7 +84,7 @@ export const getQuotationById = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to fetch quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch quotation') });
   }
 };
 
@@ -110,7 +111,7 @@ export const createQuotation = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to create quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to create quotation') });
   }
 };
 
@@ -130,7 +131,7 @@ export const updateQuotation = async (req, res) => {
     });
   } catch (error) {
     console.error('Error updating quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to update quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to update quotation') });
   }
 };
 
@@ -147,7 +148,7 @@ export const deleteQuotation = async (req, res) => {
     });
   } catch (error) {
     console.error('Error deleting quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to delete quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to delete quotation') });
   }
 };
 
@@ -187,7 +188,7 @@ export const duplicateQuotation = async (req, res) => {
     });
   } catch (error) {
     console.error('Error duplicating quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to duplicate quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to duplicate quotation') });
   }
 };
 
@@ -331,7 +332,7 @@ export const convertFromInquiry = async (req, res) => {
     });
   } catch (error) {
     console.error('Error converting inquiry to quotation:', error);
-    res.status(200).json({ success: false, message: 'Failed to convert inquiry to quotation: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to convert inquiry to quotation') });
   }
 };
 
@@ -380,6 +381,6 @@ export const getQuotationStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching quotation stats:', error);
-    res.status(200).json({ success: false, message: 'Failed to fetch quotation stats: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch quotation stats') });
   }
 };

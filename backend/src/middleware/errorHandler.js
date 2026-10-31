@@ -19,6 +19,10 @@ export const errorHandler = (err, req, res, next) => {
   if (err.name === 'MulterError' || err.code === 'UNSUPPORTED_FILE_TYPE') {
     return res.status(400).json({ success: false, message: err.message });
   }
+  // A cut-off or malformed multipart body comes out of the parser as a plain Error, not a MulterError.
+  if (/^(Unexpected end of (form|multipart data)|Multipart: |Malformed part header|Part terminated early)/.test(err.message || '')) {
+    return res.status(400).json({ success: false, message: 'The upload was incomplete or malformed. Please try again.' });
+  }
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ success: false, message: 'Origin not allowed.' });
   }

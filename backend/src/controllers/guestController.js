@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import GuestModel from '../models/Guest.js';
 import { containsRegex, pick, queryString } from '../utils/security.js';
+import { friendlyMessage } from '../utils/errors.js';
 
 export const findGuestDocument = async (id) => {
   if (!id) return null;
@@ -77,7 +78,7 @@ export const getGuests = async (req, res) => {
       data: guests
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to fetch guests: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch guests') });
   }
 };
 
@@ -89,7 +90,7 @@ export const getGuestById = async (req, res) => {
     }
     res.json({ success: true, data: guest });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };
 
@@ -151,7 +152,7 @@ export const createGuest = async (req, res) => {
     });
   } catch (error) {
     console.error('Create guest error:', error);
-    res.status(200).json({ success: false, message: 'Failed to create guest inquiry: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to create guest inquiry') });
   }
 };
 
@@ -177,7 +178,7 @@ export const updateGuest = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to update guest: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to update guest') });
   }
 };
 
@@ -216,7 +217,7 @@ export const updateGuestStatus = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };
 
@@ -256,7 +257,7 @@ export const addGuestFollowUp = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to record follow-up: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to record follow-up') });
   }
 };
 
@@ -275,7 +276,7 @@ export const deleteGuest = async (req, res) => {
       message: 'Guest inquiry deleted successfully.'
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to delete guest: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to delete guest') });
   }
 };
 
@@ -307,7 +308,7 @@ export const getGuestStats = async (req, res) => {
 
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };
 

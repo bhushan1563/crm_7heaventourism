@@ -1,8 +1,12 @@
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
-// Reads backend/.env when present (VPS / local). On Vercel the platform injects the variables instead.
-dotenv.config();
+// Reads backend/.env wherever the process was started from (npm start at the repo root, PM2, a hosting panel...).
+// ENV_FILE=/some/other/path/.env keeps secrets outside the project folder. Real environment variables always win over the file.
+const defaultEnvFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../.env');
+dotenv.config({ path: process.env.ENV_FILE || defaultEnvFile });
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -39,6 +43,8 @@ export const config = {
   isProduction,
   isVercel: Boolean(process.env.VERCEL),
   port: int(process.env.PORT, 5000),
+  // Interface to listen on. Behind Nginx on a VPS set HOST=127.0.0.1 so the app is reachable only through the proxy.
+  host: process.env.HOST || '0.0.0.0',
   mongoUri: process.env.MONGODB_URI || '',
   jwtSecret: resolveJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',

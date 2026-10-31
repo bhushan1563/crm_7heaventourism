@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import SupplierModel from '../models/Supplier.js';
 import { containsRegex, pick, queryString } from '../utils/security.js';
+import { friendlyMessage } from '../utils/errors.js';
 
 export const findSupplierDocument = async (id) => {
   if (!id || !mongoose.isValidObjectId(id)) return null;
@@ -51,7 +52,7 @@ export const getSuppliers = async (req, res) => {
       data: suppliers
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to fetch suppliers: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch suppliers') });
   }
 };
 
@@ -63,7 +64,7 @@ export const getSupplierById = async (req, res) => {
     }
     res.json({ success: true, data: supplier });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };
 
@@ -122,7 +123,7 @@ export const createSupplier = async (req, res) => {
       data: newSupplier
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to add supplier: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to add supplier') });
   }
 };
 
@@ -148,7 +149,7 @@ export const updateSupplier = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to update supplier: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to update supplier') });
   }
 };
 
@@ -167,7 +168,7 @@ export const deleteSupplier = async (req, res) => {
       message: 'Supplier deleted successfully.'
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to delete supplier: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to delete supplier') });
   }
 };
 
@@ -189,6 +190,6 @@ export const getSupplierStats = async (req, res) => {
     };
     res.json({ success: true, data: stats });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };

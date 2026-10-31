@@ -1,116 +1,176 @@
 # Deployment guide
 
-Two supported targets. **Hostinger VPS is the recommended one** (full feature set, no serverless limits).
-Both serve the web app and the API from the **same origin**, so no CORS or API-URL configuration is needed.
+Three supported targets. All serve the web app and the API from the **same origin**, so no CORS or API-URL configuration is needed.
+
+| Target | Use it when | Effort |
+|---|---|---|
+| **A. Hostinger VPS** (recommended) | You want everything to work: OCR scanner, 10 MB uploads, no serverless limits, your own domain + HTTPS | one command |
+| **B. Hostinger Node.js web hosting** (Business / Cloud plans) | You already have that plan and no VPS | upload a zip, fill in a form |
+| **C. Vercel** | Quick hosted preview; accepts serverless limits | import the repo |
+
+Everything below the line "Prepare" is needed by **A and B**.
 
 ---
 
-## A. Hostinger VPS (Ubuntu 22.04 / 24.04) - one Node process + Nginx
+## Prepare (once)
+
+1. **MongoDB Atlas** (or any MongoDB the server can reach)
+   - Create a database user with the **readWrite** role on this one database (not "Atlas admin").
+   - *Network Access*: add the server's public IP. Remove the `0.0.0.0/0` entry once the server works (keep it only for Vercel).
+   - Copy the `mongodb+srv://...` connection string and put the database name in it, e.g. `.../7heaven_crm`.
+     If the password contains `@ : / ? # %`, URL-encode it (`@` becomes `%40`).
+   - Already have data? It stays in Atlas; the new server just connects to the same database. To move data between databases use
+     `npm run backup-db` + `npm run restore-db` (see *Backups*).
+2. **Domain.** Create an **A record** for the name you will use (e.g. `crm.example.com`) pointing at the VPS IP
+   (hPanel -> Domains -> DNS / DNS Zone). It can take a few minutes to spread; HTTPS cannot be issued before it does.
+3. **The code**, in one of two ways:
+   - a Git repository the server can clone (a private repository needs a read-only deploy key or token on the server), or
+   - the zip from `npm run package` on your computer (contains the built web app; no secrets, no customer data).
+     `npm run package -- --no-apk` leaves out the 64 MB Android app download (the login page's "download app" button then has nothing to serve).
+
+---
+
+## A. Hostinger VPS (Ubuntu 22.04 / 24.04)
 
 ```
-Browser ──HTTPS──> Nginx (80/443) ──> Node :5000 (PM2)  ──> serves frontend/dist  +  /api  +  /static
-                                                     └──> MongoDB (Atlas or local)
+Browser --HTTPS--> Nginx (80/443) --> Node 127.0.0.1:5000 (PM2) --> serves the web app + /api + /static
+                                                          └--> MongoDB Atlas
 ```
 
-### 1. Server basics
+Order the VPS with the plain **Ubuntu 22.04 / 24.04** operating system (not a control-panel template). 1 vCPU / 2 GB RAM is comfortable;
+the OCR scanner uses a few hundred MB while it reads an image.
+
+### A1. One-command setup
+
+Log in as root (`ssh root@YOUR_VPS_IP`), then get the code onto the server and run the script:
 
 ```bash
-ssh root@YOUR_VPS_IP
-apt update && apt upgrade -y
-apt install -y git nginx ufw
+# Option 1 - from Git
+apt-get update && apt-get install -y git
+git clone https://github.com/YOUR-USER/YOUR-REPO.git /root/7heaven-src
+
+# Option 2 - from the zip (run `scp release/7heaven-crm-*.zip root@YOUR_VPS_IP:/root/` on your computer first)
+apt-get update && apt-get install -y unzip
+unzip -q /root/7heaven-crm-*.zip -d /root/7heaven-src
+
+cd /root/7heaven-src
+MONGODB_URI='mongodb+srv://USER:PASSWORD@cluster.xxxxx.mongodb.net/7heaven_crm' \
+  bash deploy/setup-vps.sh --domain crm.example.com --email you@example.com
+```
+
+Without `MONGODB_URI=...` the script asks for the connection string with hidden input. Add `--dry-run` first to see every command
+it would run without changing anything. Other options: `--no-ssl` (skip HTTPS for now), `--yes` (no confirmation), `--repo <url>`,
+`--branch <name>`, `--dir <path>`; `--help` lists them.
+
+What it does, in order (it is safe to run again; it skips what is already done):
+
+1. Installs Git, Nginx, Certbot, Node.js 22 (if Node < 20), PM2.
+2. Turns on the firewall (`ufw`): SSH (every port `sshd` listens on) + HTTP/HTTPS only.
+3. Creates the unprivileged user `crm`, puts the code in `/var/www/7heaven-crm`.
+4. Writes `backend/.env` (mode 600, owned by `crm`) with a freshly generated `JWT_SECRET`, your `MONGODB_URI`, `NODE_ENV=production`,
+   `HOST=127.0.0.1` (only Nginx can reach the app). An existing `backend/.env` is never overwritten.
+5. `npm ci`, builds the web app, starts it under PM2 as `crm` (auto-restart on crash, start on reboot, log rotation), and schedules a
+   daily database backup at 03:15 into `/var/backups/7heaven` (newest 14 kept).
+6. Installs the Nginx site for your domain (with a sign-in rate limit) and removes the default site.
+7. Gets a free Let's Encrypt certificate **if the domain already points at this server** (otherwise it tells you the one command to run later).
+
+Then:
+
+- **Hostinger firewall:** hPanel -> VPS -> Security / Firewall must allow TCP 22 (SSH), 80 and 443 as well, if you use that firewall.
+- **Atlas:** add the server's public IP to *Network Access* (the script prints it) and remove `0.0.0.0/0`.
+- **First admin** (only if the database is brand new and empty):
+  `sudo -u crm bash -lc "cd /var/www/7heaven-crm && npm run create-admin -- you@example.com 'a-strong-password'"`
+- Open `https://crm.example.com`, sign in.
+
+### A2. Updating later
+
+```bash
+sudo -u crm bash /var/www/7heaven-crm/deploy/deploy.sh      # git pull, npm ci, tests, build, zero-downtime PM2 reload, health check
+```
+
+It stops and prints the app log if the new version does not become healthy. `SKIP_TESTS=1` skips the (database-free, ~15 s) test run.
+Installed from a zip instead of Git? Upload the new zip, `unzip -o` it over `/var/www/7heaven-crm`
+(keep `backend/.env`; the zip does not contain one), `chown -R crm:crm /var/www/7heaven-crm`, then run `deploy.sh` (it skips `git pull`
+when there is no `.git` folder).
+
+### A3. Doing it by hand (what the script automates)
+
+```bash
+apt update && apt install -y git nginx ufw certbot python3-certbot-nginx
 ufw allow OpenSSH && ufw allow 'Nginx Full' && ufw enable
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && apt install -y nodejs && npm install -g pm2
 
-# Node 22 + PM2
-curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-apt install -y nodejs
-npm install -g pm2
-```
+useradd --system --create-home --shell /bin/bash crm
+git clone <repo> /var/www/7heaven-crm && chown -R crm:crm /var/www/7heaven-crm
+sudo -u crm bash -lc 'cd /var/www/7heaven-crm && cp backend/.env.example backend/.env && chmod 600 backend/.env'
+nano /var/www/7heaven-crm/backend/.env      # NODE_ENV=production  HOST=127.0.0.1  PORT=5000  MONGODB_URI=...  JWT_SECRET=$(openssl rand -hex 48)
 
-Point your domain's **A record** (e.g. `crm.example.com`) at the VPS IP.
+sudo -u crm bash -lc 'cd /var/www/7heaven-crm && npm ci --include=dev && npm run build \
+  && pm2 startOrReload deploy/ecosystem.config.cjs && pm2 save'
+pm2 startup systemd -u crm --hp /home/crm          # makes PM2 start at boot
+curl -s http://127.0.0.1:5000/api/health           # {"status":"healthy",...}
 
-### 2. MongoDB
-
-- **Atlas (simplest):** create a cluster, a database user, and add the VPS IP under *Network Access*
-  (remove the `0.0.0.0/0` "allow from anywhere" entry that Atlas' auto-setup adds).
-  Use the `mongodb+srv://...` string as `MONGODB_URI`. If the password contains `@ : / ?` etc., URL-encode it (`@` -> `%40`).
-  Give the database user the **readWrite** role on this one database only, not "Atlas admin".
-- **On the VPS:** install MongoDB Community (follow MongoDB's Ubuntu instructions), keep it bound to `127.0.0.1`,
-  enable authentication, and use `mongodb://USER:PASS@127.0.0.1:27017/7heaven_crm?authSource=admin`.
-- **Moving existing data:** `mongodump --uri="<old uri>" --out dump` then `mongorestore --uri="<new uri>" dump`.
-
-### 3. Get the code and configure
-
-```bash
-mkdir -p /var/www && cd /var/www
-git clone <YOUR_REPO_URL> 7heaven-crm && cd 7heaven-crm
-
-cp backend/.env.example backend/.env
-nano backend/.env       # PORT=5000, MONGODB_URI=..., JWT_SECRET=<openssl rand -hex 48>, NODE_ENV=production
-```
-
-> `JWT_SECRET` is mandatory: in production the API exits at start-up if it is missing or a placeholder, and logs what to fix
-> (`pm2 logs 7heaven-crm`). Changing it signs everyone out once; that is expected.
-> Move existing data in with `npm run import-csv -- "<folder>"` (see the README) or `mongodump` / `mongorestore` (below).
-
-### 4. Build and start
-
-```bash
-npm ci
-npm run build                                   # creates frontend/dist
-npm run create-admin -- admin@yourdomain.com 'A-strong-password'   # only on an EMPTY database
-pm2 start deploy/ecosystem.config.cjs
-pm2 save
-pm2 startup            # run the command it prints, so PM2 restarts on reboot
-
-curl -s http://127.0.0.1:5000/api/health        # -> {"status":"healthy",...}
-```
-
-### 5. Nginx + HTTPS
-
-```bash
-cp deploy/nginx/7heaven-crm.conf /etc/nginx/sites-available/7heaven-crm
-nano /etc/nginx/sites-available/7heaven-crm     # set server_name (and the port if you changed PORT)
-ln -s /etc/nginx/sites-available/7heaven-crm /etc/nginx/sites-enabled/
+install -d /etc/nginx/snippets
+cp /var/www/7heaven-crm/deploy/nginx/7heaven-proxy.conf /etc/nginx/snippets/
+sed 's/crm\.example\.com/YOUR.DOMAIN/' /var/www/7heaven-crm/deploy/nginx/7heaven-crm.conf > /etc/nginx/sites-available/7heaven-crm
+ln -s /etc/nginx/sites-available/7heaven-crm /etc/nginx/sites-enabled/ && rm -f /etc/nginx/sites-enabled/default
 nginx -t && systemctl reload nginx
-
-apt install -y certbot python3-certbot-nginx
-certbot --nginx -d crm.example.com
+certbot --nginx -d YOUR.DOMAIN -m you@example.com --agree-tos --redirect
 ```
 
-Open `https://crm.example.com` and sign in.
+`JWT_SECRET` is mandatory: in production the API exits at start-up if it is missing or a placeholder and logs what to fix. Changing it
+signs everyone out once. Use `www.` as well? Add `-d www.YOUR.DOMAIN` to certbot and the name to `server_name`.
 
-### 6. Updating later
+### A4. Everyday operations
 
-```bash
-cd /var/www/7heaven-crm && bash deploy/deploy.sh   # git pull, npm ci, build, pm2 reload
-```
-
-### Operations
-
-| Task | Command |
+| Task | Command (run as root; PM2 belongs to the `crm` user, hence `sudo -u crm`) |
 |---|---|
-| Logs | `pm2 logs 7heaven-crm` |
-| Restart | `pm2 restart 7heaven-crm` |
-| Status | `pm2 status` |
-| Backup DB | `mongodump --uri="<uri>" --out backup-$(date +%F)` |
+| Status | `sudo -u crm pm2 status` |
+| Live logs | `sudo -u crm pm2 logs 7heaven-crm` |
+| Restart | `sudo -u crm pm2 restart 7heaven-crm` |
+| Health | `curl -s http://127.0.0.1:5000/api/health` (503 while the database is unreachable - good for an uptime monitor on `https://YOUR.DOMAIN/api/health`) |
+| Nginx errors | `tail -n 50 /var/log/nginx/error.log` |
+| Back up now | `sudo -u crm bash -lc 'cd /var/www/7heaven-crm && node scripts/backup-db.mjs --dir /var/backups/7heaven'` |
 
-Notes: logs no longer contain the MongoDB URI or any secret. Run a single instance (the PM2 file does): the OCR scanner is
-memory-hungry and the login rate limiter keeps its counters in memory. PM2 sends SIGTERM on reload; the API drains in-flight requests and
-closes the database cleanly. `curl /api/health` returns 503 while the database is unreachable (use it for uptime monitoring).
-
-### Production checklist
-
-- [ ] `NODE_ENV=production`, a random `JWT_SECRET`, `MONGODB_URI` set in `backend/.env` (or Vercel env vars)
-- [ ] First admin created with `npm run create-admin`, strong password; no `ADMIN_*` variables left in the environment
-- [ ] Atlas *Network Access* limited to the server IP; database user limited to `readWrite` on this database
-- [ ] HTTPS enabled (certbot) and, afterwards, the HSTS line from `deploy/nginx/7heaven-crm.conf`
-- [ ] `npm test` passes; `npm run build` succeeds
-- [ ] Backups: `mongodump` on a schedule (Atlas M0 has none), copy it off the server
-- [ ] Imported temporary passwords handed out and `IMPORTED_USER_LOGINS.csv` deleted
+The app runs as a **single process** on purpose: the OCR scanner is memory-hungry and the login rate limiter keeps its counters in memory.
+PM2 restarts it above 900 MB. On a reload it drains in-flight requests and closes the database cleanly. Logs never contain the database URI or any secret.
 
 ---
 
-## B. Vercel (web app + API as one serverless project)
+## B. Hostinger Node.js web hosting (Business / Cloud plans)
+
+> Not verified against a live Hostinger account: hPanel's labels change over time, so match the *meaning* of each field.
+> If a step does not fit your plan, the VPS route (A) is the dependable one.
+
+1. On your computer: `npm run package` -> `release/7heaven-crm-v1.0.0-<date>.zip` (contains the **already built** web app).
+2. hPanel -> **Websites -> Add website -> Node.js Apps** (wording varies) -> **Upload your website files** -> choose the zip.
+   (Alternatively *Import Git repository*, but then the platform must build the web app itself - see the note below.)
+3. Settings of the app:
+   - **Node.js version:** 20 or 22.
+   - **Entry file / start command:** `backend/src/server.js` (or `npm start`). Run from the project root.
+   - **Build command:** leave empty, or `npm install`. The zip already contains `frontend/dist`.
+   - **Install command:** `npm install --omit=dev` or `npm ci --omit=dev` is enough.
+4. **Environment variables** (the control panel's form; there is no `.env` file in the zip):
+
+   | Variable | Value |
+   |---|---|
+   | `NODE_ENV` | `production` |
+   | `MONGODB_URI` | your Atlas connection string |
+   | `JWT_SECRET` | a random string, 64+ characters (`openssl rand -hex 48`, or any password generator) |
+
+   Do **not** set `PORT`: the platform assigns it and the app reads it. Leave `HOST` unset.
+5. In Atlas -> *Network Access*, allow the hosting's outbound IP. Shared hosting usually has no fixed IP, which means `0.0.0.0/0`
+   with a strong database password - another reason to prefer a VPS.
+6. Start/restart the app, open the site, and check `https://YOUR.DOMAIN/api/health`.
+7. Brand-new empty database? Create the first admin from your own computer (not on the host):
+   `MONGODB_URI='<atlas uri>' npm run create-admin -- you@example.com 'a-strong-password'`
+
+Notes: if the platform builds the project itself and fails with `vite: not found`, it installed production dependencies only - use the zip with the
+build command empty. Shared plans limit memory and processes; if the OCR scanner is killed or times out there, that is the plan, not the app.
+
+---
+
+## C. Vercel (web app + API as one serverless project)
 
 `vercel.json` builds the web app (`frontend/dist`), publishes the APK as a static file at `/static/7heaven.apk`,
 and routes `/api/*` to `api/index.js`, which wraps the same Express app.
@@ -127,20 +187,71 @@ and routes `/api/*` to `api/index.js`, which wraps the same Express app.
 6. Deploy. On an **empty** database create the first admin from your machine:
    `MONGODB_URI="<atlas uri>" npm run create-admin -- admin@yourdomain.com 'A-strong-password'`
 
-### Vercel limits to know about
+Vercel limits: request bodies are capped at about 4.5 MB (large phone photos for the scanner can fail; the API itself allows 10 MB),
+OCR on a cold start can take several seconds (raise *Max Duration* if scans time out), and the 67 MB APK is served from the CDN, not the function.
 
-- **Request bodies are capped at about 4.5 MB** by Vercel Functions. Phone photos for the business-card scanner and very large
-  quotation payloads can exceed that and fail; the API itself allows 10 MB / 20 MB. The VPS has no such cap.
-- **Function time limit.** OCR on a cold start can take several seconds. If scans time out, raise *Max Duration* under
-  *Settings -> Functions* (the allowed maximum depends on your plan).
-- **Cold starts / bundle size.** The function bundle includes `tesseract.js` and `eng.traineddata`; the 67 MB APK is deliberately
-  excluded from it and served from the CDN instead.
-- The app keeps no files on disk (uploads are processed in memory), so a read-only serverless filesystem is fine.
+---
+
+## Backups and restore
+
+Atlas' free tier has **no backups**, and a server snapshot does not contain an external database. The VPS setup schedules one daily;
+you can also run it by hand anywhere that has the repo and a `backend/.env` (or `MONGODB_URI` in the environment):
+
+```bash
+npm run backup-db                                   # -> backups/2026-10-31_031500/   (one compressed file per collection + manifest.json)
+npm run backup-db -- --dir /var/backups/7heaven --keep 14
+```
+
+- Backups hold **customer data and password hashes**. The folder is created private (mode 700); never commit or e-mail it.
+  Copy it off the server now and then (`scp -r root@IP:/var/backups/7heaven ./7heaven-backups`), ideally encrypted (`gpg -c file`).
+- **Test a restore once**, into a scratch database, before you need it:
+  ```bash
+  MONGODB_URI='mongodb+srv://USER:PASS@cluster.xxxxx.mongodb.net/7heaven_restore_test' \
+    node scripts/restore-db.mjs /var/backups/7heaven/2026-10-31_031500 --yes
+  ```
+- **Real restore** (replaces what is there): stop the app, restore, start it again so indexes are rebuilt:
+  ```bash
+  sudo -u crm pm2 stop 7heaven-crm
+  sudo -u crm bash -lc 'cd /var/www/7heaven-crm && node scripts/restore-db.mjs /var/backups/7heaven/<stamp> --yes --drop'
+  sudo -u crm pm2 start 7heaven-crm
+  ```
+  Without `--drop` the restore refuses to touch a collection that already contains data; without `--yes` it only shows what it would do.
+
+---
+
+## Troubleshooting
+
+| Symptom | Likely cause and fix |
+|---|---|
+| Browser shows **502 Bad Gateway** | The app is not running: `sudo -u crm pm2 status` / `pm2 logs 7heaven-crm --lines 50`. Usually a missing/placeholder `JWT_SECRET` or an unreachable database. |
+| `/api/health` says **503, database disconnected** | Atlas *Network Access* does not include this server's IP, wrong user/password in `MONGODB_URI` (`bad auth`), or the password has unencoded special characters. |
+| Log: `querySrv ECONNREFUSED` | The server's DNS cannot resolve Atlas SRV records. Add `DNS_SERVERS=8.8.8.8,8.8.4.4` to `backend/.env`, `pm2 restart 7heaven-crm --update-env`. |
+| App exits at start: `JWT_SECRET` ... | Production refuses to start without a real secret. Set it in `backend/.env` (VPS) or the panel's environment variables (B / Vercel). |
+| **certbot fails** / site is http only | The domain's A record does not point at this server yet. Fix DNS, wait, then `certbot --nginx -d YOUR.DOMAIN -m you@example.com --agree-tos --redirect`. |
+| Cannot reach the site at all | The Hostinger firewall (hPanel -> VPS -> Security) or `ufw status` blocks 80/443. |
+| Login says too many attempts (**429**) | Rate limiting working as intended: 10 failed attempts per 15 min per IP + email. Wait, or restart the app to clear the in-memory counters. |
+| Page loads but is blank after an update | Hard-refresh (Ctrl+F5). Old tabs still hold the previous build's file names. |
+| Scanner is slow or the app restarts during a scan | Not enough RAM. Give the VPS 2 GB, or check `pm2 logs` for `max_memory_restart`. |
+| Files edited on Windows break the server scripts (`bash\r: No such file`) | Line endings. `.gitattributes` forces LF for scripts when using Git; the zip from `npm run package` is already converted. |
+
+---
+
+## Production checklist
+
+- [ ] `NODE_ENV=production`, a random `JWT_SECRET`, `MONGODB_URI` set (`backend/.env` on a VPS, panel variables on hosting/Vercel)
+- [ ] HTTPS works (`https://YOUR.DOMAIN`, padlock) and `http://` redirects to it
+- [ ] First admin created with a strong password; no `ADMIN_*` variables left in the environment
+- [ ] Atlas *Network Access* limited to the server IP (no `0.0.0.0/0` on a VPS); database user limited to `readWrite` on this database
+- [ ] Any password or connection string that was ever pasted into a chat, e-mail or screenshot has been **rotated**
+- [ ] `https://YOUR.DOMAIN/api/health` returns `healthy`; an uptime monitor watches it
+- [ ] A backup exists, has been copied off the server, and a restore was tested once
+- [ ] Imported temporary passwords handed out and `IMPORTED_USER_LOGINS.csv` deleted
 
 ---
 
 ## Reference
 
-- API port: `PORT` in `backend/.env` (default 5000). Keep Nginx's `proxy_pass` in sync.
+- API port: `PORT` in `backend/.env` (default 5000). `setup-vps.sh` and `deploy.sh` read it; if you change it later, update `proxy_pass` in `/etc/nginx/snippets/7heaven-proxy.conf` and reload Nginx.
+- `HOST` (default `0.0.0.0`; `127.0.0.1` behind Nginx) and `ENV_FILE` (path of the env file, default `backend/.env`) are optional.
 - The API serves `frontend/dist` automatically when it exists; without a build it is API-only (dev mode uses Vite on :5173).
 - To host the web app and API on different domains, build with `REACT_APP_APIURL=https://api.example.com` set in the environment.

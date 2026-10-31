@@ -16,7 +16,7 @@ const validate = (env) => {
   `;
   const out = execFileSync(process.execPath, ['--input-type=module', '-e', code], {
     cwd: os.tmpdir(),
-    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, ...env },
+    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, ENV_FILE: path.join(os.tmpdir(), 'no-such.env'), ...env },
     encoding: 'utf8'
   });
   return JSON.parse(out.trim().split('\n').pop());
@@ -62,4 +62,28 @@ test('ADMIN_PASSWORD must be strong enough when bootstrapping an admin', () => {
   const result = validate({ ...good, NODE_ENV: 'production', ADMIN_EMAIL: 'a@b.co', ADMIN_PASSWORD: '123' });
   assert.equal(result.ok, false);
   assert.match(result.message, /ADMIN_PASSWORD/);
+});
+
+test('the env file is found from any working directory (ENV_FILE), and real environment variables still win', async () => {
+  const fs = await import('node:fs');
+  const file = path.join(os.tmpdir(), `7heaven-test-${process.pid}.env`);
+  fs.writeFileSync(file, `MONGODB_URI=mongodb://from-file/db\nJWT_SECRET=${'f'.repeat(48)}\nHOST=127.0.0.1\nPORT=6123\nNODE_ENV=production\n`);
+  try {
+    const code = `
+      const { config, validateConfig } = await import(${JSON.stringify(envModule)});
+      validateConfig();
+      console.log(JSON.stringify({ uri: config.mongoUri, host: config.host, port: config.port, prod: config.isProduction }));
+    `;
+    const run = (extraEnv) =>
+      JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', code], {
+        cwd: os.tmpdir(), // deliberately NOT the backend folder
+        env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, ENV_FILE: file, ...extraEnv },
+        encoding: 'utf8'
+      }).trim().split('\n').pop());
+
+    assert.deepEqual(run({}), { uri: 'mongodb://from-file/db', host: '127.0.0.1', port: 6123, prod: true });
+    assert.equal(run({ PORT: '7000' }).port, 7000, 'a real environment variable overrides the file');
+  } finally {
+    fs.rmSync(file, { force: true });
+  }
 });

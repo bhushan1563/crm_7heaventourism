@@ -1,3 +1,5 @@
+import { friendlyMessage } from '../utils/errors.js';
+
 export const checkRights = (moduleName, action) => {
   return (req, res, next) => {
     // Admin bypasses all checks
@@ -81,7 +83,7 @@ export const checkRecordOwnership = (recordFinder) => {
       req.targetRecord = record;
       next();
     } catch (err) {
-      return res.status(200).json({ success: false, message: 'Error verifying record ownership: ' + err.message });
+      return res.status(200).json({ success: false, message: friendlyMessage(err, 'Error verifying record ownership') });
     }
   };
 };

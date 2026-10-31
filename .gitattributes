@@ -1,0 +1,17 @@
+# Files that run on the Linux server must keep Unix line endings even when checked out on Windows
+# (a script saved with CRLF fails on Linux with "bash\r: No such file or directory").
+*.sh   text eol=lf
+*.conf text eol=lf
+*.cjs  text eol=lf
+*.mjs  text eol=lf
+.env.example text eol=lf
+
+# Windows-only launcher
+*.bat  text eol=crlf
+
+# Large binaries: never touched by line-ending conversion
+*.apk  binary
+*.traineddata binary
+*.webp binary
+*.png  binary
+*.jpg  binary

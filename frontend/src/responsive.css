@@ -124,12 +124,12 @@ p {
     position: sticky;
     left: 0;
     z-index: 2;
-    background: #FFFFFF;
+    background: var(--surface);
     box-shadow: 1px 0 0 var(--border-color);
   }
 
   .luxury-table.table-sticky-first th:first-child {
-    background: #F8FAFC;
+    background: var(--surface-2);
   }
 
   /* Two-column screens stack. */
@@ -155,6 +155,10 @@ p {
     flex-shrink: 0;
   }
 
+  .filter-pills > button {
+    min-height: 38px;
+  }
+
   .filter-search {
     min-width: 0 !important;
     max-width: none !important;
@@ -169,22 +173,22 @@ p {
 }
 
 /* Tablet / small laptop table view: keep the row actions (edit, delete...) pinned to the right while scrolling sideways. */
-@media (min-width: 768px) and (max-width: 1279.98px) {
+@media (min-width: 768px) and (max-width: 1439.98px) {
   .luxury-table.table-stack th:last-child,
   .luxury-table.table-stack td:last-child {
     position: sticky;
     right: 0;
     z-index: 2;
-    background: #FFFFFF;
+    background: var(--surface);
     box-shadow: -1px 0 0 var(--border-color);
   }
 
   .luxury-table.table-stack th:last-child {
-    background: #F8FAFC;
+    background: var(--surface-2);
   }
 
   .luxury-table.table-stack tbody tr:hover td:last-child {
-    background: #F8FAFC;
+    background: var(--surface-2);
   }
 }
 
@@ -237,7 +241,7 @@ p {
   }
 
   .table-stack tbody tr {
-    background: #FFFFFF;
+    background: var(--surface);
     border: 1px solid var(--border-color);
     border-radius: 14px;
     padding: 6px 14px;
@@ -246,7 +250,7 @@ p {
   }
 
   .table-stack tbody tr:hover {
-    background: #FFFFFF;
+    background: var(--surface);
   }
 
   .table-stack td {
@@ -372,41 +376,6 @@ p {
   .modal-body form > div[style*='justify-content: flex-end'],
   .modal-body > div[style*='justify-content: flex-end'] {
     flex-wrap: wrap;
-  }
-}
-
-/* ---------- Login screen ---------- */
-@media (max-width: 1023.98px) {
-  .login-shell {
-    flex-direction: column !important;
-    width: 100% !important;
-    min-height: 100vh;
-    min-height: 100dvh;
-  }
-
-  .login-hero {
-    flex: none !important;
-    padding: 28px 24px 8px !important;
-    border-right: none !important;
-    background: transparent !important;
-  }
-
-  /* Marketing copy is hidden on tablets and phones: the form is what people came for. */
-  .login-hero-copy,
-  .login-hero-footer {
-    display: none !important;
-  }
-
-  .login-form-col {
-    flex: 1 !important;
-    justify-content: flex-start !important;
-    padding: 20px 16px 40px !important;
-    background: transparent !important;
-  }
-
-  .login-card {
-    padding: 28px 22px !important;
-    margin-top: 8px;
   }
 }
 

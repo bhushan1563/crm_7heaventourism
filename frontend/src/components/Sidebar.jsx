@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -7,76 +7,49 @@ import {
   UserCog,
   ShieldCheck,
   ScanLine,
-  ChevronLeft,
-  ChevronRight,
-  LogOut,
   Sparkles,
   FileText,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import ConfirmDialog from './ConfirmDialog';
 import logo from '../assets/logo.webp';
 
-export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobile = false, isOpen = false, onClose = () => {} }) => {
-  const { user, logout } = useAuth();
+/**
+ * Navigation only. Opening / collapsing it is done by the single menu button in the top bar (on a phone this panel also
+ * has a close button); the signed-in user, profile and sign-out live in the top bar's account menu.
+ */
+export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose = () => {} }) => {
+  const { user } = useAuth();
   const location = useLocation();
-  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
 
-  const handleLogoutConfirm = () => {
-    setIsLogoutConfirmOpen(false);
-    logout();
-  };
+  const isAdmin = user?.role === 'Admin' || user?.role === 'SuperAdmin';
 
-  const navItems = [
+  // Same screens and permissions as before, grouped the way CRM workspaces usually are.
+  const sections = [
     {
-      to: '/dashboard',
-      label: 'Dashboard',
-      icon: LayoutDashboard,
-      module: 'reports'
+      label: 'Overview',
+      items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }]
     },
     {
-      to: '/guests',
-      label: 'Guest List',
-      icon: Users,
-      module: 'guest_list',
-      badge: 'Inquiries'
-    },
-    {
-      to: '/quotations',
-      label: 'Quotations',
-      icon: FileText,
-      module: 'quotations'
-    },
-    {
-      to: '/suppliers',
-      label: 'Supplier List',
-      icon: Building2,
-      module: 'supplier_list',
-      badge: '5 Categories'
-    },
-    {
-      to: '/users',
-      label: 'User Management',
-      icon: UserCog,
-      module: 'users'
-    },
-    ...(user?.role === 'Admin' || user?.role === 'SuperAdmin'
-      ? [
-        {
-          to: '/rights',
-          label: 'Rights & Security',
-          icon: ShieldCheck,
-          module: 'rights'
-        }
+      label: 'Sales',
+      items: [
+        { to: '/guests', label: 'Guest List', icon: Users },
+        { to: '/quotations', label: 'Quotations', icon: FileText }
       ]
-      : []),
+    },
     {
-      to: '/scanner',
-      label: 'Mobile Scanner',
-      icon: ScanLine,
-      module: 'scanner',
-      highlight: true
+      label: 'Operations',
+      items: [
+        { to: '/suppliers', label: 'Supplier List', icon: Building2 },
+        { to: '/scanner', label: 'Mobile Scanner', icon: ScanLine, tag: 'OCR' }
+      ]
+    },
+    {
+      label: 'Administration',
+      items: [
+        { to: '/users', label: 'User Management', icon: UserCog },
+        ...(isAdmin ? [{ to: '/rights', label: 'Rights & Security', icon: ShieldCheck }] : [])
+      ]
     }
   ];
 
@@ -86,254 +59,58 @@ export const Sidebar = ({ isCollapsed, setIsCollapsed, isMobile = false, isOpen 
       className={`app-sidebar${isCollapsed ? ' is-collapsed' : ''}${isOpen ? ' is-open' : ''}`}
       aria-label="Sidebar"
     >
-      {/* Brand Header */}
-      <div
-        style={{
-          padding: '20px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: isCollapsed ? 'center' : 'space-between',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)'
-        }}
-      >
-        {!isCollapsed ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '10px',
-                background: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
-                overflow: 'hidden',
-                flexShrink: 0
-              }}
-            >
-              <img src={logo} alt="7Heaven Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-            </div>
+      {/* Brand */}
+      <div className="sidebar-brand">
+        <div className="sidebar-brand-main">
+          <div className="sidebar-brand-logo">
+            <img src={logo} alt="7Heaven Logo" />
+          </div>
+          {!isCollapsed && (
             <div>
-              <div
-                style={{
-                  fontFamily: 'var(--font-headline)',
-                  fontSize: '1rem',
-                  fontWeight: 800,
-                  letterSpacing: '-0.02em',
-                  color: '#FFFFFF'
-                }}
-              >
-                7Heaven Tourism
-              </div>
-              <div style={{ fontSize: '0.55rem', color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 600 }}>
-                Travel with the Trust
-              </div>
+              <div className="sidebar-brand-name">7Heaven Tourism</div>
+              <div className="sidebar-brand-tag">Travel with the Trust</div>
             </div>
-          </div>
-        ) : (
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '10px',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
-              overflow: 'hidden'
-            }}
-          >
-            <img src={logo} alt="7Heaven Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
-          </div>
-        )}
+          )}
+        </div>
 
-        <button
-          type="button"
-          className="sidebar-icon-btn"
-          onClick={() => (isMobile ? onClose() : setIsCollapsed(!isCollapsed))}
-          style={{
-            background: 'rgba(255, 255, 255, 0.05)',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            color: '#94A3B8',
-            borderRadius: '8px',
-            padding: isMobile ? '9px' : '5px',
-            cursor: 'pointer',
-            display: isCollapsed ? 'none' : 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}
-          title={isMobile ? 'Close menu' : isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
-          aria-label={isMobile ? 'Close menu' : isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isMobile ? <X size={18} /> : <ChevronLeft size={16} />}
-        </button>
+        {isMobile && (
+          <button type="button" className="sidebar-icon-btn" onClick={onClose} title="Close menu" aria-label="Close menu" style={{ padding: '9px' }}>
+            <X size={18} />
+          </button>
+        )}
       </div>
 
-      {/* Navigation Links */}
+      {/* Navigation */}
       <nav className="sidebar-nav" aria-label="Main navigation">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+        {sections.map((section) => (
+          <React.Fragment key={section.label}>
+            <div className="sidebar-section-label">{section.label}</div>
+            {section.items.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
 
-          return (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className="sidebar-link"
-              onClick={() => isMobile && onClose()}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                minHeight: '44px',
-                padding: '11px 14px',
-                borderRadius: '10px',
-                textDecoration: 'none',
-                color: isActive ? '#FFFFFF' : '#94A3B8',
-                background: isActive
-                  ? '#2563EB'
-                  : item.highlight
-                    ? 'rgba(38, 198, 218, 0.1)'
-                    : 'transparent',
-                boxShadow: isActive ? '0 4px 12px rgba(37, 99, 235, 0.35)' : 'none',
-                fontWeight: isActive ? 600 : 500,
-                fontSize: '0.875rem',
-                transition: 'all 0.2s ease',
-                position: 'relative'
-              }}
-              title={isCollapsed ? item.label : undefined}
-            >
-              <Icon
-                size={19}
-                color={isActive ? '#FFFFFF' : item.highlight ? '#26C6DA' : '#94A3B8'}
-                style={{ flexShrink: 0 }}
-              />
-
-              {!isCollapsed && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                  <span>{item.label}</span>
-                  {item.highlight ? (
-                    <span
-                      style={{
-                        background: 'rgba(38, 198, 218, 0.2)',
-                        color: '#26C6DA',
-                        fontSize: '0.65rem',
-                        fontWeight: 700,
-                        padding: '2px 6px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px'
-                      }}
-                    >
-                      <Sparkles size={10} /> OCR
+              return (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  className={`sidebar-link${isActive ? ' is-active' : ''}`}
+                  onClick={() => isMobile && onClose()}
+                  title={isCollapsed ? item.label : undefined}
+                  aria-label={isCollapsed ? item.label : undefined}
+                >
+                  <Icon size={18} className="sidebar-icon" />
+                  <span className="sidebar-label">{item.label}</span>
+                  {item.tag && (
+                    <span className="sidebar-link-tag">
+                      <Sparkles size={10} /> {item.tag}
                     </span>
-                  ) : null}
-                </div>
-              )}
-            </NavLink>
-          );
-        })}
+                  )}
+                </NavLink>
+              );
+            })}
+          </React.Fragment>
+        ))}
       </nav>
-
-      {/* User Info & Logout Footer */}
-      <div
-        style={{
-          padding: '16px',
-          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'rgba(15, 23, 42, 0.95)'
-        }}
-      >
-        {!isCollapsed ? (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #2563EB 0%, #0288D1 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  flexShrink: 0
-                }}
-              >
-                {user?.firstName ? user.firstName[0] : 'U'}
-              </div>
-              <div style={{ overflow: 'hidden' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#F8FAFC', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-                  {user ? `${user.firstName} ${user.lastName}` : 'Guest User'}
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
-                  <span
-                    style={{
-                      fontSize: '0.675rem',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      background: user?.role === 'Admin' ? 'rgba(37, 99, 235, 0.25)' : 'rgba(38, 198, 218, 0.2)',
-                      color: user?.role === 'Admin' ? '#93C5FD' : '#80DEEA',
-                      fontWeight: 600
-                    }}
-                  >
-                    {user?.role || 'Sales'}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setIsLogoutConfirmOpen(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#EF4444',
-                cursor: 'pointer',
-                padding: '6px',
-                borderRadius: '8px',
-                display: 'flex',
-                transition: 'opacity 0.2s'
-              }}
-              title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
-            >
-              <LogOut size={17} />
-            </button>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <button
-              onClick={() => setIsLogoutConfirmOpen(true)}
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#EF4444',
-                cursor: 'pointer',
-                padding: '8px'
-              }}
-              title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Logout Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={isLogoutConfirmOpen}
-        onClose={() => setIsLogoutConfirmOpen(false)}
-        onConfirm={handleLogoutConfirm}
-        title="Sign Out" aria-label="Sign out" className="sidebar-icon-btn"
-        message="Are you sure you want to sign out from 7Heaven?"
-        confirmText="Yes, Sign Out"
-        cancelText="Cancel"
-        isDanger={true}
-      />
     </aside>
   );
 };

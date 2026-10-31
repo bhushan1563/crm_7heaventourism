@@ -52,6 +52,7 @@ import QuotationDocumentView from '../components/QuotationDocumentView';
 import { generateQuotationPDF, printQuotation, printFlightVoucher } from '../utils/quotationPdfGenerator';
 import QuotationLivePreview from '../components/QuotationLivePreview';
 import { formatDate, toInputDate } from '../utils/dateHelper';
+import { getErrorMessage } from '../services/api';
 
 const DEFAULT_COMPANY = {
   name: '7HEAVEN TOURISM',
@@ -246,7 +247,7 @@ export const QuotationBuilderPage = () => {
           }
         }
       } catch (err) {
-        showToast('Error initializing quotation builder: ' + err.message, 'error');
+        showToast('Error initializing quotation builder: ' + getErrorMessage(err), 'error');
       } finally {
         setLoading(false);
       }
@@ -705,7 +706,7 @@ export const QuotationBuilderPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Failed to save quotation: ' + err.message, 'error');
+      showToast('Failed to save quotation: ' + getErrorMessage(err), 'error');
     } finally {
       setSaving(false);
     }
@@ -746,15 +747,15 @@ export const QuotationBuilderPage = () => {
                   fontWeight: 700,
                   padding: '2px 8px',
                   borderRadius: '6px',
-                  backgroundColor: formData.quotationType === 'Only Hotel' ? '#ecfdf5' : (formData.quotationType === 'Events / Corporate' ? '#fdf4ff' : '#e0f2fe'),
-                  color: formData.quotationType === 'Only Hotel' ? '#047857' : (formData.quotationType === 'Events / Corporate' ? '#a21caf' : '#0369a1'),
+                  backgroundColor: formData.quotationType === 'Only Hotel' ? 'var(--bg-ECFDF5)' : (formData.quotationType === 'Events / Corporate' ? 'var(--bg-FDF4FF)' : 'var(--bg-E0F2FE)'),
+                  color: formData.quotationType === 'Only Hotel' ? 'var(--fg-047857)' : (formData.quotationType === 'Events / Corporate' ? 'var(--fg-A21CAF)' : 'var(--fg-0369A1)'),
                   border: '1px solid currentColor'
                 }}
               >
                 {formData.quotationType || 'Package'}
               </span>
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+            <div style={{ fontSize: '0.8rem', color: 'var(--fg-94A3B8)', marginTop: '2px' }}>
               {formData.destination || 'Destination'} • {formData.clientName || 'Valued Guest'}
             </div>
           </div>
@@ -822,7 +823,7 @@ export const QuotationBuilderPage = () => {
                     fontSize: '0.75rem',
                     fontWeight: isActive ? 700 : 500,
                     backgroundColor: isActive ? 'rgba(14, 165, 233, 0.18)' : 'transparent',
-                    color: isActive ? '#38bdf8' : '#94a3b8',
+                    color: isActive ? 'var(--fg-0369A1)' : 'var(--fg-667085)',
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                     transition: 'all 0.15s ease'
@@ -851,7 +852,7 @@ export const QuotationBuilderPage = () => {
                   gap: '10px'
                 }}
               >
-                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Tag size={16} />
                   <span>Select Type of Quotation *</span>
                 </div>
@@ -874,9 +875,9 @@ export const QuotationBuilderPage = () => {
                         style={{
                           padding: '10px',
                           borderRadius: '8px',
-                          border: isSelected ? '2px solid #0284c7' : '1px solid #cbd5e1',
-                          backgroundColor: isSelected ? '#e0f2fe' : '#ffffff',
-                          color: isSelected ? '#0369a1' : '#334155',
+                          border: isSelected ? '2px solid #0284c7' : '1px solid var(--bd-CBD5E1)',
+                          backgroundColor: isSelected ? 'var(--bg-E0F2FE)' : 'var(--bg-FFFFFF)',
+                          color: isSelected ? 'var(--fg-0369A1)' : 'var(--fg-334155)',
                           cursor: 'pointer',
                           display: 'flex',
                           flexDirection: 'column',
@@ -888,7 +889,7 @@ export const QuotationBuilderPage = () => {
                       >
                         <Icon size={18} color={isSelected ? '#0284c7' : '#64748b'} />
                         <span style={{ fontWeight: 700, fontSize: '0.8rem' }}>{opt.label}</span>
-                        <span style={{ fontSize: '0.68rem', color: '#64748b' }}>{opt.desc}</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)' }}>{opt.desc}</span>
                       </button>
                     );
                   })}
@@ -897,7 +898,7 @@ export const QuotationBuilderPage = () => {
 
               {/* Optional: Link to Existing Inquiry */}
               <div className="form-group" style={{ padding: '12px', borderRadius: '10px', border: '1px solid rgba(14, 165, 233, 0.2)' }}>
-                <label className="form-label" style={{ color: '#38bdf8' }}>
+                <label className="form-label" style={{ color: 'var(--fg-0369A1)' }}>
                   Auto-fill from Guest Inquiry (Optional)
                 </label>
                 <select
@@ -1049,7 +1050,7 @@ export const QuotationBuilderPage = () => {
               </div>
 
               {formData.quotationType === 'Only Hotel' && (
-                <div style={{ fontSize: '0.78rem', color: '#0369a1', background: '#e0f2fe', padding: '8px 12px', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--fg-0369A1)', background: 'var(--bg-E0F2FE)', padding: '8px 12px', borderRadius: '6px' }}>
                   ℹ️ Note: For &quot;Only Hotel&quot; quotations, day-wise tour itinerary is optional. You can skip directly to Hotel Details and Pricing.
                 </div>
               )}
@@ -1067,7 +1068,7 @@ export const QuotationBuilderPage = () => {
                     gap: '10px'
                   }}
                 >
-                  <Calendar size={36} style={{ color: '#0ea5e9', opacity: 0.8 }} />
+                  <Calendar size={36} style={{ color: 'var(--fg-0EA5E9)', opacity: 0.8 }} />
                   <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.95rem' }}>
                     No Itinerary Days Added Yet
                   </div>
@@ -1093,7 +1094,7 @@ export const QuotationBuilderPage = () => {
                         padding: '12px',
                         borderRadius: '10px',
                         border: '1px solid rgba(255, 255, 255, 0.08)',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: 'var(--bg-F8FAFC)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '10px'
@@ -1104,7 +1105,7 @@ export const QuotationBuilderPage = () => {
                           <input
                             type="text"
                             className="form-input"
-                            style={{ width: '90px', fontWeight: 700, color: '#0284c7' }}
+                            style={{ width: '90px', fontWeight: 700, color: 'var(--fg-0284C7)' }}
                             value={day.dayNumber}
                             onChange={(e) => handleUpdateDay(idx, 'dayNumber', e.target.value)}
                             placeholder="Day 01"
@@ -1153,14 +1154,14 @@ export const QuotationBuilderPage = () => {
                   gap: '8px'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: '#0284c7' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', fontWeight: 700, color: 'var(--fg-0284C7)' }}>
                   <Sparkles size={15} />
                   <span>End of Tour / Event Conclusion Banner</span>
                 </div>
                 <input
                   type="text"
                   className="form-input"
-                  style={{ fontWeight: 600, color: '#0f172a', background: '#FFFFFF' }}
+                  style={{ fontWeight: 600, color: 'var(--fg-0F172A)', background: 'var(--bg-FFFFFF)' }}
                   value={formData.endOfTourNote || '***End of the Tour***'}
                   onChange={(e) => setFormData({ ...formData, endOfTourNote: e.target.value })}
                   placeholder="e.g. ***End of the Tour***"
@@ -1176,10 +1177,10 @@ export const QuotationBuilderPage = () => {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--fg-0F172A)' }}>
                       Accommodations & Hotel Stays ({formData.packageDetails?.hotels?.length || 0})
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)' }}>
                       Add hotels with room category, meal plans, check-in/out dates, and star rating.
                     </div>
                   </div>
@@ -1206,7 +1207,7 @@ export const QuotationBuilderPage = () => {
                       gap: '8px'
                     }}
                   >
-                    <Building2 size={32} style={{ color: '#0ea5e9', opacity: 0.8 }} />
+                    <Building2 size={32} style={{ color: 'var(--fg-0EA5E9)', opacity: 0.8 }} />
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
                       No Accommodations Added
                     </div>
@@ -1228,8 +1229,8 @@ export const QuotationBuilderPage = () => {
                       <div
                         key={idx}
                         style={{
-                          background: '#f8fafc',
-                          border: '1px solid #cbd5e1',
+                          background: 'var(--bg-F8FAFC)',
+                          border: '1px solid var(--bd-CBD5E1)',
                           borderRadius: '10px',
                           padding: '14px',
                           display: 'flex',
@@ -1426,7 +1427,7 @@ export const QuotationBuilderPage = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {(formData.packageDetails?.inclusions || []).map((inc, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <span style={{ color: '#10b981', fontWeight: 800 }}>✓</span>
+                      <span style={{ color: 'var(--fg-10B981)', fontWeight: 800 }}>✓</span>
                       <input
                         type="text"
                         className="form-input"
@@ -1503,7 +1504,7 @@ export const QuotationBuilderPage = () => {
               >
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Plane size={15} style={{ color: '#0ea5e9' }} />
+                    <Plane size={15} style={{ color: 'var(--fg-0EA5E9)' }} />
                     <span>Flight Presentation Mode</span>
                   </div>
                 </div>
@@ -1520,7 +1521,7 @@ export const QuotationBuilderPage = () => {
                     onClick={() => setFormData({ ...formData, asPerFlightTicket: true })}
                     className={`btn btn-sm ${formData.asPerFlightTicket ? 'btn-primary' : 'btn-ghost'}`}
                   >
-                    ✈️ As Per Flight Ticket
+                    As Per Flight Ticket
                   </button>
                 </div>
               </div>
@@ -1537,7 +1538,7 @@ export const QuotationBuilderPage = () => {
                     gap: '10px'
                   }}
                 >
-                  <label className="form-label" style={{ fontWeight: 700, color: '#0284c7' }}>
+                  <label className="form-label" style={{ fontWeight: 700, color: 'var(--fg-0284C7)' }}>
                     Flight Ticket Statement & Notes to Guest
                   </label>
                   <textarea
@@ -1580,14 +1581,14 @@ export const QuotationBuilderPage = () => {
                         padding: '12px',
                         borderRadius: '10px',
                         border: '1px solid var(--border-subtle)',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: 'var(--bg-F8FAFC)',
                         display: 'flex',
                         flexDirection: 'column',
                         gap: '10px'
                       }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontWeight: 700, color: '#0284c7', fontSize: '0.85rem' }}>
+                        <span style={{ fontWeight: 700, color: 'var(--fg-0284C7)', fontSize: '0.85rem' }}>
                           Flight #{idx + 1}: {f.flightType || 'Segment'}
                         </span>
                         <button
@@ -1725,11 +1726,11 @@ export const QuotationBuilderPage = () => {
               {/* Header & Add-on Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Receipt size={18} style={{ color: '#0284c7' }} />
+                  <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--fg-0F172A)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Receipt size={18} style={{ color: 'var(--fg-0284C7)' }} />
                     <span>Pricing Management & Cost Breakdown</span>
                   </div>
-                  <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--fg-64748B)' }}>
                     Configure Package Price, Airfare, Other, dynamic Add-ons and view live Grand Totals.
                   </div>
                 </div>
@@ -1753,8 +1754,8 @@ export const QuotationBuilderPage = () => {
                   gap: '6px',
                   padding: '6px',
                   borderRadius: '10px',
-                  backgroundColor: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
+                  backgroundColor: 'var(--bg-F1F5F9)',
+                  border: '1px solid var(--bd-CBD5E1)',
                   overflowX: 'auto',
                   alignItems: 'center'
                 }}
@@ -1773,8 +1774,8 @@ export const QuotationBuilderPage = () => {
                         padding: '8px 14px',
                         borderRadius: '8px',
                         border: isActive ? '1px solid #0284c7' : '1px solid transparent',
-                        backgroundColor: isActive ? '#0284c7' : '#ffffff',
-                        color: isActive ? '#ffffff' : '#334155',
+                        backgroundColor: isActive ? '#0284c7' : 'var(--bg-FFFFFF)',
+                        color: isActive ? '#ffffff' : 'var(--fg-334155)',
                         fontWeight: isActive ? 700 : 600,
                         fontSize: '0.8rem',
                         cursor: 'pointer',
@@ -1789,8 +1790,8 @@ export const QuotationBuilderPage = () => {
                           fontSize: '0.72rem',
                           padding: '1px 5px',
                           borderRadius: '4px',
-                          backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : '#e2e8f0',
-                          color: isActive ? '#ffffff' : '#475569'
+                          backgroundColor: isActive ? 'rgba(255,255,255,0.25)' : 'var(--bg-E2E8F0)',
+                          color: isActive ? '#ffffff' : 'var(--fg-475569)'
                         }}
                       >
                         ₹{item.costPerPerson || 0}
@@ -1810,8 +1811,8 @@ export const QuotationBuilderPage = () => {
                     padding: '8px 16px',
                     borderRadius: '8px',
                     border: pricingActiveTab === 'total' ? '1.5px solid #059669' : '1px solid #10b981',
-                    backgroundColor: pricingActiveTab === 'total' ? '#059669' : '#ecfdf5',
-                    color: pricingActiveTab === 'total' ? '#ffffff' : '#047857',
+                    backgroundColor: pricingActiveTab === 'total' ? '#059669' : 'var(--bg-ECFDF5)',
+                    color: pricingActiveTab === 'total' ? '#ffffff' : 'var(--fg-047857)',
                     fontWeight: 800,
                     fontSize: '0.82rem',
                     cursor: 'pointer',
@@ -1839,7 +1840,7 @@ export const QuotationBuilderPage = () => {
                       style={{
                         padding: '18px',
                         borderRadius: '12px',
-                        backgroundColor: '#f8fafc',
+                        backgroundColor: 'var(--bg-F8FAFC)',
                         border: '1.5px solid #0284c7',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1849,7 +1850,7 @@ export const QuotationBuilderPage = () => {
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 800, color: '#0284c7', fontSize: '0.95rem' }}>
+                          <span style={{ fontWeight: 800, color: 'var(--fg-0284C7)', fontSize: '0.95rem' }}>
                             Component: {item.name}
                           </span>
                           {!isPreset && (
@@ -1894,7 +1895,7 @@ export const QuotationBuilderPage = () => {
                           <input
                             type="number"
                             className="form-input"
-                            style={{ fontWeight: 700, fontSize: '1rem', color: '#0369a1' }}
+                            style={{ fontWeight: 700, fontSize: '1rem', color: 'var(--fg-0369A1)' }}
                             value={item.costPerPerson ?? 0}
                             onChange={(e) => handleUpdatePricingItem(currentIndex, 'costPerPerson', Number(e.target.value))}
                           />
@@ -1916,7 +1917,7 @@ export const QuotationBuilderPage = () => {
                             type="text"
                             className="form-input"
                             disabled
-                            style={{ fontWeight: 800, color: '#059669', background: '#ecfdf5' }}
+                            style={{ fontWeight: 800, color: 'var(--fg-059669)', background: 'var(--bg-ECFDF5)' }}
                             value={`₹${(item.costPerPerson * getPaxNumber(formData.paxDetails)).toLocaleString('en-IN')}`}
                           />
                         </div>
@@ -1935,8 +1936,8 @@ export const QuotationBuilderPage = () => {
                       </div>
 
                       {/* Included in Grand Total Toggle */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#475569' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px dashed var(--bd-E2E8F0)' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--fg-475569)' }}>
                           Include this component in Grand Total calculation:
                         </div>
                         <button
@@ -1957,7 +1958,7 @@ export const QuotationBuilderPage = () => {
                   style={{
                     padding: '18px',
                     borderRadius: '12px',
-                    backgroundColor: '#f8fafc',
+                    backgroundColor: 'var(--bg-F8FAFC)',
                     border: '1.5px solid #10b981',
                     display: 'flex',
                     flexDirection: 'column',
@@ -1965,7 +1966,7 @@ export const QuotationBuilderPage = () => {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 800, color: '#047857', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ fontWeight: 800, color: 'var(--fg-047857)', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       <CheckCircle2 size={18} />
                       <span>Consolidated Total & Pricing Summary</span>
                     </div>
@@ -1980,10 +1981,10 @@ export const QuotationBuilderPage = () => {
                   </div>
 
                   {/* Pricing Items Summary Table */}
-                  <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+                  <div style={{ border: '1px solid var(--bd-CBD5E1)', borderRadius: '8px', overflow: 'hidden', backgroundColor: 'var(--bg-FFFFFF)' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
                       <thead>
-                        <tr style={{ backgroundColor: '#f1f5f9', borderBottom: '1px solid #cbd5e1', textAlign: 'left' }}>
+                        <tr style={{ backgroundColor: 'var(--bg-F1F5F9)', borderBottom: '1px solid var(--bd-CBD5E1)', textAlign: 'left' }}>
                           <th style={{ padding: '8px 12px' }}>Pricing Item</th>
                           <th style={{ padding: '8px 12px' }}>Rate / Pax</th>
                           <th style={{ padding: '8px 12px' }}>Pax</th>
@@ -1994,24 +1995,24 @@ export const QuotationBuilderPage = () => {
                       </thead>
                       <tbody>
                         {currentPricingItems.map((item, idx) => (
-                          <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#0f172a' }}>
+                          <tr key={item.id} style={{ borderBottom: '1px solid var(--bd-F1F5F9)' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--fg-0F172A)' }}>
                               {item.name}
                             </td>
-                            <td style={{ padding: '8px 12px', color: '#0369a1', fontWeight: 600 }}>
+                            <td style={{ padding: '8px 12px', color: 'var(--fg-0369A1)', fontWeight: 600 }}>
                               ₹{(item.costPerPerson || 0).toLocaleString('en-IN')}
                             </td>
-                            <td style={{ padding: '8px 12px', color: '#64748b' }}>
+                            <td style={{ padding: '8px 12px', color: 'var(--fg-64748B)' }}>
                               {getPaxNumber(formData.paxDetails)}
                             </td>
-                            <td style={{ padding: '8px 12px', fontWeight: 700, color: '#059669' }}>
+                            <td style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--fg-059669)' }}>
                               ₹{((item.costPerPerson || 0) * getPaxNumber(formData.paxDetails)).toLocaleString('en-IN')}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>
                               {item.isIncluded !== false ? (
-                                <span style={{ color: '#059669', fontSize: '0.75rem', fontWeight: 700 }}>✓ Included</span>
+                                <span style={{ color: 'var(--fg-059669)', fontSize: '0.75rem', fontWeight: 700 }}>✓ Included</span>
                               ) : (
-                                <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>Optional</span>
+                                <span style={{ color: 'var(--fg-94A3B8)', fontSize: '0.75rem' }}>Optional</span>
                               )}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>
@@ -2044,26 +2045,26 @@ export const QuotationBuilderPage = () => {
 
                   {/* Summary Totals Cards */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                    <div style={{ padding: '12px 14px', borderRadius: '8px', backgroundColor: '#fef08a', border: '1px solid #facc15' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#854d0e', textTransform: 'uppercase' }}>
+                    <div style={{ padding: '12px 14px', borderRadius: '8px', backgroundColor: 'var(--bg-FEF08A)', border: '1px solid #facc15' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fg-854D0E)', textTransform: 'uppercase' }}>
                         Total Cost Per Person (Incl GST)
                       </div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--fg-0F172A)', marginTop: '2px' }}>
                         ₹{(formData.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#713f12', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--fg-713F12)', marginTop: '2px' }}>
                         {formData.pricing?.totalCostNote || 'Rs 0 Per person (Incl of GST)'}
                       </div>
                     </div>
 
-                    <div style={{ padding: '12px 14px', borderRadius: '8px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#065f46', textTransform: 'uppercase' }}>
+                    <div style={{ padding: '12px 14px', borderRadius: '8px', backgroundColor: 'var(--bg-ECFDF5)', border: '1px solid var(--bd-A7F3D0)' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--fg-065F46)', textTransform: 'uppercase' }}>
                         Grand Total (Group: {formData.paxDetails || '1 Pax'})
                       </div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--fg-059669)', marginTop: '2px' }}>
                         ₹{(formData.pricing?.grandTotal || 0).toLocaleString('en-IN')}
                       </div>
-                      <div style={{ fontSize: '0.72rem', color: '#047857', marginTop: '2px' }}>
+                      <div style={{ fontSize: '0.72rem', color: 'var(--fg-047857)', marginTop: '2px' }}>
                         Auto-calculated from all active price tabs
                       </div>
                     </div>
@@ -2139,7 +2140,7 @@ export const QuotationBuilderPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {formData.exclusions.map((exc, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: '#ef4444', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>×</span>
+                        <span style={{ color: 'var(--fg-EF4444)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>×</span>
                         <input
                           type="text"
                           className="form-input"
@@ -2165,8 +2166,8 @@ export const QuotationBuilderPage = () => {
               {/* Payment Policy */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <CreditCard size={15} style={{ color: '#38bdf8' }} />
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CreditCard size={15} style={{ color: 'var(--fg-0369A1)' }} />
                     <span>Payment Policy ({(formData.paymentPolicy || []).length})</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -2206,7 +2207,7 @@ export const QuotationBuilderPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {formData.paymentPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>💳</span>
+                        <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>•</span>
                         <input
                           type="text"
                           className="form-input"
@@ -2232,8 +2233,8 @@ export const QuotationBuilderPage = () => {
               {/* Cancellation Policy */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <AlertTriangle size={15} style={{ color: '#f59e0b' }} />
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-F59E0B)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={15} style={{ color: 'var(--fg-F59E0B)' }} />
                     <span>Cancellation Policy ({(formData.cancellationPolicy || []).length})</span>
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
@@ -2273,7 +2274,7 @@ export const QuotationBuilderPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {formData.cancellationPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: '#f59e0b', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>⚠️</span>
+                        <span style={{ color: 'var(--fg-F59E0B)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>⚠️</span>
                         <input
                           type="text"
                           className="form-input"
@@ -2299,8 +2300,8 @@ export const QuotationBuilderPage = () => {
               {/* Vehicle Guidelines */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontWeight: 800 }}>❖</span>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontWeight: 800 }}>•</span>
                     <span>Vehicle Guidelines (❖ Points) ({(formData.vehicleNotes || []).length})</span>
                   </div>
                   <button
@@ -2330,7 +2331,7 @@ export const QuotationBuilderPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {formData.vehicleNotes.map((vn, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: '#38bdf8', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>❖</span>
+                        <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>❖</span>
                         <input
                           type="text"
                           className="form-input"
@@ -2387,7 +2388,7 @@ export const QuotationBuilderPage = () => {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                     {formData.importantNotes.map((note, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ color: '#94a3b8', fontWeight: 700, fontSize: '0.78rem', minWidth: '20px' }}>
+                        <span style={{ color: 'var(--fg-94A3B8)', fontWeight: 700, fontSize: '0.78rem', minWidth: '20px' }}>
                           {idx + 1}.
                         </span>
                         <input
@@ -2413,8 +2414,8 @@ export const QuotationBuilderPage = () => {
               </div>
 
               {/* Company Branding & Contact Info */}
-              <div style={{ padding: '14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', backgroundColor: '#f8fafc' }}>
-                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+              <div style={{ padding: '14px', borderRadius: '10px', border: '1px solid var(--border-subtle)', backgroundColor: 'var(--bg-F8FAFC)' }}>
+                <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--fg-0F172A)', marginBottom: '8px' }}>
                   7Heaven Company Branding & Contact (Footer Details)
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>

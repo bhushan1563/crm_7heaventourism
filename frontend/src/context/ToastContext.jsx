@@ -6,7 +6,9 @@ const ToastContext = createContext(null);
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const showToast = useCallback((message, type = 'info', duration = 3500) => {
+  // Errors and warnings stay longer: they are usually longer sentences and need to be read.
+  const showToast = useCallback((message, type = 'info', duration) => {
+    if (duration === undefined) duration = type === 'error' ? 7000 : type === 'warning' ? 5500 : 3500;
     const id = Date.now() + Math.random().toString(36).substring(2, 7);
     setToasts((prev) => [...prev, { id, message, type }]);
 
@@ -27,26 +29,26 @@ export const ToastProvider = ({ children }) => {
       {/* Toast Render Container */}
       <div className="toast-stack" role="status" aria-live="polite">
         {toasts.map((toast) => {
-          let bg = '#1e293b';
-          let border = 'rgba(255,255,255,0.1)';
+          let bg = 'var(--surface)';
+          let border = 'var(--border-color)';
           let icon = <Info size={18} color="#38bdf8" />;
-          let accent = '#38bdf8';
+          let accent = '#2E90FA';
 
           if (toast.type === 'success') {
-            bg = 'rgba(15, 23, 42, 0.95)';
-            border = 'rgba(16, 185, 129, 0.4)';
+            bg = 'var(--surface)';
+            border = 'var(--border-color)';
             icon = <CheckCircle2 size={18} color="#10b981" />;
-            accent = '#10b981';
+            accent = '#12B76A';
           } else if (toast.type === 'error') {
-            bg = 'rgba(15, 23, 42, 0.95)';
-            border = 'rgba(244, 63, 94, 0.4)';
+            bg = 'var(--surface)';
+            border = 'var(--border-color)';
             icon = <AlertCircle size={18} color="#f43f5e" />;
-            accent = '#f43f5e';
+            accent = '#F04438';
           } else if (toast.type === 'warning') {
-            bg = 'rgba(15, 23, 42, 0.95)';
-            border = 'rgba(245, 158, 11, 0.4)';
+            bg = 'var(--surface)';
+            border = 'var(--border-color)';
             icon = <AlertTriangle size={18} color="#f59e0b" />;
-            accent = '#f59e0b';
+            accent = '#F79009';
           }
 
           return (
@@ -63,6 +65,7 @@ export const ToastProvider = ({ children }) => {
               <div style={{ flex: 1, fontWeight: 500 }}>{toast.message}</div>
               <button
                 onClick={() => removeToast(toast.id)}
+                aria-label="Dismiss notification"
                 style={{
                   background: 'transparent',
                   border: 'none',

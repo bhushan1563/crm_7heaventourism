@@ -1,0 +1,381 @@
+/* My Profile screen + the shared avatar / account-menu pieces. Uses theme variables only, so it follows light / dark. */
+
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.profile-forms {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+/* ---------- Identity card ---------- */
+.profile-identity {
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.profile-photo {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  padding: 4px;
+  border: 2px dashed transparent;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.profile-photo.is-dragging {
+  border-color: var(--primary);
+  background: var(--primary-tint);
+}
+
+.profile-photo-busy {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 24, 40, 0.5);
+  color: #FFFFFF;
+}
+
+.profile-name {
+  margin-top: 16px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  overflow-wrap: anywhere;
+}
+
+.profile-email {
+  margin-top: 2px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.profile-photo-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.profile-hint {
+  margin-top: 10px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+
+.profile-facts {
+  width: 100%;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.profile-facts dt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.profile-facts dd {
+  margin-top: 2px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Forms ---------- */
+.profile-form {
+  padding: 20px;
+}
+
+.profile-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+}
+
+.profile-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+
+.field-error {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--chip-red-fg);
+}
+
+.form-input[aria-invalid='true'] {
+  border-color: #F04438;
+  background: var(--tint-red-field);
+}
+
+.form-input[aria-invalid='true']:focus {
+  box-shadow: 0 0 0 3px rgba(240, 68, 56, 0.16);
+}
+
+/* ---------- Password strength ---------- */
+.strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.strength-bar {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.strength-bar i {
+  height: 5px;
+  flex: 1;
+  border-radius: 9999px;
+  background: var(--surface-3);
+  transition: background-color 0.2s ease;
+}
+
+.strength-label {
+  min-width: 70px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.strength[data-level='1'] .strength-bar i:nth-child(-n + 1) { background: #F04438; }
+.strength[data-level='2'] .strength-bar i:nth-child(-n + 2) { background: #F79009; }
+.strength[data-level='3'] .strength-bar i:nth-child(-n + 3) { background: #2E90FA; }
+.strength[data-level='4'] .strength-bar i:nth-child(-n + 4) { background: #12B76A; }
+.strength[data-level='1'] .strength-label { color: var(--chip-red-fg); }
+.strength[data-level='2'] .strength-label { color: var(--chip-amber-fg); }
+.strength[data-level='3'] .strength-label { color: var(--chip-blue-fg); }
+.strength[data-level='4'] .strength-label { color: var(--chip-green-fg); }
+
+/* ---------- Avatars (photo or initial) ---------- */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563EB 0%, #0E9AA7 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+
+.avatar-photo {
+  max-width: none; /* the global img { max-width: 100% } rule would squash a fixed-size photo into an oval */
+  object-fit: cover;
+  background: var(--surface-3);
+}
+
+/* ---------- Top-bar buttons and account menu ---------- */
+.navbar-icon-btn {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  border: 1px solid var(--border-color);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar-icon-btn:hover {
+  background: var(--surface-3);
+  color: var(--text-primary);
+}
+
+.navbar-icon-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.profile-menu {
+  position: relative;
+}
+
+.navbar-user-pill {
+  cursor: pointer;
+  font-family: inherit;
+  color: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.navbar-user-pill:hover,
+.navbar-user-pill[aria-expanded='true'] {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.navbar-user-pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.navbar-user-text {
+  text-align: left;
+}
+
+.navbar-user-caret {
+  color: var(--text-muted);
+  margin-left: -2px;
+}
+
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 270px;
+  background: var(--surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 60;
+}
+
+.profile-dropdown-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 6px;
+}
+
+.profile-dropdown-name {
+  font-size: 0.875rem;
+  font-weight: 650;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-dropdown-email {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.855rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-dropdown-item:hover,
+.profile-dropdown-item:focus-visible {
+  background: var(--surface-3);
+  outline: none;
+}
+
+.profile-dropdown-item.is-danger {
+  color: var(--chip-red-fg);
+}
+
+.profile-dropdown-item.is-danger:hover {
+  background: var(--chip-red-bg);
+}
+
+.profile-dropdown-sep {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 6px 4px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1023.98px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 639.98px) {
+  .profile-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-form {
+    padding: 16px;
+  }
+
+  .profile-form-actions .btn,
+  .profile-photo-actions .btn {
+    flex: 1;
+  }
+
+  .navbar-icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .navbar-user-caret {
+    display: none;
+  }
+
+  .profile-dropdown {
+    position: fixed;
+    top: calc(56px + 8px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}

@@ -108,6 +108,23 @@ export const AuthProvider = ({ children }) => {
     setRights({});
   };
 
+  // Used by "My Profile": keep the session in step with the latest copy of the user (name, phone, photo).
+  const updateUser = useCallback((nextUser) => {
+    const sessionUser = nextUser?._doc || nextUser;
+    setUser(sessionUser);
+    try {
+      localStorage.setItem('7heaven_user', JSON.stringify(sessionUser));
+    } catch (e) {
+      console.warn('Could not cache the profile locally:', e.message);
+    }
+  }, []);
+
+  // After a password change the server issues a fresh token for this device (every other device is signed out).
+  const replaceToken = useCallback((nextToken) => {
+    localStorage.setItem('7heaven_token', nextToken);
+    setToken(nextToken);
+  }, []);
+
   /**
    * Check if current user has permission for an action in a module
    * @param {string} moduleName - 'guest_list' | 'supplier_list' | 'users' | 'rights' | 'scanner' | 'reports'
@@ -165,6 +182,8 @@ export const AuthProvider = ({ children }) => {
         login,
         logout,
         refreshUser,
+        updateUser,
+        replaceToken,
         can,
         canEditRecord,
         isAuthenticated: Boolean(token && user)

@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, Sparkles, Users, Building2, QrCode } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ShieldCheck, ArrowRight, Users, Building2, QrCode } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { API_ORIGIN } from '../services/api';
 import logo from '../assets/logo.webp';
+import '../login.css';
+
+const FEATURES = [
+  { icon: Users, color: '#60A5FA', title: 'Guest Inquiries', text: 'Under Process to Travelled' },
+  { icon: Building2, color: '#5FD7E1', title: '5-Tier Suppliers', text: 'Domestic, Intl, Consolidators' },
+  { icon: ShieldCheck, color: '#4ADE9A', title: 'Granular Rights', text: 'Download & Edit-Others rules' },
+  { icon: QrCode, color: '#7DD3FC', title: 'Mobile Scanner', text: 'Instant Card / OCR parsing' }
+];
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -37,204 +45,58 @@ export const LoginPage = () => {
   };
 
   return (
-    <div
-      className="login-shell"
-      style={{
-        minHeight: '100vh',
-        width: '100%',
-        display: 'flex',
-        background: '#0F172A',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
-    >
-      {/* Background ambient lighting */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-15%',
-          left: '10%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'rgba(37, 99, 235, 0.15)',
-          filter: 'blur(120px)',
-          pointerEvents: 'none'
-        }}
-      />
-      <div
-        style={{
-          position: 'absolute',
-          bottom: '-15%',
-          right: '10%',
-          width: '500px',
-          height: '500px',
-          borderRadius: '50%',
-          background: 'rgba(38, 198, 218, 0.12)',
-          filter: 'blur(120px)',
-          pointerEvents: 'none'
-        }}
-      />
-
-      {/* Left Column: Brand Hero & Value Proposition */}
-      <div
-        className="login-hero"
-        style={{
-          flex: '1.1',
-          padding: '60px 70px',
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between',
-          borderRight: '1px solid rgba(255, 255, 255, 0.08)',
-          background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.9) 100%)',
-          zIndex: 1
-        }}
-      >
-        {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div
-            style={{
-              width: '46px',
-              height: '46px',
-              borderRadius: '12px',
-              background: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 6px 20px rgba(37, 99, 235, 0.4)',
-              overflow: 'hidden'
-            }}
-          >
-            <img src={logo} alt="7Heaven Tourism" style={{ width: '32px', height: '32px', objectFit: 'contain' }} />
+    <div className="login-shell">
+      {/* Left: brand panel */}
+      <div className="login-hero">
+        <div className="login-brand">
+          <div className="login-brand-logo">
+            <img src={logo} alt="7Heaven Tourism" />
           </div>
           <div>
-            <div style={{ fontFamily: 'var(--font-headline)', fontSize: '1.75rem', fontWeight: 800, color: '#FFFFFF', letterSpacing: '-0.02em' }}>
-              7Heaven Tourism
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#94A3B8', letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 600 }}>
-              Travel with the Trust
-            </div>
+            <div className="login-brand-name">7Heaven Tourism</div>
+            <div className="login-brand-tag">Travel with the Trust</div>
           </div>
         </div>
 
-        {/* Hero Copy */}
-        <div className="login-hero-copy" style={{ maxWidth: '540px', margin: '40px 0' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 14px',
-              borderRadius: '9999px',
-              background: 'rgba(37, 99, 235, 0.15)',
-              border: '1px solid rgba(37, 99, 235, 0.3)',
-              color: '#93C5FD',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              marginBottom: '20px'
-            }}
-          >
-            <Sparkles size={14} color="#26C6DA" /> Enterprise Operations Suite
-          </div>
-
-          <h2
-            style={{
-              fontFamily: 'var(--font-headline)',
-              fontSize: '2.75rem',
-              fontWeight: 800,
-              lineHeight: 1.15,
-              color: '#FFFFFF',
-              letterSpacing: '-0.03em',
-              marginBottom: '20px'
-            }}
-          >
-            Seamless Inquiries, Suppliers & Security.
-          </h2>
-
-          <p style={{ fontSize: '1.05rem', color: '#94A3B8', lineHeight: 1.6, marginBottom: '32px' }}>
-            A unified operations portal built for high-end luxury holiday management, categorized vendor directories, role-based download restrictions, and intelligent mobile card scanning.
+        <div className="login-hero-copy">
+          <span className="login-eyebrow">Enterprise Operations Suite</span>
+          <h2>Seamless Inquiries, Suppliers &amp; Security.</h2>
+          <p>
+            A unified operations portal built for high-end holiday management, categorized vendor directories,
+            role-based download restrictions, and intelligent mobile card scanning.
           </p>
 
-          {/* Feature Grid Pills */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '14px' }}>
-            <div style={{ padding: '14px 18px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Users size={20} color="#2563EB" />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F8FAFC' }}>Guest Inquiries</div>
-                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Under Process to Travelled</div>
+          <div className="login-features">
+            {FEATURES.map(({ icon: Icon, color, title, text }) => (
+              <div className="login-feature" key={title}>
+                <span className="login-feature-icon" style={{ color }}>
+                  <Icon size={18} />
+                </span>
+                <div>
+                  <div className="login-feature-title">{title}</div>
+                  <div className="login-feature-text">{text}</div>
+                </div>
               </div>
-            </div>
-
-            <div style={{ padding: '14px 18px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <Building2 size={20} color="#26C6DA" />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F8FAFC' }}>5-Tier Suppliers</div>
-                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Domestic, Intl, Consolidators</div>
-              </div>
-            </div>
-
-            <div style={{ padding: '14px 18px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <ShieldCheck size={20} color="#10B981" />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F8FAFC' }}>Granular Rights</div>
-                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Download & Edit-Others rules</div>
-              </div>
-            </div>
-
-            <div style={{ padding: '14px 18px', borderRadius: '12px', background: 'rgba(255, 255, 255, 0.04)', border: '1px solid rgba(255, 255, 255, 0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <QrCode size={20} color="#0288D1" />
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F8FAFC' }}>Mobile Scanner</div>
-                <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Instant Card / OCR parsing</div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Footer info */}
-        <div className="login-hero-footer" style={{ fontSize: '0.8rem', color: '#64748B' }}>
-          © 2026 7Heaven Tourism • High Availability Cluster
-        </div>
+        <div className="login-hero-footer">© 2026 7Heaven Tourism</div>
       </div>
 
-      {/* Right Column: Portal Login Form */}
-      <div
-        className="login-form-col"
-        style={{
-          flex: '0.9',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '40px',
-          zIndex: 1,
-          background: '#0B132B'
-        }}
-      >
-        <div
-          className="login-card"
-          style={{
-            width: '100%',
-            maxWidth: '440px',
-            padding: '40px',
-            borderRadius: '20px',
-            background: '#FFFFFF',
-            boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.3)'
-          }}
-        >
-          <div style={{ marginBottom: '28px', textAlign: 'center' }}>
-            <h3 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em', fontFamily: 'var(--font-headline)' }}>
-              Portal Sign In
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#64748B', marginTop: '6px' }}>
-              Enter your credentials to access 7Heaven Tourism
-            </p>
+      {/* Right: sign-in form */}
+      <div className="login-form-col">
+        <div className="login-card">
+          <div className="login-card-head">
+            <h3>Sign in to your workspace</h3>
+            <p>Enter your credentials to access 7Heaven Tourism</p>
           </div>
 
           <form onSubmit={handleLogin}>
             <div className="form-group">
-              <label className="form-label" htmlFor="login-email">Email Address</label>
-              <div style={{ position: 'relative' }}>
+              <label className="form-label" htmlFor="login-email">Email address</label>
+              <div className="login-field">
+                <Mail size={17} className="login-field-icon" />
                 <input
                   id="login-email"
                   type="email"
@@ -244,77 +106,51 @@ export const LoginPage = () => {
                   autoCapitalize="none"
                   spellCheck={false}
                   className="form-input"
-                  style={{ paddingLeft: '40px' }}
                   placeholder="name@7heaven.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                 />
-                <Mail
-                  size={18}
-                  style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}
-                />
               </div>
             </div>
 
-            <div className="form-group" style={{ marginBottom: '24px' }}>
-              {/* <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <label className="form-label" style={{ marginBottom: 0 }}>Password</label>
-                <span style={{ fontSize: '0.75rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600 }}>
-                  Forgot password?
-                </span>
-              </div> */}
-              <div style={{ position: 'relative' }}>
+            <div className="form-group" style={{ marginBottom: '22px' }}>
+              <label className="form-label" htmlFor="login-password">Password</label>
+              <div className="login-field">
+                <Lock size={17} className="login-field-icon" />
                 <input
+                  id="login-password"
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   autoComplete="current-password"
-                  aria-label="Password"
                   className="form-input"
-                  style={{ paddingLeft: '40px', paddingRight: '40px' }}
+                  style={{ paddingRight: '42px' }}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <Lock
-                  size={18}
-                  style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }}
-                />
                 <button
                   type="button"
+                  className="login-field-toggle"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#94A3B8',
-                    cursor: 'pointer',
-                    display: 'flex'
-                  }}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>
               </div>
             </div>
 
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ width: '100%', padding: '13px', fontSize: '0.95rem' }}
-              disabled={loading}
-            >
+            <button type="submit" className="btn btn-primary login-submit" disabled={loading}>
               {loading ? 'Authenticating...' : 'Sign In to 7Heaven Tourism'}
-              <ArrowRight size={17} />
+              <ArrowRight size={16} />
             </button>
+
+            <div className="login-divider"><span>or</span></div>
+
             <button
               type="button"
-              className="btn btn-secondary"
-              style={{ width: '100%', padding: '13px', fontSize: '0.95rem', marginTop: '10px' }}
+              className="btn btn-outline login-submit"
               onClick={() => {
                 window.location.href = `${API_ORIGIN}/static/7heaven.apk`;
               }}

@@ -38,6 +38,22 @@ export const loginLimiter = rateLimit({
     res.status(429).json({ success: false, message: 'Too many failed login attempts. Please try again in 15 minutes.' })
 });
 
+/**
+ * Changing a password needs the current one, so a stolen session could be used to guess it. Wrong guesses are counted per
+ * account; a successful change is not.
+ */
+export const passwordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 8,
+  skipSuccessfulRequests: true,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  keyGenerator: (req) => (req.user ? `u:${req.user._id}` : ipKeyGenerator(req.ip)),
+  requestWasSuccessful: (req, res) => res.locals.passwordChanged === true,
+  handler: (req, res) =>
+    res.status(429).json({ success: false, message: 'Too many failed attempts. Please try again in 15 minutes.' })
+});
+
 /** OCR is CPU and memory heavy: cap it per user/IP. */
 export const scanLimiter = limiter({
   windowMs: 60 * 1000,

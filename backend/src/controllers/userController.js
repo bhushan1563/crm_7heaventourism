@@ -2,9 +2,10 @@ import bcrypt from 'bcryptjs';
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
 import { isAdminRole, isValidEmail, pick, MIN_PASSWORD_LENGTH } from '../utils/security.js';
+import { friendlyMessage } from '../utils/errors.js';
 
 const ASSIGNABLE_ROLES = ['Admin', 'Sales', 'Ops', 'Viewer'];
-const UPDATABLE_FIELDS = ['email', 'firstName', 'lastName', 'phone', 'avatar', 'active', 'role', 'password'];
+const UPDATABLE_FIELDS = ['email', 'firstName', 'lastName', 'phone', 'active', 'role', 'password'];
 
 const fail = (res, message) => res.status(200).json({ success: false, message });
 
@@ -45,7 +46,7 @@ export const getUsers = async (req, res) => {
       data: users
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to fetch users: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch users') });
   }
 };
 
@@ -125,7 +126,7 @@ export const createUser = async (req, res) => {
       data: newUser
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to create user: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to create user') });
   }
 };
 
@@ -175,6 +176,7 @@ export const updateUser = async (req, res) => {
         return fail(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
       }
       updateData.password = await bcrypt.hash(updateData.password, 10);
+      updateData.passwordChangedAt = new Date(Math.floor(Date.now() / 1000) * 1000); // sign the user out everywhere
     }
 
     const updated = await UserModel.findByIdAndUpdate(existing._id, updateData, { new: true, runValidators: true }).select('-password');
@@ -185,7 +187,7 @@ export const updateUser = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to update user: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to update user') });
   }
 };
 
@@ -211,7 +213,7 @@ export const toggleUserActive = async (req, res) => {
       data: updated
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error) });
   }
 };
 
@@ -233,6 +235,6 @@ export const deleteUser = async (req, res) => {
       message: 'User account removed successfully.'
     });
   } catch (error) {
-    res.status(200).json({ success: false, message: 'Failed to delete user: ' + error.message });
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to delete user') });
   }
 };

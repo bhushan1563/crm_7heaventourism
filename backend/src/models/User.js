@@ -43,6 +43,11 @@ const userSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: ''
+  },
+  // Sessions issued before this moment are rejected (set whenever the password changes).
+  passwordChangedAt: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

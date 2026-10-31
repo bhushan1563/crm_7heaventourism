@@ -36,25 +36,28 @@ import ExportButton from '../components/ExportButton';
 import GuestFollowUpModal from '../components/GuestFollowUpModal';
 import { formatDate, toInputDate } from '../utils/dateHelper';
 import { GUEST_STATUSES } from '../config';
+import { getErrorMessage } from '../services/api';
 
 const STATUS_OPTIONS = GUEST_STATUSES;
 
 const getStatusStyle = (status) => {
+  // Same palette as the status chips (StatusBadge) so a status looks identical everywhere.
   switch (status) {
-    case 'Under Process':
-      return { bg: '#FEF3C7', color: '#B45309', border: '#FDE68A' };
     case 'Follow up':
-      return { bg: '#FFEDD5', color: '#C2410C', border: '#FED7AA' };
+      return { bg: 'var(--bg-FFF4ED)', color: 'var(--fg-B93815)', border: 'var(--bd-F9DBAF)' };
     case 'Quoted':
-      return { bg: '#E0F2FE', color: '#0369A1', border: '#BAE6FD' };
+      return { bg: 'var(--bg-EFF8FF)', color: 'var(--fg-175CD3)', border: 'var(--bd-B2DDFF)' };
     case 'Confirmed':
-      return { bg: '#F3E8FF', color: '#7E22CE', border: '#E9D5FF' };
+      return { bg: 'var(--bg-F4F3FF)', color: 'var(--fg-5925DC)', border: 'var(--bd-D9D6FE)' };
     case 'Confirmed & Payment received':
-      return { bg: '#ECFDF5', color: '#047857', border: '#A7F3D0' };
+      return { bg: 'var(--bg-ECFDF3)', color: 'var(--fg-027A48)', border: 'var(--bd-ABEFC6)' };
     case 'Travelled':
-      return { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
+      return { bg: 'var(--bg-F0FDF9)', color: 'var(--fg-107569)', border: 'var(--bd-99F6E0)' };
+    case 'Cancelled':
+      return { bg: 'var(--bg-FEF3F2)', color: 'var(--fg-B42318)', border: 'var(--bd-FECDCA)' };
+    case 'Under Process':
     default:
-      return { bg: '#FEF3C7', color: '#B45309', border: '#FDE68A' };
+      return { bg: 'var(--bg-FFFAEB)', color: 'var(--fg-B54708)', border: 'var(--bd-FEDF89)' };
   }
 };
 
@@ -107,7 +110,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast('Error loading guests: ' + err.message, 'error');
+      showToast('Error loading guests: ' + getErrorMessage(err), 'error');
     } finally {
       setLoading(false);
     }
@@ -211,7 +214,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to update status', 'error');
+      showToast(getErrorMessage(err, 'Failed to update status'), 'error');
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -358,7 +361,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error creating guest inquiry', 'error');
+      showToast(getErrorMessage(err, 'Error creating guest inquiry'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -378,7 +381,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Error updating inquiry', 'error');
+      showToast(getErrorMessage(err, 'Error updating inquiry'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -398,7 +401,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to delete inquiry', 'error');
+      showToast(getErrorMessage(err, 'Failed to delete inquiry'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -415,7 +418,7 @@ export const GuestListPage = () => {
         showToast(res.message, 'error');
       }
     } catch (err) {
-      showToast(err.response?.data?.message || 'Failed to record follow-up', 'error');
+      showToast(getErrorMessage(err, 'Failed to record follow-up'), 'error');
     }
   };
 
@@ -454,38 +457,13 @@ export const GuestListPage = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {/* Header & Controls Bar */}
-      <div
-        className="glass-panel"
-        style={{
-          padding: '12px 20px',
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          position: 'relative',
-          zIndex: 20
-        }}
-      >
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>
-              Guest Inquiries
-            </h2>
-            <span
-              style={{
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                padding: '2px 8px',
-                borderRadius: '9999px',
-                background: 'rgba(37, 99, 235, 0.12)',
-                color: '#2563EB',
-                border: '1px solid rgba(37, 99, 235, 0.2)'
-              }}
-            >
-              {filteredGuests.length} Inquiries
-            </span>
+      <div className="page-header animate-fade-in" style={{ position: 'relative', zIndex: 20 }}>
+        <div className="page-header-text">
+          <div className="page-title-row">
+            <h2 className="page-title">Guest Inquiries</h2>
+            <span className="count-chip">{filteredGuests.length} {filteredGuests.length === 1 ? 'inquiry' : 'inquiries'}</span>
           </div>
+          <p className="page-subtitle">Track every lead from first inquiry to travel.</p>
         </div>
 
         <div className="page-actions">
@@ -533,7 +511,7 @@ export const GuestListPage = () => {
       >
         {/* Search */}
         <div className="filter-search" style={{ position: 'relative', minWidth: '280px', flex: 1 }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--fg-64748B)' }} />
           <input
             type="text"
             className="form-input"
@@ -554,7 +532,7 @@ export const GuestListPage = () => {
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
-                color: '#94a3b8',
+                color: 'var(--fg-94A3B8)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -612,13 +590,13 @@ export const GuestListPage = () => {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   Loading 7Heaven inquiries...
                 </td>
               </tr>
             ) : filteredGuests.length === 0 ? (
               <tr>
-                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: '#94a3b8' }}>
+                <td colSpan="10" style={{ textAlign: 'center', padding: '40px', color: 'var(--fg-94A3B8)' }}>
                   No guest inquiries found matching your criteria.
                 </td>
               </tr>
@@ -634,13 +612,13 @@ export const GuestListPage = () => {
                       <span
                         style={{
                           fontWeight: 700,
-                          color: '#2563EB',
+                          color: 'var(--fg-2563EB)',
                           fontSize: '0.75rem',
                           fontFamily: 'monospace',
-                          background: '#EFF6FF',
+                          background: 'var(--bg-EFF6FF)',
                           padding: '2px 6px',
                           borderRadius: '4px',
-                          border: '1px solid #BFDBFE'
+                          border: '1px solid var(--bd-BFDBFE)'
                         }}
                       >
                         {guest.srNo}
@@ -648,17 +626,17 @@ export const GuestListPage = () => {
                     </td>
 
                     {/* B. Date of Inquiry Generate */}
-                    <td data-label="Inquiry Date" style={{ color: '#64748B', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    <td data-label="Inquiry Date" style={{ color: 'var(--fg-64748B)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                       {formatDate(guest.inquiryDate)}
                     </td>
 
                     {/* C. Guest Names */}
                     <td data-label="Guest">
-                      <div style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.825rem' }}>
+                      <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.825rem' }}>
                         {guest.guestNames}
                       </div>
                       {guest.paxCount && (
-                        <div style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--fg-64748B)' }}>
                           {guest.paxCount} Pax • {guest.budget || 'Custom'}
                         </div>
                       )}
@@ -667,12 +645,12 @@ export const GuestListPage = () => {
                     {/* D. Mail Id & Contact number */}
                     <td data-label="Contact">
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#0F172A' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: 'var(--fg-0F172A)' }}>
                           <Phone size={11} color="#10B981" />
                           <span>{guest.contactNumber}</span>
                         </div>
                         {guest.email && (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#2563EB', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: 'var(--fg-2563EB)', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             <Mail size={11} color="#2563EB" />
                             <span>{guest.email}</span>
                           </div>
@@ -682,7 +660,7 @@ export const GuestListPage = () => {
 
                     {/* E. Destination */}
                     <td data-label="Destination">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: '#0F172A', fontSize: '0.775rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600, color: 'var(--fg-0F172A)', fontSize: '0.775rem' }}>
                         <MapPin size={12} color="#2563EB" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{guest.destination}</span>
                       </div>
@@ -690,7 +668,7 @@ export const GuestListPage = () => {
 
                     {/* F. Travel Date */}
                     <td data-label="Travel Date">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#475569', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--fg-475569)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                         <Calendar size={12} color="#0288D1" />
                         <span>{formatDate(guest.travelDate)}</span>
                       </div>
@@ -731,19 +709,19 @@ export const GuestListPage = () => {
                                   key={st}
                                   value={st}
                                   style={{
-                                    backgroundColor: '#FFFFFF',
-                                    color: '#0F172A',
+                                    backgroundColor: 'var(--bg-FFFFFF)',
+                                    color: 'var(--fg-0F172A)',
                                     fontWeight: 600,
                                     padding: '6px 8px'
                                   }}
                                 >
-                                  {st === 'Under Process' && '🟡 Process'}
-                                  {st === 'Follow up' && '🟠 Follow up'}
-                                  {st === 'Quoted' && '🔵 Quoted'}
-                                  {st === 'Confirmed' && '🟣 Confirmed'}
-                                  {st === 'Confirmed & Payment received' && '🟢 Paid'}
-                                  {st === 'Travelled' && '🔘 Travelled'}
-                                  {st === 'Cancelled' && '🔴 Cancelled'}
+                                  {st === 'Under Process' && 'Under Process'}
+                                  {st === 'Follow up' && 'Follow up'}
+                                  {st === 'Quoted' && 'Quoted'}
+                                  {st === 'Confirmed' && 'Confirmed'}
+                                  {st === 'Confirmed & Payment received' && 'Paid'}
+                                  {st === 'Travelled' && 'Travelled'}
+                                  {st === 'Cancelled' && 'Cancelled'}
                                 </option>
                               ))}
                             </select>
@@ -766,14 +744,14 @@ export const GuestListPage = () => {
 
                     {/* H. Sales */}
                     <td data-label="Sales">
-                      <span style={{ fontSize: '0.75rem', color: '#2563EB', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--fg-2563EB)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {guest.sales}
                       </span>
                     </td>
 
                     {/* I. Ops */}
                     <td data-label="Ops">
-                      <span style={{ fontSize: '0.75rem', color: '#0D9488', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--fg-0D9488)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                         {guest.ops}
                       </span>
                     </td>
@@ -786,7 +764,7 @@ export const GuestListPage = () => {
                           onClick={() => setFollowUpGuest(guest)}
                           className="btn-icon btn-outline btn-sm"
                           title="Notify & Follow-up with Guest"
-                          style={{ borderColor: '#BFDBFE', color: '#2563EB', padding: '3px' }}
+                          style={{ borderColor: 'var(--bd-BFDBFE)', color: 'var(--fg-2563EB)', padding: '3px' }}
                         >
                           <MessageSquare size={12} color="#2563EB" />
                         </button>
@@ -801,7 +779,7 @@ export const GuestListPage = () => {
                             <Edit2 size={12} color="#2563EB" />
                           </button>
                         ) : (
-                          <span title="Locked for Assigned Staff" style={{ padding: '3px', color: '#DC2626' }}>
+                          <span title="Locked for Assigned Staff" style={{ padding: '3px', color: 'var(--fg-DC2626)' }}>
                             <Lock size={12} />
                           </span>
                         )}

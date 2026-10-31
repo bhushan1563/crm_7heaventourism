@@ -21,8 +21,8 @@ export const ConfirmDialog = ({
             width: '54px',
             height: '54px',
             borderRadius: '50%',
-            background: isDanger ? '#FEE2E2' : '#FEF3C7',
-            color: isDanger ? '#DC2626' : '#D97706',
+            background: isDanger ? 'var(--bg-FEE2E2)' : 'var(--bg-FEF3C7)',
+            color: isDanger ? 'var(--fg-DC2626)' : 'var(--fg-D97706)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -31,7 +31,7 @@ export const ConfirmDialog = ({
         >
           <AlertTriangle size={28} />
         </div>
-        <p style={{ color: '#475569', fontSize: '0.95rem', lineHeight: '1.5', fontWeight: 500 }}>
+        <p style={{ color: 'var(--fg-475569)', fontSize: '0.95rem', lineHeight: '1.5', fontWeight: 500 }}>
           {message}
         </p>
       </div>
