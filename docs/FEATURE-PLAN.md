@@ -45,7 +45,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 1.4 Insert a saved itinerary into a quotation (copy, editable); photos + formatting render in the quotation preview/PDF
 
 ### Step 2: Hotel list and hotel quotation (R2)
-- [ ] 2.1 Model + API + photos + search
+- [x] 2.1 Model + API + photos + search
 - [ ] 2.2 Hotels screens
 - [ ] 2.3 Hotel quotation type driven by the list (+ quick add) and its layout
 - [ ] 2.4 "Create quotation" from a hotel; pick-from-list inside package hotel stays

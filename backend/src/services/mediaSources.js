@@ -3,10 +3,13 @@
 export const getMediaSources = async () => {
   const { default: Itinerary } = await import('../models/Itinerary.js');
   const { default: Quotation } = await import('../models/Quotation.js');
+  const { default: Hotel } = await import('../models/Hotel.js');
   return [
     // The itinerary's own gallery and the photos of each day.
     { model: Itinerary, select: 'photos days.photos' },
     // The photos on the days of a quotation (copied in from the library or added there).
-    { model: Quotation, select: 'itinerary.photos' }
+    { model: Quotation, select: 'itinerary.photos' },
+    // The photo gallery of each hotel in the hotel list.
+    { model: Hotel, select: 'photos' }
   ];
 };
