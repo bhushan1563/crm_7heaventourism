@@ -16,8 +16,8 @@ step "Installing dependencies"
 npm ci --include=dev   # dev dependencies (Vite) are needed to build the web app, even when NODE_ENV=production
 
 if [ "${SKIP_TESTS:-0}" != "1" ]; then
-  step "Running tests (no database needed)"
-  npm test
+  step "Running the quick tests (no database needed; the full suite runs on GitHub)"
+  npm run test:unit
 fi
 
 step "Building the web app"

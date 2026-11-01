@@ -11,7 +11,7 @@ import { fileURLToPath } from 'url';
 import { config, validateConfig } from './config/env.js';
 import { connectDB, disconnectDB, isDbConnected } from './config/db.js';
 import { seedDatabase } from './utils/seedData.js';
-import { apiLimiter } from './middleware/rateLimit.js';
+import { apiLimiter, mediaServeLimiter } from './middleware/rateLimit.js';
 import { apiNotFound, errorHandler } from './middleware/errorHandler.js';
 
 import authRoutes from './routes/authRoutes.js';
@@ -21,6 +21,10 @@ import userRoutes from './routes/userRoutes.js';
 import rightsRoutes from './routes/rightsRoutes.js';
 import scannerRoutes from './routes/scannerRoutes.js';
 import quotationRoutes from './routes/quotationRoutes.js';
+import mediaRoutes from './routes/mediaRoutes.js';
+import itineraryRoutes from './routes/itineraryRoutes.js';
+import hotelRoutes from './routes/hotelRoutes.js';
+import { serveMedia } from './controllers/mediaController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -116,6 +120,10 @@ app.use(
   express.static(path.join(__dirname, 'uploads'), { dotfiles: 'ignore', index: false, maxAge: '1h' })
 );
 
+// Photos (public, unguessable, cached for a year): /media/<token> and /media/<token>/thumb
+app.get('/media/:token', mediaServeLimiter, serveMedia('full'));
+app.get('/media/:token/thumb', mediaServeLimiter, serveMedia('thumb'));
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/guests', guestRoutes);
@@ -124,6 +132,9 @@ app.use('/api/quotations', quotationRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/rights', rightsRoutes);
 app.use('/api/scanner', scannerRoutes);
+app.use('/api/media', mediaRoutes);
+app.use('/api/itineraries', itineraryRoutes);
+app.use('/api/hotels', hotelRoutes);
 app.use('/api', apiNotFound);
 
 // Serve the built frontend when it exists (monorepo single-server deployment).
@@ -146,8 +157,8 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
       }
     })
   );
-  // SPA fallback: non-API, non-static GET requests get index.html (client-side routing)
-  app.get(/^\/(?!api(\/|$)|static(\/|$)).*/, (req, res) => {
+  // SPA fallback: non-API, non-static, non-photo GET requests get index.html (client-side routing)
+  app.get(/^\/(?!api(\/|$)|static(\/|$)|media(\/|$)).*/, (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });

@@ -33,7 +33,9 @@ import {
   Tag,
   CreditCard,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen,
+  Car
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -53,6 +55,52 @@ import { generateQuotationPDF, printQuotation, printFlightVoucher } from '../uti
 import QuotationLivePreview from '../components/QuotationLivePreview';
 import { formatDate, toInputDate } from '../utils/dateHelper';
 import { getErrorMessage } from '../services/api';
+import LazyRichTextEditor from '../components/LazyRichTextEditor';
+import PhotoGallery from '../components/PhotoGallery';
+import ItineraryPicker from '../components/itinerary/ItineraryPicker';
+import HotelPicker from '../components/hotel/HotelPicker';
+import TagInput from '../components/itinerary/TagInput';
+import FormattedLine from '../components/quotation/FormattedLine';
+import OptionsEditor from '../components/quotation/OptionsEditor';
+import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } from '../utils/quotationOptions';
+import VehiclesEditor from '../components/quotation/VehiclesEditor';
+import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
+import VisaEditor from '../components/quotation/VisaEditor';
+import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
+import hotelService from '../services/hotelService';
+import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
+import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
+import { AMENITY_RULES } from '../utils/hotel';
+import './quotationHotels.css';
+
+// The tabs of the builder for a quotation type. A land service has no hotels, flights or separate price tab (its vehicles carry the
+// rates); a visa has no itinerary, hotels or flights either: the visa with its documents, and the fees, take their place.
+const tabsFor = (quotation) => {
+  if (isLandService(quotation)) {
+    return [
+      { id: 'overview', label: '1. Trip & Type', icon: Users },
+      { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
+      { id: 'package', label: '3. Vehicles & Rates', icon: Car },
+      { id: 'notes', label: '4. Notes & Terms', icon: FileText }
+    ];
+  }
+  if (isVisa(quotation)) {
+    return [
+      { id: 'overview', label: '1. Client & Type', icon: Users },
+      { id: 'visa', label: '2. Visa & Documents', icon: FileCheck },
+      { id: 'visaFees', label: '3. Fees & Services', icon: Receipt },
+      { id: 'notes', label: '4. Notes & Terms', icon: FileText }
+    ];
+  }
+  return [
+    { id: 'overview', label: '1. Trip & Type', icon: Users },
+    { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
+    { id: 'package', label: '3. Hotel Details', icon: Building2 },
+    { id: 'flights', label: '4. Flights', icon: Plane },
+    { id: 'pricing', label: '5. Pricing', icon: DollarSign },
+    { id: 'notes', label: '6. Notes & Terms', icon: FileText }
+  ];
+};
 
 const DEFAULT_COMPANY = {
   name: '7HEAVEN TOURISM',
@@ -122,6 +170,7 @@ export const QuotationBuilderPage = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const guestIdParam = searchParams.get('guestId');
+  const hotelIdParam = searchParams.get('hotelId'); // "Create quotation" on a hotel of the hotel list
 
   const { user, can } = useAuth();
   const { showToast } = useToast();
@@ -136,6 +185,8 @@ export const QuotationBuilderPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false); // the "Insert from the itinerary library" dialog
+  const [hotelPicker, setHotelPicker] = useState(null); // the "Choose from the hotel list" dialog: { mode: 'new' } or { index }
 
   const [guestsList, setGuestsList] = useState([]);
   const [usersList, setUsersList] = useState([]);
@@ -246,6 +297,24 @@ export const QuotationBuilderPage = () => {
             handleGuestSelect(targetGuest);
           }
         }
+
+        // Started from a hotel of the hotel list: a hotel quotation with that hotel already chosen.
+        if (!isEditMode && hotelIdParam) {
+          const hRes = await hotelService.get(hotelIdParam);
+          if (hRes.success) {
+            const draft = quotationFromHotel(hRes.data);
+            setFormData((prev) => ({
+              ...prev,
+              quotationType: draft.quotationType,
+              destination: draft.destination,
+              duration: draft.duration,
+              packageDetails: { ...prev.packageDetails, hotels: [draft.stay] }
+            }));
+            showToast(`A hotel quotation for ${hRes.data.name} was started. Add the client and the dates, then the prices.`, 'success');
+          } else {
+            showToast(hRes.message || 'That hotel could not be opened, so the quotation starts empty.', 'error');
+          }
+        }
       } catch (err) {
         showToast('Error initializing quotation builder: ' + getErrorMessage(err), 'error');
       } finally {
@@ -266,6 +335,7 @@ export const QuotationBuilderPage = () => {
       clientPhone: guest.contactNumber || prev.clientPhone,
       destination: guest.destination || prev.destination,
       paxDetails: `${guest.paxCount || 2} Adults`,
+      ...followGuests(prev, `${guest.paxCount || 2} Adults`),
       travelDate: guest.travelDate || prev.travelDate,
       sales: guest.sales || prev.sales,
       salesId: guest.salesId || prev.salesId,
@@ -387,6 +457,26 @@ export const QuotationBuilderPage = () => {
     });
   };
 
+  // Copies a saved itinerary into this quotation. The days become part of the quotation and can be edited freely; the
+  // library original is not touched. Returns { ok: false, message } when it cannot be inserted (the dialog shows why).
+  const handleInsertItinerary = (itinerary, { mode, copyLists, fillDetails }) => {
+    const result = insertItinerary(formData.itinerary || [], itinerary, mode);
+    if (!result.ok) return result;
+    setFormData((prev) => ({
+      ...prev,
+      itinerary: result.days,
+      ...(fillDetails ? detailsFrom(prev, itinerary) : {}),
+      ...(copyLists
+        ? {
+            packageDetails: { ...prev.packageDetails, inclusions: mergeLines(prev.packageDetails?.inclusions, plainLines(itinerary.inclusions)) },
+            exclusions: mergeLines(prev.exclusions, plainLines(itinerary.exclusions))
+          }
+        : {})
+    }));
+    showToast(`Added ${result.added} ${result.added === 1 ? 'day' : 'days'} from "${itinerary.title}". You can change anything here; the library itinerary stays as it was.`, 'success');
+    return { ok: true };
+  };
+
   const handleRemoveDay = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -429,6 +519,48 @@ export const QuotationBuilderPage = () => {
         ]
       }
     }));
+  };
+
+  // A hotel chosen from the hotel list becomes a new stay, or replaces the details of the stay it was chosen for. The stay
+  // gets its own copy of the hotel's details and photos; dates, nights and rooms already entered are kept.
+  const handlePickHotel = (hotel) => {
+    const target = hotelPicker;
+    setFormData((prev) => {
+      const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
+      const title = retitle ? { destination: hotelTitle(hotel) } : {};
+      if (target && target.option !== undefined) {
+        // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
+        const options = (prev.options || []).map((option, i) => {
+          if (i !== target.option) return option;
+          const hotels = [...option.hotels];
+          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(stayFromHotel(hotel, blankStay()));
+          else hotels[target.hotel] = stayFromHotel(hotel, hotels[target.hotel]);
+          return { ...option, hotels };
+        });
+        return { ...prev, ...title, options };
+      }
+      const hotels = [...(prev.packageDetails?.hotels || [])];
+      if (target && target.mode !== 'new' && hotels[target.index]) hotels[target.index] = stayFromHotel(hotel, hotels[target.index]);
+      else hotels.push(stayFromHotel(hotel, blankStay()));
+      return { ...prev, ...title, packageDetails: { ...prev.packageDetails, hotels } };
+    });
+    showToast(`${hotel.name} was taken from the hotel list. Its details and photos are copied below; you can still change them.`, 'success');
+    return { ok: true };
+  };
+
+  // Hotel options: the hotels the quotation already has become Option 1 (and the quotation's own list is emptied, so the
+  // same hotels are never shown twice); going back to a single offer keeps the hotels of the first option.
+  const handleStartOptions = () => {
+    setFormData((prev) => ({
+      ...prev,
+      options: repriceOptions(startOptions(prev.packageDetails?.hotels || []), prev.paxDetails),
+      packageDetails: { ...prev.packageDetails, hotels: [] }
+    }));
+    showToast('Hotel options are on. Option 1 has the hotels you had; fill in Option 2 and the prices.', 'info');
+  };
+  const handleSingleOffer = () => {
+    setFormData((prev) => ({ ...prev, options: [], packageDetails: { ...prev.packageDetails, hotels: hotelsOfFirstOption(prev.options) } }));
+    showToast('Back to a single offer. The hotels of the first option were kept.', 'info');
   };
 
   const handleRemoveHotel = (index) => {
@@ -674,14 +806,32 @@ export const QuotationBuilderPage = () => {
       setActiveTab('overview');
       return;
     }
+    // A hotel quotation is made from the hotel list: every stay must be a hotel taken from it.
+    // A visa is checked on its country, applicants and fees; a land service on its vehicles; otherwise: with hotel options the
+    // hotels live inside the options (each is checked there), and without them the quotation's own stays are.
+    const visaTrouble = visaIssue(formData);
+    if (visaTrouble) {
+      showToast(visaTrouble.message, 'warning');
+      setActiveTab(visaTrouble.tab);
+      return;
+    }
+    const hotelProblem = isVisa(formData) ? null : isLandService(formData) ? landServiceProblem(formData) : formData.options?.length ? optionsProblem(formData) : hotelQuotationProblem(formData);
+    if (hotelProblem) {
+      showToast(hotelProblem, 'warning');
+      setActiveTab('package');
+      return;
+    }
 
     try {
       setSaving(true);
       let res;
+      const payload = isVisa(formData)
+        ? { ...formData, visa: visaPayload(formData.visa), visaFees: feesPayload(formData.visaFees) }
+        : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
       if (isEditMode) {
-        res = await quotationService.updateQuotation(id, formData);
+        res = await quotationService.updateQuotation(id, payload);
       } else {
-        res = await quotationService.createQuotation(formData);
+        res = await quotationService.createQuotation(payload);
       }
 
       if (res.success) {
@@ -797,14 +947,7 @@ export const QuotationBuilderPage = () => {
               overflowX: 'auto'
             }}
           >
-            {[
-              { id: 'overview', label: '1. Trip & Type', icon: Users },
-              { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
-              { id: 'package', label: '3. Hotel Details', icon: Building2 },
-              { id: 'flights', label: '4. Flights', icon: Plane },
-              { id: 'pricing', label: '5. Pricing', icon: DollarSign },
-              { id: 'notes', label: '6. Notes & Terms', icon: FileText }
-            ].map(tab => {
+            {tabsFor(formData).map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -856,10 +999,10 @@ export const QuotationBuilderPage = () => {
                   <Tag size={16} />
                   <span>Select Type of Quotation *</span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
                   {QUOTATION_TYPES.map(opt => {
                     const isSelected = (formData.quotationType || 'Package') === opt.value;
-                    const Icon = opt.value === 'Only Hotel' ? Hotel : opt.value === 'Events / Corporate' ? Briefcase : Luggage;
+                    const Icon = opt.value === 'Only Hotel' ? Hotel : opt.value === 'Events / Corporate' ? Briefcase : opt.value === 'Land Service' ? Car : opt.value === 'Visa' ? FileCheck : Luggage;
                     return (
                       <button
                         key={opt.value}
@@ -868,8 +1011,14 @@ export const QuotationBuilderPage = () => {
                           setFormData(prev => ({
                             ...prev,
                             quotationType: opt.value,
-                            destination: prev.destination || (opt.value === 'Only Hotel' ? 'LUXURY HOTEL BOOKING' : '')
+                            destination: prev.destination || (opt.value === 'Only Hotel' ? 'LUXURY HOTEL BOOKING' : ''),
+                            // A land service starts with one vehicle line and the standard inclusions (nothing typed is replaced).
+                            ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
+                            // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
+                            ...(opt.value === 'Visa' ? startVisa(prev) : {})
                           }));
+                          // Go back to the first tab when the one being looked at does not exist for the new type.
+                          if (!tabsFor({ quotationType: opt.value }).some((t) => t.id === activeTab)) setActiveTab('overview');
                           showToast(`Quotation format switched to ${opt.value}`, 'info');
                         }}
                         style={{
@@ -922,14 +1071,14 @@ export const QuotationBuilderPage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    {formData.quotationType === 'Only Hotel' ? 'Hotel / City Title *' : 'Package Title / Destination *'}
+                    {formData.quotationType === 'Only Hotel' ? 'Hotel / City Title *' : isLandService(formData) ? 'Trip / Route Title *' : isVisa(formData) ? 'Visa Title *' : 'Package Title / Destination *'}
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    placeholder={formData.quotationType === 'Only Hotel' ? 'e.g. TAJ LAKE PALACE, UDAIPUR' : 'e.g. VARANASI & AYODHYA'}
+                    placeholder={formData.quotationType === 'Only Hotel' ? 'e.g. TAJ LAKE PALACE, UDAIPUR' : isLandService(formData) ? 'e.g. DELHI - AGRA - JAIPUR BY SUV' : isVisa(formData) ? 'e.g. UNITED ARAB EMIRATES TOURIST VISA' : 'e.g. VARANASI & AYODHYA'}
                   />
                 </div>
                 <div className="form-group">
@@ -967,6 +1116,8 @@ export const QuotationBuilderPage = () => {
                       setFormData(prev => {
                         const updated = { ...prev, paxDetails: newPax };
                         updated.pricing = recalculatePricing(prev.pricing?.items || DEFAULT_PRICING_ITEMS, newPax, prev.pricing);
+                        if (prev.options?.length) updated.options = repriceOptions(prev.options, newPax); // option totals follow the guests
+                        Object.assign(updated, followGuests(prev, newPax)); // a visa's applicants follow the guests until set by hand
                         return updated;
                       });
                     }}
@@ -1039,14 +1190,27 @@ export const QuotationBuilderPage = () => {
                 <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>
                   {formData.quotationType === 'Events / Corporate' ? 'Event & Schedule Itinerary' : 'Day-by-Day Tour Itinerary'} ({formData.itinerary?.length || 0} Days)
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddDay}
-                  className="btn btn-outline-azure btn-sm"
-                >
-                  <Plus size={14} />
-                  <span>Add Day</span>
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {can('itineraries', 'canRead') && (
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="btn btn-outline btn-sm"
+                      title="Copy a saved itinerary from the library into this quotation"
+                    >
+                      <BookOpen size={14} />
+                      <span>Insert from library</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddDay}
+                    className="btn btn-outline-azure btn-sm"
+                  >
+                    <Plus size={14} />
+                    <span>Add Day</span>
+                  </button>
+                </div>
               </div>
 
               {formData.quotationType === 'Only Hotel' && (
@@ -1073,17 +1237,24 @@ export const QuotationBuilderPage = () => {
                     No Itinerary Days Added Yet
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '340px' }}>
-                    Click the button below to add Day 01 and begin creating the custom travel plan.
+                    Add Day 01 and write the plan yourself{can('itineraries', 'canRead') ? ', or copy a ready-made itinerary from the library' : ''}.
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddDay}
-                    className="btn btn-primary btn-sm"
-                    style={{ marginTop: '6px' }}
-                  >
-                    <Plus size={14} />
-                    <span>Add Day 01</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={handleAddDay}
+                      className="btn btn-primary btn-sm"
+                    >
+                      <Plus size={14} />
+                      <span>Add Day 01</span>
+                    </button>
+                    {can('itineraries', 'canRead') && (
+                      <button type="button" onClick={() => setPickerOpen(true)} className="btn btn-outline btn-sm">
+                        <BookOpen size={14} />
+                        <span>Insert from library</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1129,12 +1300,45 @@ export const QuotationBuilderPage = () => {
                         </button>
                       </div>
 
-                      <textarea
-                        className="form-textarea"
-                        rows={3}
-                        value={day.description}
-                        onChange={(e) => handleUpdateDay(idx, 'description', e.target.value)}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ flex: '1 1 180px' }}
+                          value={day.stay || ''}
+                          maxLength={120}
+                          onChange={(e) => handleUpdateDay(idx, 'stay', e.target.value)}
+                          placeholder="Overnight stay (optional), e.g. Ubud"
+                          aria-label={`Overnight stay for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        />
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ flex: '1 1 180px' }}
+                          value={day.meals || ''}
+                          maxLength={120}
+                          onChange={(e) => handleUpdateDay(idx, 'meals', e.target.value)}
+                          placeholder="Meals (optional), e.g. Breakfast, Dinner"
+                          aria-label={`Meals for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        />
+                      </div>
+
+                      <LazyRichTextEditor
+                        value={day.description || ''}
+                        onChange={(description) => handleUpdateDay(idx, 'description', description)}
+                        maxLength={20000}
+                        minHeight={110}
+                        ariaLabel={`Description of ${day.dayNumber || `Day ${idx + 1}`}`}
                         placeholder="Enter detailed day activities, pickup timings, visits, overnight stay..."
+                      />
+
+                      <PhotoGallery
+                        photos={day.photos || []}
+                        onChange={(photos) => handleUpdateDay(idx, 'photos', photos)}
+                        purpose="quotation"
+                        max={6}
+                        label={`Photos for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        help="Shown with this day in the quotation and its PDF."
                       />
                     </div>
                   ))}
@@ -1171,9 +1375,37 @@ export const QuotationBuilderPage = () => {
           )}
 
           {/* TAB 3: HOTELS & ACCOMMODATIONS (NEW FORMAT) */}
-          {activeTab === 'package' && (
+          {/* TAB 3 for a land service: the vehicles, their rates and what they include (no hotels) */}
+          {activeTab === 'package' && isLandService(formData) && (
+            <div className="animate-fade-in">
+              <VehiclesEditor quotation={formData} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
+            </div>
+          )}
+
+          {/* The two tabs of a visa quotation: the visa with its documents checklist, and the fees */}
+          {(activeTab === 'visa' || activeTab === 'visaFees') && isVisa(formData) && (
+            <div className="animate-fade-in">
+              <VisaEditor quotation={formData} section={activeTab === 'visa' ? 'details' : 'fees'} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
+            </div>
+          )}
+
+          {activeTab === 'package' && !isLandService(formData) && !isVisa(formData) && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Hotels Section */}
+              {/* Hotel options: several choices, each with its own hotels and its own price */}
+              {(formData.options || []).length > 0 && (
+                <OptionsEditor
+                  options={formData.options}
+                  onChange={(options) => setFormData((prev) => ({ ...prev, options }))}
+                  paxDetails={formData.paxDetails}
+                  quotationType={formData.quotationType}
+                  canUseList={can('hotels', 'canRead')}
+                  onChooseHotel={(option, hotel) => setHotelPicker({ option, hotel })}
+                  onSingle={handleSingleOffer}
+                />
+              )}
+
+              {/* Hotels Section (a single offer) */}
+              {(formData.options || []).length === 0 && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
@@ -1181,17 +1413,33 @@ export const QuotationBuilderPage = () => {
                       Accommodations & Hotel Stays ({formData.packageDetails?.hotels?.length || 0})
                     </div>
                     <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)' }}>
-                      Add hotels with room category, meal plans, check-in/out dates, and star rating.
+                      {formData.quotationType === 'Only Hotel'
+                        ? 'A hotel quotation uses hotels from your hotel list, with their photos and details.'
+                        : 'Add hotels with room category, meal plans, check-in/out dates, and star rating.'}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddHotel}
-                    className="btn btn-outline-azure btn-sm"
-                  >
-                    <Plus size={14} />
-                    <span>Add Hotel Stay</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                    {can('hotels', 'canRead') && (
+                      <button type="button" onClick={() => setHotelPicker({ mode: 'new' })} className="btn btn-primary btn-sm" title="Take a hotel from your hotel list">
+                        <Hotel size={14} />
+                        <span>Choose from hotel list</span>
+                      </button>
+                    )}
+                    {formData.quotationType !== 'Only Hotel' && (
+                      <button
+                        type="button"
+                        onClick={handleAddHotel}
+                        className="btn btn-outline-azure btn-sm"
+                      >
+                        <Plus size={14} />
+                        <span>Add Hotel Stay</span>
+                      </button>
+                    )}
+                    <button type="button" onClick={handleStartOptions} className="btn btn-outline btn-sm" title="Offer the guest several hotel choices, each with its own price">
+                      <Layers size={14} />
+                      <span>Offer hotel options</span>
+                    </button>
+                  </div>
                 </div>
 
                 {(!formData.packageDetails?.hotels || formData.packageDetails.hotels.length === 0) ? (
@@ -1211,17 +1459,31 @@ export const QuotationBuilderPage = () => {
                     <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.85rem' }}>
                       No Accommodations Added
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                      Click below to add hotel stays, room categories, and meal plans.
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: '360px' }}>
+                      {formData.quotationType === 'Only Hotel'
+                        ? 'Choose the hotel from your hotel list. If it is new, add it to the list from the same window.'
+                        : 'Take a hotel from your hotel list, or add a stay by hand with its room categories and meal plans.'}
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAddHotel}
-                      className="btn btn-outline-azure btn-sm"
-                    >
-                      <Plus size={13} />
-                      <span>Add Hotel Stay</span>
-                    </button>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                      {can('hotels', 'canRead') ? (
+                        <button type="button" onClick={() => setHotelPicker({ mode: 'new' })} className="btn btn-primary btn-sm">
+                          <Hotel size={13} />
+                          <span>Choose from hotel list</span>
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>You do not have permission to open the hotel list.</span>
+                      )}
+                      {formData.quotationType !== 'Only Hotel' && (
+                        <button
+                          type="button"
+                          onClick={handleAddHotel}
+                          className="btn btn-outline-azure btn-sm"
+                        >
+                          <Plus size={13} />
+                          <span>Add Hotel Stay</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1239,6 +1501,23 @@ export const QuotationBuilderPage = () => {
                           boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                         }}
                       >
+                        {/* Where this stay came from */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', flexWrap: 'wrap', fontSize: '0.75rem' }}>
+                          {h.hotelId ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', color: 'var(--fg-047857)', fontWeight: 700 }}>
+                              <CheckCircle2 size={14} aria-hidden="true" /> From the hotel list: its details and photos are copied here and can be changed
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--fg-64748B)' }}>Typed by hand</span>
+                          )}
+                          {can('hotels', 'canRead') && (
+                            <button type="button" className="btn btn-outline btn-sm" onClick={() => setHotelPicker({ index: idx })}>
+                              <Hotel size={13} />
+                              <span>{h.hotelId ? 'Change hotel' : 'Choose from hotel list'}</span>
+                            </button>
+                          )}
+                        </div>
+
                         {/* Row 1: City, Hotel Name, Star Rating, Nights, Delete */}
                         <div
                           style={{
@@ -1255,6 +1534,7 @@ export const QuotationBuilderPage = () => {
                               className="form-input"
                               placeholder="e.g. Varanasi"
                               value={h.city || ''}
+                              readOnly={formData.quotationType === 'Only Hotel' && Boolean(h.hotelId)}
                               onChange={(e) => handleUpdateHotel(idx, 'city', e.target.value)}
                             />
                           </div>
@@ -1266,6 +1546,8 @@ export const QuotationBuilderPage = () => {
                               style={{ fontWeight: 700 }}
                               placeholder="e.g. Hotel Rivatas"
                               value={h.hotelName || ''}
+                              readOnly={formData.quotationType === 'Only Hotel' && Boolean(h.hotelId)}
+                              title={formData.quotationType === 'Only Hotel' && h.hotelId ? 'Use "Change hotel" to pick a different hotel' : undefined}
                               onChange={(e) => handleUpdateHotel(idx, 'hotelName', e.target.value)}
                             />
                           </div>
@@ -1274,6 +1556,7 @@ export const QuotationBuilderPage = () => {
                             <select
                               className="form-select"
                               value={h.starRating || '4 star'}
+                              disabled={formData.quotationType === 'Only Hotel' && Boolean(h.hotelId)}
                               onChange={(e) => handleUpdateHotel(idx, 'starRating', e.target.value)}
                             >
                               {HOTEL_STAR_RATINGS.map((option) => (
@@ -1312,8 +1595,14 @@ export const QuotationBuilderPage = () => {
                               className="form-input"
                               placeholder="e.g. Deluxe Room / Suite"
                               value={h.roomCategory || ''}
+                              list={`stay-rooms-${idx}`}
                               onChange={(e) => handleUpdateHotel(idx, 'roomCategory', e.target.value)}
                             />
+                            <datalist id={`stay-rooms-${idx}`}>
+                              {(h.roomOptions || []).map((room) => (
+                                <option key={room} value={room} />
+                              ))}
+                            </datalist>
                           </div>
                           <div>
                             <label className="form-label" style={{ fontSize: '0.7rem' }}>Meal Plan</label>
@@ -1389,6 +1678,44 @@ export const QuotationBuilderPage = () => {
                             }}
                           />
                         </div>
+
+                        {/* What the hotel quotation shows besides the basics: photos, amenities, check-in / check-out times */}
+                        <details className="stay-more" open={Boolean(h.photos?.length || h.amenities?.length)}>
+                          <summary>
+                            Photos, amenities and times ({h.photos?.length || 0} {(h.photos?.length || 0) === 1 ? 'photo' : 'photos'}, {h.amenities?.length || 0} {(h.amenities?.length || 0) === 1 ? 'amenity' : 'amenities'})
+                          </summary>
+                          <div className="stay-more-body">
+                            <PhotoGallery
+                              photos={h.photos || []}
+                              onChange={(photos) => handleUpdateHotel(idx, 'photos', photos)}
+                              purpose="quotation"
+                              max={6}
+                              label={`Photos of ${h.hotelName || `hotel stay ${idx + 1}`}`}
+                              help="Shown with this hotel in the quotation and its PDF. The first photo is the large one."
+                            />
+                            <div>
+                              <span className="form-label">Amenities</span>
+                              <TagInput
+                                tags={h.amenities || []}
+                                onChange={(amenities) => handleUpdateHotel(idx, 'amenities', amenities)}
+                                rules={AMENITY_RULES}
+                                label={`Add an amenity to hotel stay ${idx + 1}`}
+                                removeLabel="Remove amenity"
+                                placeholder="e.g. Swimming pool, Free WiFi"
+                              />
+                            </div>
+                            <div className="stay-times">
+                              <div>
+                                <label className="form-label" htmlFor={`stay-in-${idx}`}>Check-in time</label>
+                                <input id={`stay-in-${idx}`} type="time" className="form-input" value={h.checkInTime || ''} onChange={(e) => handleUpdateHotel(idx, 'checkInTime', e.target.value)} />
+                              </div>
+                              <div>
+                                <label className="form-label" htmlFor={`stay-out-${idx}`}>Check-out time</label>
+                                <input id={`stay-out-${idx}`} type="time" className="form-input" value={h.checkOutTime || ''} onChange={(e) => handleUpdateHotel(idx, 'checkOutTime', e.target.value)} />
+                              </div>
+                            </div>
+                          </div>
+                        </details>
                       </div>
                     ))}
                   </div>
@@ -1408,6 +1735,7 @@ export const QuotationBuilderPage = () => {
                   />
                 </div>
               </div>
+              )}
 
               {/* Inclusions */}
               <div>
@@ -1428,13 +1756,11 @@ export const QuotationBuilderPage = () => {
                   {(formData.packageDetails?.inclusions || []).map((inc, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <span style={{ color: 'var(--fg-10B981)', fontWeight: 800 }}>✓</span>
-                      <input
-                        type="text"
-                        className="form-input"
-                        style={{ flex: 1 }}
+                      <FormattedLine
                         value={inc}
                         placeholder="Inclusion item..."
-                        onChange={(e) => handleUpdateInclusion(idx, e.target.value)}
+                        ariaLabel={`Inclusion ${idx + 1}`}
+                        onChange={(value) => handleUpdateInclusion(idx, value)}
                       />
                       <button
                         type="button"
@@ -2141,13 +2467,11 @@ export const QuotationBuilderPage = () => {
                     {formData.exclusions.map((exc, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-EF4444)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>×</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={exc}
                           placeholder="e.g. Monument entry fees / personal expenses..."
-                          onChange={(e) => handleUpdateExclusion(idx, e.target.value)}
+                          ariaLabel={`Exclusion ${idx + 1}`}
+                          onChange={(value) => handleUpdateExclusion(idx, value)}
                         />
                         <button
                           type="button"
@@ -2208,13 +2532,11 @@ export const QuotationBuilderPage = () => {
                     {formData.paymentPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>•</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={item}
                           placeholder="e.g. 25% Advance token payment at confirmation..."
-                          onChange={(e) => handleUpdatePaymentPolicy(idx, e.target.value)}
+                          ariaLabel={`Payment policy point ${idx + 1}`}
+                          onChange={(value) => handleUpdatePaymentPolicy(idx, value)}
                         />
                         <button
                           type="button"
@@ -2275,13 +2597,11 @@ export const QuotationBuilderPage = () => {
                     {formData.cancellationPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-F59E0B)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>⚠️</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={item}
                           placeholder="e.g. 30 days or more prior to departure: 10% cancellation fee..."
-                          onChange={(e) => handleUpdateCancellationPolicy(idx, e.target.value)}
+                          ariaLabel={`Cancellation policy point ${idx + 1}`}
+                          onChange={(value) => handleUpdateCancellationPolicy(idx, value)}
                         />
                         <button
                           type="button"
@@ -2297,7 +2617,8 @@ export const QuotationBuilderPage = () => {
                 )}
               </div>
 
-              {/* Vehicle Guidelines */}
+              {/* Vehicle Guidelines (not for a visa) */}
+              {!isVisa(formData) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2332,13 +2653,11 @@ export const QuotationBuilderPage = () => {
                     {formData.vehicleNotes.map((vn, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>❖</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={vn}
                           placeholder="e.g. AC will be switched off in ghat sections..."
-                          onChange={(e) => handleUpdateVehicleNote(idx, e.target.value)}
+                          ariaLabel={`Vehicle note ${idx + 1}`}
+                          onChange={(value) => handleUpdateVehicleNote(idx, value)}
                         />
                         <button
                           type="button"
@@ -2353,6 +2672,7 @@ export const QuotationBuilderPage = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Important Notes & Terms */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -2391,13 +2711,11 @@ export const QuotationBuilderPage = () => {
                         <span style={{ color: 'var(--fg-94A3B8)', fontWeight: 700, fontSize: '0.78rem', minWidth: '20px' }}>
                           {idx + 1}.
                         </span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={note}
                           placeholder="e.g. Standard check-in 12:00 PM, valid photo ID required..."
-                          onChange={(e) => handleUpdateImportantNote(idx, e.target.value)}
+                          ariaLabel={`Important note ${idx + 1}`}
+                          onChange={(value) => handleUpdateImportantNote(idx, value)}
                         />
                         <button
                           type="button"
@@ -2504,6 +2822,20 @@ export const QuotationBuilderPage = () => {
         {/* RIGHT: Live Interactive Document Preview */}
         <QuotationLivePreview quotation={formData} />
       </div >
+
+      <HotelPicker
+        isOpen={Boolean(hotelPicker)}
+        onClose={() => setHotelPicker(null)}
+        onPick={handlePickHotel}
+        canAdd={can('hotels', 'canCreate')}
+      />
+
+      <ItineraryPicker
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onInsert={handleInsertItinerary}
+        currentDayCount={formData.itinerary?.length || 0}
+      />
     </div >
   );
 };

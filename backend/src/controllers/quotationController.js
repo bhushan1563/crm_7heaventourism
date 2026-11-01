@@ -3,6 +3,64 @@ import QuotationModel from '../models/Quotation.js';
 import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
+import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
+import { normalizeQuotationLists } from '../utils/quotationLists.js';
+import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
+import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
+import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
+import { loadPhotoSizes } from '../services/photoRefs.js';
+
+/**
+ * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days, the hotel stays and the lists
+ * of lines (inclusions, exclusions, policies, notes). A part the request does not mention is left out (an update that only
+ * changes the status must leave the days alone). Text is sanitised, and every photo is confirmed to exist and gets its size
+ * from the database (one lookup for all of them).
+ * @returns {Promise<{ ok: true, overrides: object } | { ok: false, message: string }>} `overrides` replace those fields of the body
+ */
+const prepareExtras = async (body) => {
+  const overrides = {};
+  if (!body) return { ok: true, overrides };
+  const days = body.itinerary === undefined ? null : normalizeQuotationItinerary(body.itinerary);
+  if (days && !days.ok) return days;
+  const hasStays = body.packageDetails && typeof body.packageDetails === 'object' && body.packageDetails.hotels !== undefined;
+  const stays = hasStays ? normalizeQuotationHotels(body.packageDetails.hotels) : null;
+  if (stays && !stays.ok) return stays;
+
+  const lists = normalizeQuotationLists(body);
+  if (!lists.ok) return lists;
+  const options = body.options === undefined ? null : normalizeQuotationOptions(body.options);
+  if (options && !options.ok) return options;
+  const vehicles = normalizeQuotationVehicles(body);
+  if (!vehicles.ok) return vehicles;
+  const visa = normalizeQuotationVisa(body);
+  if (!visa.ok) return visa;
+
+  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
+  const loaded = await loadPhotoSizes(tokens);
+  if (!loaded.ok) return loaded;
+  const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
+  if (days) overrides.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
+  if (stays) overrides.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  if (vehicles.vehicles) overrides.vehicles = vehicles.vehicles;
+  if (vehicles.landService) overrides.landService = vehicles.landService;
+  // The price of a land service quotation IS its vehicles: keep the amount the lists and statistics read (pricing.grandTotal)
+  // equal to the vehicle total, so the two can never disagree.
+  if (vehicles.vehicles && body.quotationType === 'Land Service' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
+    overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
+  }
+  if (visa.visa) overrides.visa = visa.visa;
+  if (visa.visaFees) overrides.visaFees = visa.visaFees;
+  // The price of a visa quotation IS its fees (per applicant or for the group): keep the amount that lists and statistics read
+  // (pricing.grandTotal) equal to the fee total.
+  if (visa.total !== undefined && body.quotationType === 'Visa' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
+    overrides.pricing = { ...body.pricing, grandTotal: visa.total, totalCostPerPerson: 0, totalCostNote: `Rs ${visa.total.toLocaleString('en-IN')} total` };
+  }
+  if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
+  if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
+  Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)
+  return { ok: true, overrides };
+};
 
 export const findQuotationDocument = async (id) => {
   if (!id) return null;
@@ -90,12 +148,16 @@ export const getQuotationById = async (req, res) => {
 
 export const createQuotation = async (req, res) => {
   try {
+    const extras = await prepareExtras(req.body);
+    if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
+
     const quotationNo = req.body.quotationNo || await getNextQuotationNo();
     const createdBy = req.user._id;
     const createdByName = `${req.user.firstName} ${req.user.lastName}`.trim();
 
     const quotationData = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
+      ...extras.overrides,
       quotationNo,
       createdBy,
       createdByName,
@@ -117,10 +179,15 @@ export const createQuotation = async (req, res) => {
 
 export const updateQuotation = async (req, res) => {
   try {
+    const extras = await prepareExtras(req.body);
+    if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
+
     const existing = await findQuotationDocument(req.params.id);
-    const updated = existing
-      ? await QuotationModel.findByIdAndUpdate(existing._id, omit(req.body, PROTECTED_QUOTATION_FIELDS), { new: true })
-      : null;
+    const changes = {
+      ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
+      ...extras.overrides
+    };
+    const updated = existing ? await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true }) : null;
     if (!updated) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
     }

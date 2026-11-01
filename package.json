@@ -13,19 +13,23 @@
   },
   "scripts": {
     "dev": "concurrently -n api,web -c cyan,magenta \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:local": "node scripts/dev-local.mjs",
     "dev:backend": "npm run dev -w backend",
     "dev:frontend": "npm run dev -w frontend",
     "build": "npm run build -w frontend",
     "start": "npm run start -w backend",
     "build:vercel": "npm run build -w frontend && node scripts/vercel-postbuild.mjs",
     "create-admin": "node scripts/create-admin.mjs",
-    "test": "npm test -w backend",
+    "test": "npm test -w backend && npm test -w frontend",
     "import-csv": "node scripts/import-legacy-csv.mjs",
     "backup-db": "node scripts/backup-db.mjs",
     "restore-db": "node scripts/restore-db.mjs",
     "package": "node scripts/package-release.mjs",
     "check-db": "node scripts/check-db.mjs",
-    "reset-password": "node scripts/reset-password.mjs"
+    "reset-password": "node scripts/reset-password.mjs",
+    "media-cleanup": "node scripts/media-cleanup.mjs",
+    "test:unit": "npm run test:unit -w backend",
+    "test:web": "npm test -w frontend"
   },
   "devDependencies": {
     "concurrently": "^10.0.5",

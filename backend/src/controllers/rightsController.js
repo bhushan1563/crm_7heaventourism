@@ -2,8 +2,8 @@ import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
 import { queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { RIGHT_MODULES as MODULES, allRights, defaultRightsFor } from '../config/rights.js';
 
-const MODULES = ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'];
 const EDITABLE_ROLES = ['Sales', 'Ops', 'Viewer'];
 
 const permissionFlags = (p = {}) => ({
@@ -59,12 +59,12 @@ export const getRights = async (req, res) => {
 export const getAllRightsMatrix = async (req, res) => {
   try {
     const users = await UserModel.find({ deleted: { $ne: true } }).select('-password').sort({ createdAt: -1 });
-    const allRights = await RightModel.find();
+    const storedRights = await RightModel.find();
     const modules = MODULES;
 
     const matrix = users.map(user => {
-      const userSpecificRights = allRights.filter(r => String(r.userId) === String(user._id));
-      const roleRights = allRights.filter(r => r.userRole === user.role);
+      const userSpecificRights = storedRights.filter(r => String(r.userId) === String(user._id));
+      const roleRights = storedRights.filter(r => r.userRole === user.role && !r.userId); // a role row never belongs to one person
 
       const modulePermissions = {};
       modules.forEach(mod => {
@@ -72,14 +72,7 @@ export const getAllRightsMatrix = async (req, res) => {
         const rRight = roleRights.find(r => r.module === mod);
 
         if (user.role === 'Admin' || user.role === 'SuperAdmin') {
-          modulePermissions[mod] = {
-            canCreate: true,
-            canRead: true,
-            canUpdate: true,
-            canDelete: true,
-            canDownload: true,
-            canEditOthers: true,
-          };
+          modulePermissions[mod] = allRights();
         } else if (uRight) {
           modulePermissions[mod] = {
             canCreate: uRight.canCreate,
@@ -99,14 +92,7 @@ export const getAllRightsMatrix = async (req, res) => {
             canEditOthers: rRight.canEditOthers,
           };
         } else {
-          modulePermissions[mod] = {
-            canCreate: false,
-            canRead: true,
-            canUpdate: false,
-            canDelete: false,
-            canDownload: false,
-            canEditOthers: false,
-          };
+          modulePermissions[mod] = defaultRightsFor(user.role, mod);
         }
       });
 
@@ -143,6 +129,9 @@ export const updateRight = async (req, res) => {
     }
 
     // Upserts skip schema validation, so check the identifiers here (and keep objects out of the query).
+    if (userId && userRole) {
+      return res.status(200).json({ success: false, message: 'Choose either a person or a role, not both.' });
+    }
     if (!MODULES.includes(module) || (userId && typeof userId !== 'string') || (userRole && !EDITABLE_ROLES.includes(userRole))) {
       return res.status(200).json({ success: false, message: 'Invalid module, user or role.' });
     }
@@ -151,7 +140,7 @@ export const updateRight = async (req, res) => {
       userId: userId || null,
       userRole: userRole || null,
       module,
-      canCreate: canCreate !== undefined ? !!canCreate : true,
+      canCreate: canCreate !== undefined ? !!canCreate : false,
       canRead: canRead !== undefined ? !!canRead : true,
       canUpdate: canUpdate !== undefined ? !!canUpdate : false,
       canDelete: canDelete !== undefined ? !!canDelete : false,
@@ -188,7 +177,14 @@ export const bulkUpdateUserRights = async (req, res) => {
       });
     }
 
+    if (userId && userRole) {
+      return res.status(200).json({ success: false, message: 'Choose either a person or a role, not both.' });
+    }
     const modules = Object.keys(permissions).filter((mod) => MODULES.includes(mod));
+    const malformed = modules.find((mod) => permissions[mod] === null || typeof permissions[mod] !== 'object' || Array.isArray(permissions[mod]));
+    if (malformed) {
+      return res.status(200).json({ success: false, message: `The permissions for '${malformed}' are not valid. Nothing was saved.` });
+    }
     if (modules.length === 0) {
       return res.status(200).json({ success: false, message: 'No valid modules were provided.' });
     }

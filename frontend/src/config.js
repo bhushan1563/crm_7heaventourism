@@ -23,15 +23,19 @@ export const QUOTATION_STATUS_TABS = ['ALL', ...QUOTATION_STATUSES];
 export const QUOTATION_TYPES = [
     { value: 'Only Hotel', label: '1. Only Hotel', desc: 'Accommodation only' },
     { value: 'Package', label: '2. Package', desc: 'Full Tour Package' },
-    { value: 'Events / Corporate', label: '3. Events / Corporate', desc: 'MICE & Retreats' }
+    { value: 'Events / Corporate', label: '3. Events / Corporate', desc: 'MICE & Retreats' },
+    { value: 'Land Service', label: '4. Land Service', desc: 'Vehicle only' },
+    { value: 'Visa', label: '5. Visa', desc: 'Documents & fees' }
 ];
 
 export const HOTEL_STAR_RATINGS = [
     { value: '5 star', label: '5 Star Luxury' },
     { value: '4 star', label: '4 Star Premium' },
     { value: '3 star', label: '3 Star Deluxe' },
+    { value: '2 star', label: '2 Star Standard' },
     { value: 'Heritage / Palace', label: 'Heritage / Palace' },
-    { value: 'Resort / Villa', label: 'Resort / Villa' }
+    { value: 'Resort / Villa', label: 'Resort / Villa' },
+    { value: 'Unrated', label: 'Not rated' }
 ];
 
 export const MEAL_PLANS = [
@@ -60,6 +64,8 @@ export const RIGHTS_MODULES = [
     { value: 'guest_list', label: 'Guest List' },
     { value: 'supplier_list', label: 'Supplier List (5 Categories)' },
     { value: 'quotations', label: 'Quotation Builder & Documents' },
+    { value: 'hotels', label: 'Hotel List' },
+    { value: 'itineraries', label: 'Itinerary Library' },
     { value: 'reports', label: 'Reports & Dashboard' },
     { value: 'users', label: 'User Management' },
     { value: 'rights', label: 'Rights & Security' },
@@ -101,3 +107,13 @@ export const FOLLOW_UP_CHANNELS = [
     { value: 'Email', label: 'Channel: Email' },
     { value: 'Meeting', label: 'Channel: In-Person' }
 ];
+
+// Printed on documents the app generates (itineraries; quotations carry their own copy per quotation).
+export const COMPANY = {
+    name: '7HEAVEN TOURISM',
+    tagline: 'Travel with the Trust',
+    address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
+    phone: '+91 7862829178',
+    email: 'sales@7heaventourism.in',
+    website: 'www.7heaventourism.in'
+};

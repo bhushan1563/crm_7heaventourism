@@ -7,7 +7,7 @@ const MAX_INPUT_BYTES = 10 * 1024 * 1024;
 const OUTPUT_SIZE = 256;
 const MAX_OUTPUT_CHARS = 120000; // the server accepts up to 150000
 
-const loadImage = async (file) => {
+export const loadImage = async (file) => {
   if (typeof createImageBitmap === 'function') {
     try {
       return await createImageBitmap(file); // honours the photo's EXIF rotation

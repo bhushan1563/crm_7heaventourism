@@ -6,11 +6,22 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@tiptap/core": "^2.27.3",
+    "@tiptap/extension-color": "^2.27.3",
+    "@tiptap/extension-highlight": "^2.27.3",
+    "@tiptap/extension-text-style": "^2.27.3",
+    "@tiptap/extension-underline": "^2.27.3",
+    "@tiptap/pm": "^2.27.3",
+    "@tiptap/react": "^2.27.3",
+    "@tiptap/starter-kit": "^2.27.3",
     "axios": "^1.7.9",
     "canvas-confetti": "^1.9.4",
+    "docx": "^9.15.1",
+    "dompurify": "^3.4.17",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.9",
@@ -21,9 +32,15 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.8",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
-    "vite": "^5.4.14"
+    "fast-check": "^4.10.2",
+    "jsdom": "^25.0.1",
+    "vite": "^5.4.14",
+    "vitest": "^2.1.9"
   }
 }

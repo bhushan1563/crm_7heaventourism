@@ -61,3 +61,18 @@ export const scanLimiter = limiter({
   message: 'Too many scans in a short time. Please wait a minute and try again.',
   keyGenerator: (req) => (req.user ? `u:${req.user._id}` : ipKeyGenerator(req.ip))
 });
+
+/** Photo uploads: generous for a person filling in a gallery, small enough to stop a runaway script filling the database. */
+export const mediaUploadLimiter = limiter({
+  windowMs: 10 * 60 * 1000,
+  limit: 120,
+  message: 'Too many photo uploads in a short time. Please wait a few minutes and try again.',
+  keyGenerator: (req) => (req.user ? `u:${req.user._id}` : ipKeyGenerator(req.ip))
+});
+
+/** Public photo URLs: a page, a PDF or a Word export may load dozens at once, repeat views come from the browser cache. */
+export const mediaServeLimiter = limiter({
+  windowMs: 60 * 1000,
+  limit: 600,
+  message: 'Too many requests. Please slow down and try again in a minute.'
+});

@@ -7,7 +7,7 @@ name: CI/CD
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'feature/**'] # feature branches run the tests only; just main deploys
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -22,17 +22,28 @@ concurrency:
 jobs:
   test:
     name: Test and build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Pinned: "ubuntu-latest" is moving to Ubuntu 26, for which MongoDB (used by the integration tests) has no binaries yet.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      # The integration tests run the real app against a throwaway MongoDB; this fixes which one and caches the download.
+      MONGOMS_VERSION: 7.0.14
+      MONGOMS_DISTRO: ubuntu-22.04
+      MONGOMS_DOWNLOAD_DIR: ${{ github.workspace }}/.mongodb-binaries
     steps:
       - uses: actions/checkout@v4
+      - name: Cache the test database binary
+        uses: actions/cache@v4
+        with:
+          path: .mongodb-binaries
+          key: mongod-7.0.14-ubuntu-22.04
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - name: Install
         run: npm ci --include=dev
-      - name: Test (needs no database)
+      - name: Test (unit, property-based and database integration tests)
         run: npm test
       - name: Build the web app
         run: npm run build
@@ -41,7 +52,7 @@ jobs:
     name: Deploy to the server
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     environment: production
     steps:

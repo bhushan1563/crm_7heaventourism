@@ -8,6 +8,9 @@ dist/
 .env.local
 .env.*.local
 
+# the private database of `npm run dev:local`
+.local-db/
+
 # logs & OS files
 *.log
 npm-debug.log*

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { RIGHT_MODULES } from '../config/rights.js';
 
 const rightSchema = new mongoose.Schema({
   userId: {
@@ -14,7 +15,7 @@ const rightSchema = new mongoose.Schema({
   },
   module: {
     type: String,
-    enum: ['guest_list', 'supplier_list', 'quotations', 'users', 'rights', 'scanner', 'reports'],
+    enum: RIGHT_MODULES,
     required: true
   },
   canCreate: {
