@@ -259,6 +259,16 @@ const quotationSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  // Set while the quotation is converted into a booking confirmation (see Confirmation): the quotation is then locked.
+  // Owned by the server; cleared again if that confirmation is cancelled.
+  confirmationId: {
+    type: String,
+    default: ''
+  },
+  confirmationNo: {
+    type: String,
+    default: ''
+  },
   deleted: {
     type: Boolean,
     default: false

@@ -72,7 +72,13 @@ export const findQuotationDocument = async (id) => {
 };
 
 // Fields the server owns: never accepted from the request body when creating or updating a quotation.
-const PROTECTED_QUOTATION_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'deleted', 'createdBy', 'createdByName'];
+const PROTECTED_QUOTATION_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'deleted', 'createdBy', 'createdByName', 'confirmationId', 'confirmationNo'];
+
+/** Why a confirmed quotation cannot be changed, or null. Applies to everyone, Admin included: cancel the confirmation first. */
+const lockedMessage = (quotation, action) =>
+  quotation?.confirmationId
+    ? `This quotation is confirmed as ${quotation.confirmationNo || 'a booking'} and is locked, so it cannot be ${action}. Open the confirmation to add booking details, or cancel the confirmation to change the quotation.`
+    : null;
 
 const buildQuotationFilter = (query = {}) => {
   const filter = {};
@@ -183,6 +189,8 @@ export const updateQuotation = async (req, res) => {
     if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
 
     const existing = await findQuotationDocument(req.params.id);
+    const locked = lockedMessage(existing, 'changed');
+    if (locked) return res.status(200).json({ success: false, message: locked });
     const changes = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
       ...extras.overrides
@@ -205,6 +213,8 @@ export const updateQuotation = async (req, res) => {
 export const deleteQuotation = async (req, res) => {
   try {
     const existing = await findQuotationDocument(req.params.id);
+    const locked = lockedMessage(existing, 'deleted');
+    if (locked) return res.status(200).json({ success: false, message: locked });
     const deleted = existing ? await QuotationModel.findByIdAndUpdate(existing._id, { deleted: true }) : null;
     if (!deleted) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
@@ -241,6 +251,10 @@ export const duplicateQuotation = async (req, res) => {
       quotationNo: nextNo,
       clientName: `${originalObj.clientName} (Copy)`,
       status: 'Draft',
+      // A copy of a confirmed quotation is a new, open quotation: it is not part of that booking.
+      isLocked: false,
+      confirmationId: '',
+      confirmationNo: '',
       createdBy,
       createdByName,
       sales: createdByName,

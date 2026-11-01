@@ -27,6 +27,9 @@ import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import quotationService from '../services/quotationService';
+import confirmationService from '../services/confirmationService';
+import ConfirmBookingDialog from '../components/confirmation/ConfirmBookingDialog';
+import { confirmBlockedReason } from '../utils/confirmation';
 import StatusBadge from '../components/StatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExportButton from '../components/ExportButton';
@@ -62,6 +65,10 @@ export const QuotationListPage = () => {
   const [followUpItem, setFollowUpItem] = useState(null);
   const [isUpdatingFollowUp, setIsUpdatingFollowUp] = useState(false);
 
+  // Confirm booking dialog: turns a quotation into a booking confirmation
+  const [confirmItem, setConfirmItem] = useState(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+
   // Direct downloading state per item id
   const [downloadingId, setDownloadingId] = useState(null);
   const [directDownloadQuote, setDirectDownloadQuote] = useState(null);
@@ -96,6 +103,26 @@ export const QuotationListPage = () => {
   useEffect(() => {
     fetchQuotations();
   }, []);
+
+  const handleConfirmBooking = async (optionIndex) => {
+    setIsConfirming(true);
+    try {
+      const res = await confirmationService.confirm(confirmItem._id, optionIndex);
+      if (res.success) {
+        showToast(res.message || 'Booking confirmed.', 'success');
+        setConfirmItem(null);
+        navigate(`/confirmations/${res.data._id}`);
+      } else {
+        showToast(res.message || 'The booking could not be confirmed.', 'error');
+        fetchQuotations(); // someone else may have changed it: show what it is now
+        setConfirmItem(null);
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'The booking could not be confirmed.'), 'error');
+    } finally {
+      setIsConfirming(false);
+    }
+  };
 
   // Filtered quotations
   const filteredQuotations = useMemo(() => {
@@ -584,8 +611,39 @@ export const QuotationListPage = () => {
                           </button>
                         )}
 
+                        {/* 4b. Confirm the booking (the client accepted), or open the booking it already became */}
+                        {q.confirmationId ? (
+                          can('confirmations', 'canRead') && (
+                            <button
+                              onClick={() => navigate(`/confirmations/${q.confirmationId}`)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              title={`Open booking ${q.confirmationNo}`}
+                              aria-label={`Open booking ${q.confirmationNo}`}
+                              style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <CheckCircle2 size={13} color="#059669" />
+                            </button>
+                          )
+                        ) : (
+                          canModify && can('confirmations', 'canCreate') && !confirmBlockedReason(q) && (
+                            <button
+                              onClick={() => setConfirmItem(q)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              title="Confirm booking (the client accepted this quotation)"
+                              aria-label={`Confirm booking for ${q.quotationNo}`}
+                              style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <CheckCircle2 size={13} />
+                            </button>
+                          )
+                        )}
+
                         {/* 5. Edit Quotation */}
-                        {canModify ? (
+                        {q.confirmationId ? (
+                          <span title={`Confirmed as ${q.confirmationNo}: locked. Cancel the booking to change it.`} style={{ padding: '4px', color: 'var(--fg-059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
+                            <Lock size={13} />
+                          </span>
+                        ) : canModify ? (
                           <button
                             onClick={() => navigate(`/quotations/${q._id}/edit`)}
                             className="btn btn-outline btn-sm btn-icon"
@@ -601,7 +659,7 @@ export const QuotationListPage = () => {
                         )}
 
                         {/* 6. Delete Quotation */}
-                        {can('quotations', 'canDelete') && canModify && (
+                        {can('quotations', 'canDelete') && canModify && !q.confirmationId && (
                           <button
                             onClick={() => setDeleteItem(q)}
                             className="btn btn-danger btn-sm btn-icon"
@@ -643,6 +701,9 @@ export const QuotationListPage = () => {
           />
         </div>
       )}
+
+      {/* Confirm booking dialog */}
+      <ConfirmBookingDialog quotation={confirmItem} isOpen={Boolean(confirmItem)} onClose={() => setConfirmItem(null)} onConfirm={handleConfirmBooking} busy={isConfirming} />
 
       {/* Mark for Follow-up Confirmation Dialog */}
       <ConfirmDialog

@@ -308,7 +308,9 @@ const OptionsComparison = ({ options, paxDetails }) => {
   );
 };
 
-export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quotation-doc' }) => {
+// `before` puts extra pages ahead of the quotation (a booking confirmation adds its booking page). It is a function that receives
+// the header, footer and page style of this document, so the extra pages look exactly like the rest.
+export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quotation-doc', before = null }) => {
   const { pathname } = useLocation();
   const isBuilderPage = /^\/quotations\/(?:new|[^/]+\/edit)$/.test(pathname);
   const pageWidth = isBuilderPage ? '120mm' : '210mm';
@@ -632,6 +634,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
   return (
     <div id={id} className="quotation-doc-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '24px' }}>
+      {before && before({ id, DocumentHeader, DocumentFooter, pageContainerStyle })}
       {/* ================= PAGE 1: ITINERARY & TOUR OVERVIEW ================= */}
       {(!pageNumber || pageNumber === 1) && !isVisaQuotation && (hasItinerary || quotationType !== 'Only Hotel') && (
         <div className="quotation-page" id={`${id}-page-1`} style={pageContainerStyle}>

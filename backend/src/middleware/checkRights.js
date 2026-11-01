@@ -43,6 +43,7 @@ export const checkRecordOwnership = (recordFinder) => {
     else if (req.baseUrl.includes('quotations')) moduleName = 'quotations';
     else if (req.baseUrl.includes('hotels')) moduleName = 'hotels';
     else if (req.baseUrl.includes('itineraries')) moduleName = 'itineraries';
+    else if (req.baseUrl.includes('confirmations')) moduleName = 'confirmations';
     const rights = req.userRights && req.userRights[moduleName];
 
     try {

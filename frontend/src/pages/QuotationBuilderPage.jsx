@@ -35,7 +35,8 @@ import {
   AlertTriangle,
   ShieldAlert,
   BookOpen,
-  Car
+  Car,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -72,6 +73,7 @@ import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/i
 import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
 import './quotationHotels.css';
+import '../components/confirmation/confirmation.css';
 
 // The tabs of the builder for a quotation type. A land service has no hotels, flights or separate price tab (its vehicles carry the
 // rates); a visa has no itinerary, hotels or flights either: the visa with its documents, and the fees, take their place.
@@ -796,6 +798,10 @@ export const QuotationBuilderPage = () => {
 
   // Save Quotation
   const handleSave = async (downloadAfter = false) => {
+    if (formData.confirmationId) {
+      showToast(`This quotation is confirmed as ${formData.confirmationNo} and is locked. Cancel the booking first if the quotation has to change.`, 'warning');
+      return;
+    }
     if (!formData.clientName.trim()) {
       showToast('Please enter the client name.', 'warning');
       setActiveTab('overview');
@@ -922,13 +928,28 @@ export const QuotationBuilderPage = () => {
           <button
             onClick={() => handleSave(false)}
             className="btn btn-primary btn-sm"
-            disabled={saving}
+            disabled={saving || Boolean(formData.confirmationId)}
+            title={formData.confirmationId ? 'Confirmed quotations are locked' : undefined}
           >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : formData.confirmationId ? <Lock size={14} /> : <Save size={14} />}
             <span>{isEditMode ? 'Save Changes' : 'Save Quotation'}</span>
           </button>
         </div>
       </div>
+
+      {formData.confirmationId && (
+        <div className="cf-banner" role="status">
+          <Lock size={16} aria-hidden="true" />
+          <span>
+            This quotation is confirmed as <strong>{formData.confirmationNo}</strong> and is locked, so what was sold cannot change. To change it, cancel the booking first; that unlocks the quotation.
+          </span>
+          {can('confirmations', 'canRead') && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/confirmations/${formData.confirmationId}`)}>
+              Open the booking
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Grid: Form Builder on Left, Live PDF Preview on Right */}
       <div className="rs-builder-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(440px, 1.25fr) minmax(380px, 1fr)', gap: '24px' }}>

@@ -1,0 +1,56 @@
+/* Booking confirmations: the editor sections, the summary strip and the list. */
+.booking-editor { display: flex; flex-direction: column; gap: 18px; }
+.booking-editor .edit-section-title { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+.be-date { max-width: 240px; }
+.be-rows { display: flex; flex-direction: column; gap: 12px; }
+.be-traveller { display: grid; grid-template-columns: minmax(180px, 3fr) minmax(70px, 0.7fr) minmax(140px, 1.4fr) 36px; gap: 8px 10px; align-items: start; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.be-traveller .be-remove { margin-top: 22px; }
+.be-note { grid-column: 1 / -1; }
+.be-detail { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) 36px; gap: 8px 10px; align-items: start; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.be-detail .be-remove { margin-top: 22px; }
+.cf-cancel-btn:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.be-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.be-pay-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
+.be-balance { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid #fcd34d; border-radius: 10px; background: #fef9c3; color: #78350f; font-size: 0.9rem; }
+.be-balance strong { font-size: 1.15rem; }
+.be-balance.is-over { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+.be-balance.is-clear { border-color: #6ee7b7; background: #ecfdf5; color: #065f46; }
+
+/* The strip at the top of a confirmation: what it is and where the money stands. */
+.cf-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; padding: 14px 18px; }
+.cf-summary dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.cf-summary dd { margin: 2px 0 0; font-size: 0.92rem; font-weight: 700; color: var(--text-primary); overflow-wrap: anywhere; }
+.cf-summary a, .cf-link { color: var(--primary-text); font-weight: 700; text-decoration: none; background: none; border: 0; padding: 0; cursor: pointer; font-size: inherit; }
+.cf-summary a:hover, .cf-link:hover { text-decoration: underline; }
+.cf-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; }
+.cf-badge.is-confirmed { color: #047857; background: #d1fae5; }
+.cf-badge.is-cancelled { color: #b91c1c; background: #fee2e2; }
+.cf-owing { color: #b45309; }
+.cf-clear { color: #047857; }
+
+/* The list: rows on a wide screen, stacked cards on a phone. */
+.cf-table { width: 100%; }
+.cf-table td, .cf-table th { vertical-align: top; }
+.cf-no { font-weight: 800; color: var(--primary-text); white-space: nowrap; }
+.cf-sub { margin-top: 2px; font-size: 0.74rem; color: var(--text-muted); }
+.cf-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+
+/* The "Confirm booking" and "Cancel booking" dialogs. */
+.cf-dialog-list { margin: 8px 0 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.86rem; }
+.cf-dialog-list li { margin: 3px 0; }
+.cf-options { display: flex; flex-direction: column; gap: 8px; margin: 10px 0; }
+.cf-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1.5px solid var(--border-color); border-radius: 10px; background: var(--surface); cursor: pointer; }
+.cf-option.is-selected { border-color: var(--primary-text); background: var(--primary-tint); }
+.cf-option input { margin-top: 3px; }
+.cf-option-name { font-weight: 700; color: var(--text-primary); }
+.cf-option-meta { font-size: 0.8rem; color: var(--text-secondary); }
+.cf-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 11px 14px; border: 1px solid #a7f3d0; border-radius: 10px; background: #ecfdf5; color: #065f46; font-size: 0.86rem; }
+.cf-banner.is-cancelled { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+
+@media (max-width: 760px) {
+  .be-traveller { grid-template-columns: 1fr 1fr; }
+  .be-name { grid-column: 1 / -1; }
+  .be-detail { grid-template-columns: 1fr; }
+  .be-detail .be-remove { margin-top: 0; justify-self: end; }
+  .be-pay-grid { grid-template-columns: 1fr; }
+}

@@ -58,7 +58,16 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 4.1 "Land Service" quotation type (vehicle only): vehicles with type, seats, AC, quantity and rate (the price is the vehicle table), trip details, vehicle inclusions (formattable), itinerary (including copy from the library), own tabs and print layout; the amount shown in lists follows the vehicle total
 ### Step 5: Visa (R3)
 - [x] 5.1 "Visa" quotation type: the visa (country, type, entry, how issued, validity, stay, processing time, applicants), a documents checklist (starts empty because it depends on the country; one click adds a standard checklist to edit), fees charged per applicant or once for the whole group (the price is the fee table; the amount shown in lists follows its total), visa inclusions, price note, all formattable; own tabs (no itinerary, hotels or flights) and print layout
-### Step 6: Confirmation (R1), when the client's fields arrive
+### Step 6: Confirmation (R1)
+The client's own list of extra fields has not arrived, so this is a first version built to take them later. Decisions:
+- A **Confirmation is its own record**: a frozen copy of the quotation as it was sold (itinerary, hotels, prices, terms) plus the booking information added when converting. If the quotation offered hotel options, the option the client accepted is chosen at conversion and becomes the hotels and price of the confirmation.
+- **Booking information**: travellers (name, age, passport), payment (total, received, balance due date, note; the balance is always calculated), notes (formattable), and an **Additional details** area (label + value pairs) for whatever the client adds to their list; fields can be promoted to fixed ones once the list is known.
+- **Locking**: converting locks the quotation for everyone (including Admin) and sets its status and the guest's status to Confirmed. Cancelling the confirmation (with a reason) unlocks the quotation and restores both statuses. To change the trip itself: cancel, edit the quotation, confirm again (a new confirmation number).
+- Confirmations are cancelled, never deleted; one live confirmation per quotation (enforced by the database, so two people clicking at once cannot create two).
+- [ ] 6.1 Model, rights module `confirmations`, API: convert (atomic, with the chosen option), list (search, status, pages), read, update booking information (concurrency check), cancel
+- [ ] 6.2 Quotation lock (update, delete, duplicate reset) and guest status follow-up, including "fully paid" moving the guest on
+- [ ] 6.3 Screens: Confirmations list and editor, "Confirm booking" on the quotation list, locked banner on the quotation
+- [ ] 6.4 Confirmation document: booking page followed by the quotation pages, in preview, PDF and print
 ### Step 7: Rights pass (R8), misc (R10)
 
 (Steps 4-7 are expanded into their own checklists when they start.)
