@@ -1,6 +1,6 @@
 import React from 'react';
-import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render } from '@testing-library/react';
 import RichText from './RichText';
 import RichTextEditor from './RichTextEditor';
 
@@ -72,6 +72,39 @@ describe('RichTextEditor (rendering; typing and formatting are covered by the br
     const { findByRole, container } = render(<RichTextEditor value="" onChange={() => {}} error="Itinerary description is required." />);
     await findByRole('toolbar');
     expect(container.querySelector('[role=alert]').textContent).toBe('Itinerary description is required.');
+  });
+
+  it('never reports a change just because it was opened: stored text that the editor would spell differently stays as stored', async () => {
+    const stored = [
+      'Plain text with no formatting',
+      '<ul><li>One</li><li>Two</li></ul>',
+      '<p><span style="color:#dc2626;font-size:18px">Red</span></p>',
+      '<p><mark style="background-color:#fde047">Yellow</mark></p>',
+      '<p><strong>Bold</strong> text</p>'
+    ];
+    for (const value of stored) {
+      const onChange = vi.fn();
+      const { findByRole, unmount } = render(<RichTextEditor value={value} onChange={onChange} />);
+      await findByRole('toolbar');
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      expect(onChange, `opening ${JSON.stringify(value)} must not count as an edit`).not.toHaveBeenCalled();
+      unmount();
+    }
+  });
+
+  it('keeps a colour palette open while a colour is being pressed (text colour and highlight alike), and closes it when pressing elsewhere', async () => {
+    const { findByRole, container } = render(<RichTextEditor value="<p>x</p>" onChange={() => {}} />);
+    const toolbar = await findByRole('toolbar', { name: 'Text formatting' });
+    for (const label of ['Text colour', 'Highlight']) {
+      fireEvent.click(toolbar.querySelector(`button[aria-label="${label}"]`));
+      const swatch = () => container.querySelector(`button[aria-label^="${label}: "]`);
+      expect(swatch(), `${label} palette opens`).not.toBeNull();
+      // The browser sends mouse-down before click. If the palette closed on mouse-down the colour could never be chosen.
+      fireEvent.mouseDown(swatch());
+      expect(swatch(), `${label} palette stays open while a colour is pressed`).not.toBeNull();
+      fireEvent.mouseDown(document.body);
+      expect(swatch(), `${label} palette closes when pressing elsewhere`).toBeNull();
+    }
   });
 
   it('locks every control when disabled', async () => {

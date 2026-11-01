@@ -3,7 +3,7 @@
 // be edited further in Word. Photos are placed in rows; a photo that cannot be loaded is skipped and reported, never fatal.
 import { COMPANY } from '../config';
 import { mediaUrl } from '../services/mediaService';
-import { documentFacts, photoRows, richBlocks } from './itineraryDoc';
+import { dayMeta, documentFacts, photoRows, richBlocks } from './itineraryDoc';
 
 const PAGE = { width: 11906, height: 16838, margin: 1020 }; // A4 in twips (1/20 pt); margins about 1.8 cm
 const CONTENT_WIDTH_PX = 660; // printable width in pixels (96 dpi)
@@ -203,7 +203,7 @@ export const generateItineraryDocx = async (itinerary, { onProgress, fetchImage 
     children.push(heading('Day by day'));
     for (const [index, day] of itinerary.days.entries()) {
       children.push(new d.Paragraph({ heading: d.HeadingLevel.HEADING_2, keepNext: true, spacing: { before: 240, after: 60 }, children: [new d.TextRun({ text: `Day ${index + 1}`, color: BRAND }), new d.TextRun({ text: `  ${day.title}` })] }));
-      const meta = [day.stay && `Overnight: ${day.stay}`, day.meals && `Meals: ${day.meals}`].filter(Boolean).join('     ');
+      const meta = dayMeta(day);
       if (meta) children.push(new d.Paragraph({ keepNext: true, spacing: { after: 80 }, children: [new d.TextRun({ text: meta, italics: true, color: '64748B', size: 20 })] }));
       children.push(...textBlocks(day.description), ...photoTables(day.photos));
     }

@@ -159,7 +159,9 @@ export const RichTextEditor = ({
   }, [value, editor]);
 
   useEffect(() => {
-    editor?.setEditable(!disabled);
+    // `false`: switching editable on or off is not an edit. By default TipTap reports it as an update, which made every
+    // record look changed the moment it was opened (its text is written back in the editor's own spelling).
+    editor?.setEditable(!disabled, false);
   }, [disabled, editor]);
 
   // Close an open palette with Escape or a click elsewhere.
@@ -167,7 +169,9 @@ export const RichTextEditor = ({
     if (!menu) return undefined;
     const close = (e) => {
       if (e.type === 'keydown' && e.key !== 'Escape') return;
-      if (e.type === 'mousedown' && frame.current?.querySelector('.rich-menu')?.contains(e.target)) return;
+      // Pressing inside ANY palette (text colour or highlight) is not "elsewhere": closing on mouse-down would remove the
+      // colour button before the click could reach it.
+      if (e.type === 'mousedown' && e.target instanceof Element && e.target.closest('.rich-menu')) return;
       setMenu(null);
     };
     document.addEventListener('keydown', close);

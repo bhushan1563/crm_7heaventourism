@@ -26,6 +26,8 @@ export const PhotoGallery = ({
   const latest = useRef(photos);
   const queue = useRef([]);
   const running = useRef(0);
+  const counter = useRef(0); // numbers the files in the order they were chosen
+  const chosenAt = useRef(new Map()); // photo token -> that number, for photos added on this screen
   const [pending, setPending] = useState([]); // uploads in progress or failed
   const [notes, setNotes] = useState([]); // files that were turned away, with the reason
   const [dragging, setDragging] = useState(false);
@@ -56,7 +58,13 @@ export const PhotoGallery = ({
           if (latest.current.some((p) => p.token === ref.token)) {
             setNotes((n) => [...n, `"${item.name}" is already in this list, so it was not added again.`]);
           } else {
-            commit([...latest.current, { ...ref, caption: '' }]);
+            // Uploads finish in any order (a small photo overtakes a large one), but the photos must appear in the order
+            // they were chosen: the first one chosen is the cover. Slot each one in before the first photo chosen after it.
+            const next = [...latest.current];
+            const before = next.findIndex((p) => (chosenAt.current.get(p.token) ?? 0) > item.seq);
+            next.splice(before === -1 ? next.length : before, 0, { ...ref, caption: '' });
+            chosenAt.current.set(ref.token, item.seq);
+            commit(next);
           }
           setPending((list) => list.filter((p) => p.id !== item.id));
         })
@@ -79,7 +87,7 @@ export const PhotoGallery = ({
       if (problem) messages.push(problem);
       else if (room <= 0) messages.push(`Only ${max} photos fit here. "${file.name}" was not added.`);
       else {
-        accepted.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, name: file.name, file, progress: 0, error: '' });
+        accepted.push({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, seq: (counter.current += 1), name: file.name, file, progress: 0, error: '' });
         room -= 1;
       }
     }

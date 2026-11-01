@@ -78,9 +78,12 @@ export const packBlocks = (blocks, capacity) => {
     used = 0;
   };
   for (let i = 0; i < blocks.length; i += 1) {
-    const { height, keepWithNext } = blocks[i];
-    // A heading needs room for itself AND the block that follows it.
-    const needed = keepWithNext && blocks[i + 1] ? height + Math.min(blocks[i + 1].height, capacity - height) : height;
+    const { height } = blocks[i];
+    // A heading needs room for itself AND everything that must stay with it: headings can follow each other ("Day by day",
+    // then the day's heading), so the chain runs on to the first ordinary block after the last heading.
+    let needed = height;
+    for (let j = i; blocks[j]?.keepWithNext && blocks[j + 1]; j += 1) needed += blocks[j + 1].height;
+    needed = Math.min(needed, capacity);
     if (current.length && used + needed > capacity) startPage();
     current.push(i);
     used += height;
@@ -88,6 +91,12 @@ export const packBlocks = (blocks, capacity) => {
   if (current.length) pages.push(current);
   return pages;
 };
+
+/** The small line under a day's title ("Overnight: Ubud  •  Meals: Dinner"), or '' when the day has neither. */
+export const dayMeta = (day) =>
+  [day.stay && `Overnight: ${day.stay}`, day.meals && `Meals: ${day.meals}`]
+    .filter(Boolean)
+    .join('  •  ');
 
 /** Everything the exports print, in one place so Word and PDF always agree. */
 export const documentFacts = (itinerary) => ({

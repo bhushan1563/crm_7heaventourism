@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { documentFacts, packBlocks, photoRows, richBlocks, slugify } from './itineraryDoc';
+import { dayMeta, documentFacts, packBlocks, photoRows, richBlocks, slugify } from './itineraryDoc';
 
 const photo = (w, h, n = 1) => ({ token: `t${n}`.padEnd(24, 'x'), width: w, height: h });
 
@@ -68,6 +68,15 @@ describe('packBlocks', () => {
     const pages = packBlocks([{ height: 600 }, { height: 40, keepWithNext: true }, { height: 200 }], 700);
     expect(pages).toEqual([[0], [1, 2]]);
   });
+  it('keeps a chain of headings together with the first ordinary block after them ("Day by day", then the day, then its text)', () => {
+    const blocks = [{ height: 800 }, { height: 40, keepWithNext: true }, { height: 60, keepWithNext: true }, { height: 150 }, { height: 100 }];
+    // 800 + 40 + 60 fits in 1000, but the text after the day heading does not: the whole chain moves to the next page.
+    expect(packBlocks(blocks, 1000)).toEqual([[0], [1, 2, 3, 4]]);
+  });
+  it('lets a chain stay on the page when all of it fits', () => {
+    const blocks = [{ height: 500 }, { height: 40, keepWithNext: true }, { height: 60, keepWithNext: true }, { height: 150 }];
+    expect(packBlocks(blocks, 1000)).toEqual([[0, 1, 2, 3]]);
+  });
   it('gives an oversized block a page of its own', () => {
     expect(packBlocks([{ height: 100 }, { height: 2000 }, { height: 100 }], 700)).toEqual([[0], [1], [2]]);
   });
@@ -84,18 +93,24 @@ describe('packBlocks', () => {
           expect(page.length).toBeGreaterThan(0);
           if (page.length > 1) expect(page.reduce((s, i) => s + blocks[i].height, 0)).toBeLessThanOrEqual(capacity);
         }
-        // a heading is followed by its block on the same page whenever there is one
+        // A heading is never the last thing on a page that also holds other blocks: whatever must stay with it comes along.
+        // (A heading alone on a page is only possible when what follows it is taller than a whole page.)
         pages.forEach((page) => {
           const last = page[page.length - 1];
-          const alone = page.length === 1;
-          if (blocks[last]?.keepWithNext && last < blocks.length - 1 && !alone) {
-            // allowed only when the following block could never fit beside it anyway
-            expect(blocks[last].height + Math.min(blocks[last + 1].height, capacity - blocks[last].height)).toBeLessThanOrEqual(capacity);
-          }
+          if (page.length > 1 && last < blocks.length - 1) expect(blocks[last].keepWithNext, `block ${last} is a heading stranded at the end of a page`).toBeFalsy();
         });
       }),
       { numRuns: 1500 }
     );
+  });
+});
+
+describe('dayMeta', () => {
+  it('shows the overnight stay and the meals with a visible separator, or nothing', () => {
+    expect(dayMeta({ stay: 'Ubud', meals: 'Dinner' })).toBe('Overnight: Ubud  •  Meals: Dinner');
+    expect(dayMeta({ stay: 'Ubud', meals: '' })).toBe('Overnight: Ubud');
+    expect(dayMeta({ stay: '', meals: 'Breakfast, Dinner' })).toBe('Meals: Breakfast, Dinner');
+    expect(dayMeta({})).toBe('');
   });
 });
 

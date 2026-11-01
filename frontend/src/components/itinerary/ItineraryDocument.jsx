@@ -2,7 +2,7 @@ import React from 'react';
 import { COMPANY } from '../../config';
 import { mediaUrl } from '../../services/mediaService';
 import { API_ORIGIN } from '../../services/api';
-import { documentFacts, photoRows, richBlocks } from '../../utils/itineraryDoc';
+import { dayMeta, documentFacts, photoRows, richBlocks } from '../../utils/itineraryDoc';
 
 // The printable look of an itinerary (A4). It is rendered off-screen by the PDF export, which measures every
 // [data-block] and packs them onto pages, so a day heading or a photo is never cut in half. Light colours only: documents
@@ -23,6 +23,8 @@ const css = `
 .itin-doc li { margin: 2px 0; }
 .itin-doc li > p { margin: 0; }
 .itin-doc mark { padding: 0 2px; border-radius: 2px; color: #111827; }
+/* A text colour chosen on purpose wins over the default dark ink, so red text stays red on a yellow highlight. */
+.itin-doc [style^="color:"] mark, .itin-doc [style*=";color:"] mark, .itin-doc [style*="; color:"] mark { color: inherit; }
 .itin-doc img { display: block; max-width: none; }
 `;
 
@@ -108,11 +110,7 @@ export const ItineraryDocument = ({ itinerary, company = COMPANY, logoUrl }) => 
               <span style={{ flex: 'none', padding: '2px 10px', borderRadius: 999, background: BRAND, color: '#fff', fontSize: 12, fontWeight: 800, letterSpacing: 0.5 }}>DAY {index + 1}</span>
               <span style={{ fontSize: 16, fontWeight: 800 }}>{day.title}</span>
             </div>
-            {(day.stay || day.meals) && (
-              <div style={{ marginTop: 4, fontSize: 12, color: MUTED, fontStyle: 'italic' }}>
-                {[day.stay && `Overnight: ${day.stay}`, day.meals && `Meals: ${day.meals}`].filter(Boolean).join('     ')}
-              </div>
-            )}
+            {dayMeta(day) && <div style={{ marginTop: 4, fontSize: 12, color: MUTED, fontStyle: 'italic' }}>{dayMeta(day)}</div>}
           </div>
           <Text value={day.description} />
           <Photos photos={day.photos} />

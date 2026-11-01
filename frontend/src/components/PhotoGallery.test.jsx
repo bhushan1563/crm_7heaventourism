@@ -48,6 +48,28 @@ describe('PhotoGallery', () => {
     expect(seen).toHaveBeenLastCalledWith([expect.objectContaining({ token: 'tok-one.jpg' }), expect.objectContaining({ token: 'tok-two.jpg' })].map((m) => m));
   });
 
+  it('keeps the photos in the order they were chosen even when a big one finishes uploading last', async () => {
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    uploadPhoto.mockImplementation(async (file) => {
+      await wait(file.name === 'big-first.jpg' ? 120 : file.name === 'second.jpg' ? 60 : 5);
+      return photo(`tok-${file.name}`);
+    });
+    const seen = vi.fn();
+    const { container } = render(<Harness onSeen={seen} />);
+    await userEvent.upload(container.querySelector('input[type=file]'), [jpeg('big-first.jpg'), jpeg('second.jpg'), jpeg('third.jpg')]);
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(3), { timeout: 3000 });
+    expect(seen).toHaveBeenLastCalledWith(['tok-big-first.jpg', 'tok-second.jpg', 'tok-third.jpg'].map((token) => expect.objectContaining({ token })));
+  });
+
+  it('puts a later batch after the photos already in the list', async () => {
+    uploadPhoto.mockImplementation(async (file) => photo(`tok-${file.name}`));
+    const seen = vi.fn();
+    const { container } = render(<Harness initial={[photo('old-1'), photo('old-2')]} onSeen={seen} />);
+    await userEvent.upload(container.querySelector('input[type=file]'), [jpeg('new-1.jpg'), jpeg('new-2.jpg')]);
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(4));
+    expect(seen).toHaveBeenLastCalledWith(['old-1', 'old-2', 'tok-new-1.jpg', 'tok-new-2.jpg'].map((token) => expect.objectContaining({ token })));
+  });
+
   it('does not list the same photo twice when the server recognises it', async () => {
     uploadPhoto.mockResolvedValue(photo('same-token'));
     const { container } = render(<Harness />);
