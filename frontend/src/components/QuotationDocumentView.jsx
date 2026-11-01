@@ -3,6 +3,54 @@ import { useLocation } from 'react-router-dom';
 import { Plane, Check, X, Diamond, Building2, Calendar, MapPin, Phone, Mail, Award, Coffee, Utensils, CreditCard, AlertCircle } from 'lucide-react';
 import logoImg from '../assets/logo.webp';
 import { formatDate } from '../utils/dateHelper';
+import { toDisplayHtml } from '../utils/richText';
+import { dayMeta, photoRows } from '../utils/itineraryDoc';
+import { mediaUrl } from '../services/mediaService';
+import { API_ORIGIN } from '../services/api';
+
+// Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
+// markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
+const DAY_TEXT_CSS = `
+.qd-rich p { margin: 0 0 3px; }
+.qd-rich ul, .qd-rich ol { margin: 0 0 3px; padding-left: 16px; text-align: left; }
+.qd-rich li { margin: 1px 0; }
+.qd-rich li > p { margin: 0; }
+.qd-rich > :last-child { margin-bottom: 0; }
+.qd-rich mark { padding: 0 1px; border-radius: 2px; color: #111827; }
+.qd-rich [style^="color:"] mark, .qd-rich [style*=";color:"] mark, .qd-rich [style*="; color:"] mark { color: inherit; }
+`;
+
+const photoCrossOrigin = API_ORIGIN ? 'anonymous' : undefined;
+
+/** The photos of one day: small rows, each row one height, wide photos on their own row. Scales with the page width. */
+const DayPhotos = ({ photos, maxRowHeight = 150 }) => {
+  if (!photos?.length) return null;
+  const gap = 6;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: `${gap}px`, marginTop: '4px' }}>
+      {photoRows(photos, 3).map((row, r) => {
+        const aspectSum = row.reduce((sum, { photo }) => sum + photo.width / photo.height, 0);
+        return (
+          <div key={r} style={{ display: 'flex', gap: `${gap}px`, alignItems: 'flex-start', width: '100%', maxWidth: `${Math.round(maxRowHeight * aspectSum + gap * (row.length - 1))}px` }}>
+            {row.map(({ photo }) => (
+              <figure key={photo.token} style={{ margin: 0, flex: `${photo.width / photo.height} 1 0`, minWidth: 0 }}>
+                <img
+                  src={mediaUrl(photo.token)}
+                  alt={photo.caption || ''}
+                  width={photo.width}
+                  height={photo.height}
+                  crossOrigin={photoCrossOrigin}
+                  style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '3px' }}
+                />
+                {photo.caption && <figcaption style={{ marginTop: '2px', fontSize: '8px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>{photo.caption}</figcaption>}
+              </figure>
+            ))}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quotation-doc' }) => {
   const { pathname } = useLocation();
@@ -406,8 +454,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                         {day.dayNumber || `Day 0${idx + 1}`}: {day.title || 'Sightseeing & Excursions'}
                       </span>
                     </div>
+                    {dayMeta(day) && (
+                      <div style={{ fontSize: '8.5px', color: '#64748b', fontStyle: 'italic' }}>{dayMeta(day)}</div>
+                    )}
                     {day.description && (
-                      <p
+                      <div
+                        className="qd-rich"
                         style={{
                           fontSize: '9.5px',
                           lineHeight: '1.45',
@@ -415,10 +467,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                           margin: '2px 0 0 0',
                           textAlign: 'justify'
                         }}
-                      >
-                        {day.description}
-                      </p>
+                        dangerouslySetInnerHTML={{ __html: toDisplayHtml(day.description) }}
+                      />
                     )}
+                    <DayPhotos photos={day.photos} />
                   </div>
                 ))
               ) : (
@@ -911,6 +963,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
           <DocumentFooter />
         </div>
       )}
+      {/* Last, not first: the print rules treat the first child as the first page. */}
+      <style>{DAY_TEXT_CSS}</style>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AlertCircle, Archive, ArchiveRestore, ArrowLeft, Copy, Lock, Plus, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -52,7 +52,10 @@ export const ItineraryEditorPage = () => {
   const [openDay, setOpenDay] = useState(0);
   const [confirm, setConfirm] = useState(null); // { type: 'leave' | 'delete' | 'removeDay' | 'reload', index? }
 
+  const heldId = useRef(null); // the record this page already holds (so it is not downloaded again)
+
   const apply = useCallback((data, { keepOpenDay = false } = {}) => {
+    heldId.current = data._id;
     const next = toForm(data);
     setForm(next);
     setRecord(data);
@@ -78,8 +81,10 @@ export const ItineraryEditorPage = () => {
   }, [id, apply]);
 
   useEffect(() => {
-    if (isEdit) loadRecord();
-  }, [isEdit, loadRecord]);
+    // Right after "Create itinerary" the address changes to this record's edit page while the page already holds it:
+    // load it only when it is a different record.
+    if (isEdit && heldId.current !== id) loadRecord();
+  }, [isEdit, id, loadRecord]);
 
   const dirty = useMemo(() => JSON.stringify(toPayload(form)) !== snapshot, [form, snapshot]);
 

@@ -3,6 +3,23 @@ import QuotationModel from '../models/Quotation.js';
 import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
+import { loadPhotoSizes } from '../services/photoRefs.js';
+
+/**
+ * The cleaned `itinerary` of a request body, or nothing when the request does not touch it (an update that only changes the
+ * status must leave the days alone). Descriptions are sanitised, photos are confirmed to exist and get their size from the
+ * database.
+ * @returns {Promise<{ ok: true, itinerary?: object[] } | { ok: false, message: string }>}
+ */
+const prepareItinerary = async (body) => {
+  if (!body || body.itinerary === undefined) return { ok: true };
+  const days = normalizeQuotationItinerary(body.itinerary);
+  if (!days.ok) return days;
+  const loaded = await loadPhotoSizes(itineraryPhotoTokens(days.value));
+  if (!loaded.ok) return loaded;
+  return { ok: true, itinerary: days.value.map((d) => ({ ...d, photos: d.photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) })) })) };
+};
 
 export const findQuotationDocument = async (id) => {
   if (!id) return null;
@@ -90,12 +107,16 @@ export const getQuotationById = async (req, res) => {
 
 export const createQuotation = async (req, res) => {
   try {
+    const days = await prepareItinerary(req.body);
+    if (!days.ok) return res.status(200).json({ success: false, message: days.message });
+
     const quotationNo = req.body.quotationNo || await getNextQuotationNo();
     const createdBy = req.user._id;
     const createdByName = `${req.user.firstName} ${req.user.lastName}`.trim();
 
     const quotationData = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
+      ...(days.itinerary ? { itinerary: days.itinerary } : {}),
       quotationNo,
       createdBy,
       createdByName,
@@ -117,10 +138,12 @@ export const createQuotation = async (req, res) => {
 
 export const updateQuotation = async (req, res) => {
   try {
+    const days = await prepareItinerary(req.body);
+    if (!days.ok) return res.status(200).json({ success: false, message: days.message });
+
     const existing = await findQuotationDocument(req.params.id);
-    const updated = existing
-      ? await QuotationModel.findByIdAndUpdate(existing._id, omit(req.body, PROTECTED_QUOTATION_FIELDS), { new: true })
-      : null;
+    const changes = { ...omit(req.body, PROTECTED_QUOTATION_FIELDS), ...(days.itinerary ? { itinerary: days.itinerary } : {}) };
+    const updated = existing ? await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true }) : null;
     if (!updated) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
     }

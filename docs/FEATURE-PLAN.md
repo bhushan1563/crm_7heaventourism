@@ -42,7 +42,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 1.1 Model + API (CRUD, duplicate, archive, search, pagination) with rights
 - [x] 1.2 Library screens (list, search, editor with day-wise photos and formatting)
 - [x] 1.3 Export to Word (.docx) and PDF with photos
-- [ ] 1.4 Insert a saved itinerary into a quotation (copy, editable); photos + formatting render in the quotation preview/PDF
+- [x] 1.4 Insert a saved itinerary into a quotation (copy, editable); photos + formatting render in the quotation preview/PDF
 
 ### Step 2: Hotel list and hotel quotation (R2)
 - [ ] 2.1 Model + API + photos + search

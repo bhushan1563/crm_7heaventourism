@@ -33,7 +33,8 @@ import {
   Tag,
   CreditCard,
   AlertTriangle,
-  ShieldAlert
+  ShieldAlert,
+  BookOpen
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -53,6 +54,10 @@ import { generateQuotationPDF, printQuotation, printFlightVoucher } from '../uti
 import QuotationLivePreview from '../components/QuotationLivePreview';
 import { formatDate, toInputDate } from '../utils/dateHelper';
 import { getErrorMessage } from '../services/api';
+import LazyRichTextEditor from '../components/LazyRichTextEditor';
+import PhotoGallery from '../components/PhotoGallery';
+import ItineraryPicker from '../components/itinerary/ItineraryPicker';
+import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 
 const DEFAULT_COMPANY = {
   name: '7HEAVEN TOURISM',
@@ -136,6 +141,7 @@ export const QuotationBuilderPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false); // the "Insert from the itinerary library" dialog
 
   const [guestsList, setGuestsList] = useState([]);
   const [usersList, setUsersList] = useState([]);
@@ -385,6 +391,26 @@ export const QuotationBuilderPage = () => {
         ]
       };
     });
+  };
+
+  // Copies a saved itinerary into this quotation. The days become part of the quotation and can be edited freely; the
+  // library original is not touched. Returns { ok: false, message } when it cannot be inserted (the dialog shows why).
+  const handleInsertItinerary = (itinerary, { mode, copyLists, fillDetails }) => {
+    const result = insertItinerary(formData.itinerary || [], itinerary, mode);
+    if (!result.ok) return result;
+    setFormData((prev) => ({
+      ...prev,
+      itinerary: result.days,
+      ...(fillDetails ? detailsFrom(prev, itinerary) : {}),
+      ...(copyLists
+        ? {
+            packageDetails: { ...prev.packageDetails, inclusions: mergeLines(prev.packageDetails?.inclusions, plainLines(itinerary.inclusions)) },
+            exclusions: mergeLines(prev.exclusions, plainLines(itinerary.exclusions))
+          }
+        : {})
+    }));
+    showToast(`Added ${result.added} ${result.added === 1 ? 'day' : 'days'} from "${itinerary.title}". You can change anything here; the library itinerary stays as it was.`, 'success');
+    return { ok: true };
   };
 
   const handleRemoveDay = (index) => {
@@ -1039,14 +1065,27 @@ export const QuotationBuilderPage = () => {
                 <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>
                   {formData.quotationType === 'Events / Corporate' ? 'Event & Schedule Itinerary' : 'Day-by-Day Tour Itinerary'} ({formData.itinerary?.length || 0} Days)
                 </div>
-                <button
-                  type="button"
-                  onClick={handleAddDay}
-                  className="btn btn-outline-azure btn-sm"
-                >
-                  <Plus size={14} />
-                  <span>Add Day</span>
-                </button>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  {can('itineraries', 'canRead') && (
+                    <button
+                      type="button"
+                      onClick={() => setPickerOpen(true)}
+                      className="btn btn-outline btn-sm"
+                      title="Copy a saved itinerary from the library into this quotation"
+                    >
+                      <BookOpen size={14} />
+                      <span>Insert from library</span>
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleAddDay}
+                    className="btn btn-outline-azure btn-sm"
+                  >
+                    <Plus size={14} />
+                    <span>Add Day</span>
+                  </button>
+                </div>
               </div>
 
               {formData.quotationType === 'Only Hotel' && (
@@ -1073,17 +1112,24 @@ export const QuotationBuilderPage = () => {
                     No Itinerary Days Added Yet
                   </div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', maxWidth: '340px' }}>
-                    Click the button below to add Day 01 and begin creating the custom travel plan.
+                    Add Day 01 and write the plan yourself{can('itineraries', 'canRead') ? ', or copy a ready-made itinerary from the library' : ''}.
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleAddDay}
-                    className="btn btn-primary btn-sm"
-                    style={{ marginTop: '6px' }}
-                  >
-                    <Plus size={14} />
-                    <span>Add Day 01</span>
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '6px' }}>
+                    <button
+                      type="button"
+                      onClick={handleAddDay}
+                      className="btn btn-primary btn-sm"
+                    >
+                      <Plus size={14} />
+                      <span>Add Day 01</span>
+                    </button>
+                    {can('itineraries', 'canRead') && (
+                      <button type="button" onClick={() => setPickerOpen(true)} className="btn btn-outline btn-sm">
+                        <BookOpen size={14} />
+                        <span>Insert from library</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -1129,12 +1175,45 @@ export const QuotationBuilderPage = () => {
                         </button>
                       </div>
 
-                      <textarea
-                        className="form-textarea"
-                        rows={3}
-                        value={day.description}
-                        onChange={(e) => handleUpdateDay(idx, 'description', e.target.value)}
+                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ flex: '1 1 180px' }}
+                          value={day.stay || ''}
+                          maxLength={120}
+                          onChange={(e) => handleUpdateDay(idx, 'stay', e.target.value)}
+                          placeholder="Overnight stay (optional), e.g. Ubud"
+                          aria-label={`Overnight stay for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        />
+                        <input
+                          type="text"
+                          className="form-input"
+                          style={{ flex: '1 1 180px' }}
+                          value={day.meals || ''}
+                          maxLength={120}
+                          onChange={(e) => handleUpdateDay(idx, 'meals', e.target.value)}
+                          placeholder="Meals (optional), e.g. Breakfast, Dinner"
+                          aria-label={`Meals for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        />
+                      </div>
+
+                      <LazyRichTextEditor
+                        value={day.description || ''}
+                        onChange={(description) => handleUpdateDay(idx, 'description', description)}
+                        maxLength={20000}
+                        minHeight={110}
+                        ariaLabel={`Description of ${day.dayNumber || `Day ${idx + 1}`}`}
                         placeholder="Enter detailed day activities, pickup timings, visits, overnight stay..."
+                      />
+
+                      <PhotoGallery
+                        photos={day.photos || []}
+                        onChange={(photos) => handleUpdateDay(idx, 'photos', photos)}
+                        purpose="quotation"
+                        max={6}
+                        label={`Photos for ${day.dayNumber || `Day ${idx + 1}`}`}
+                        help="Shown with this day in the quotation and its PDF."
                       />
                     </div>
                   ))}
@@ -2504,6 +2583,13 @@ export const QuotationBuilderPage = () => {
         {/* RIGHT: Live Interactive Document Preview */}
         <QuotationLivePreview quotation={formData} />
       </div >
+
+      <ItineraryPicker
+        isOpen={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        onInsert={handleInsertItinerary}
+        currentDayCount={formData.itinerary?.length || 0}
+      />
     </div >
   );
 };

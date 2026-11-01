@@ -109,6 +109,23 @@ describe('creating an itinerary', () => {
     expect(h.showToast).toHaveBeenCalledWith('Itinerary created.', 'success');
   });
 
+  it('after creating, shows the saved itinerary straight away: no loading spinner, no second download of what it already has', async () => {
+    itineraryService.create.mockResolvedValue({ success: true, data: stored() });
+    open();
+    await userEvent.type(titleField(), 'Bali Escape');
+    await userEvent.type(screen.getByLabelText(/^Destination/), 'Bali');
+    await userEvent.type(screen.getByLabelText('Title *', { selector: '#day-title-0' }), 'Arrival');
+    await userEvent.click(screen.getByRole('button', { name: /create itinerary/i }));
+
+    expect(await screen.findByText('All changes saved')).toBeInTheDocument();
+    expect(screen.queryByText('Loading the itinerary…')).toBeNull();
+    expect(titleField()).toHaveValue('Bali Escape');
+    // Let any effect that wants to reload the record run; there must be none.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(itineraryService.get).not.toHaveBeenCalled();
+    expect(screen.queryByText('Loading the itinerary…')).toBeNull();
+  });
+
   it('shows the server message and keeps the work when saving fails', async () => {
     itineraryService.create.mockResolvedValue({ success: false, message: 'One of the photos is no longer available. Please remove it and add it again.' });
     open();

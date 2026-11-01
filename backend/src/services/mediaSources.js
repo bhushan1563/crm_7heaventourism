@@ -2,8 +2,11 @@
 // the clean-up (npm run media-cleanup) only deletes photos that none of these mention.
 export const getMediaSources = async () => {
   const { default: Itinerary } = await import('../models/Itinerary.js');
+  const { default: Quotation } = await import('../models/Quotation.js');
   return [
     // The itinerary's own gallery and the photos of each day.
-    { model: Itinerary, select: 'photos days.photos' }
+    { model: Itinerary, select: 'photos days.photos' },
+    // The photos on the days of a quotation (copied in from the library or added there).
+    { model: Quotation, select: 'itinerary.photos' }
   ];
 };

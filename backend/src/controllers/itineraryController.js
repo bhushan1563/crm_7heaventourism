@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import ItineraryModel from '../models/Itinerary.js';
-import MediaModel from '../models/Media.js';
 import { LIMITS, normalizeItineraryInput, photoTokensOf } from '../utils/itineraryInput.js';
+import { loadPhotoSizes } from '../services/photoRefs.js';
 import { escapeRegex, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
 
@@ -24,25 +24,13 @@ export const findItineraryDocument = async (id) => {
   return ItineraryModel.findOne({ _id: id, deleted: false });
 };
 
-/**
- * Photos are referenced by token. Confirm each one exists (a forged or stale token must not be stored) and take the
- * size from the database, never from the client.
- */
+/** Confirms every photo of the itinerary exists and takes the size from the database, never from the client. */
 const attachPhotoSizes = async (data) => {
-  const tokens = [...new Set(photoTokensOf(data))];
+  const tokens = photoTokensOf(data);
   if (!tokens.length) return { ok: true };
-  const found = await MediaModel.find({ token: { $in: tokens } }).select('token width height').lean();
-  const byToken = new Map(found.map((m) => [m.token, m]));
-  const missing = tokens.filter((t) => !byToken.has(t));
-  if (missing.length) {
-    return {
-      ok: false,
-      message: missing.length === 1
-        ? 'One of the photos is no longer available. Please remove it and add it again.'
-        : `${missing.length} of the photos are no longer available. Please remove them and add them again.`
-    };
-  }
-  const withSize = (p) => ({ ...p, width: byToken.get(p.token).width, height: byToken.get(p.token).height });
+  const loaded = await loadPhotoSizes(tokens);
+  if (!loaded.ok) return loaded;
+  const withSize = (p) => ({ ...p, ...loaded.sizeOf(p.token) });
   if (data.photos) data.photos = data.photos.map(withSize);
   if (data.days) data.days = data.days.map((d) => ({ ...d, photos: d.photos.map(withSize) }));
   return { ok: true };

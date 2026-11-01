@@ -7,10 +7,21 @@ const parseDateValue = (val) => {
   return isNaN(d.getTime()) ? null : d;
 };
 
+// A photo on a day of the itinerary: a reference to a stored photo (see Media), with its size and an optional caption.
+const dayPhotoSchema = new mongoose.Schema({
+  token: { type: String, required: true },
+  width: { type: Number, required: true },
+  height: { type: Number, required: true },
+  caption: { type: String, default: '' }
+}, { _id: false });
+
 const itineraryDaySchema = new mongoose.Schema({
   dayNumber: { type: String, default: 'Day 01' },
   title: { type: String, default: '' },
-  description: { type: String, default: '' }
+  description: { type: String, default: '' }, // plain text (older quotations) or formatted text (sanitised on the server)
+  stay: { type: String, default: '' },
+  meals: { type: String, default: '' },
+  photos: { type: [dayPhotoSchema], default: [] }
 }, { _id: false });
 
 const hotelStaySchema = new mongoose.Schema({

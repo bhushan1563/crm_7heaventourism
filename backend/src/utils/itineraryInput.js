@@ -32,7 +32,7 @@ const fail = (message) => ({ ok: false, message });
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
 
 /** One line of text: trimmed, no control characters, inner line breaks and runs of spaces collapsed. */
-const line = (value, label, max, { required = false } = {}) => {
+export const line = (value, label, max, { required = false } = {}) => {
   if (value === undefined || value === null) return required ? fail(`Please enter ${label}.`) : { ok: true, value: '' };
   if (typeof value !== 'string') return fail(`${label[0].toUpperCase()}${label.slice(1)} must be text.`);
   const clean = value.replace(CONTROL, '').replace(/\s+/g, ' ').trim();
