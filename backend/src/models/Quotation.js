@@ -49,6 +49,16 @@ const hotelStaySchema = new mongoose.Schema({
   checkOutTime: { type: String, default: '' }
 }, { _id: false });
 
+// One choice offered to the guest ("Option A: 4-star hotels", "Option B: 5-star hotels"): its own hotels and its own price.
+const quotationOptionSchema = new mongoose.Schema({
+  name: { type: String, default: '' },
+  recommended: { type: Boolean, default: false },
+  hotels: { type: [hotelStaySchema], default: [] },
+  pricePerPerson: { type: Number, default: 0 },
+  totalPrice: { type: Number, default: 0 },
+  priceNote: { type: String, default: 'Per person' }
+}, { _id: false });
+
 const pricingItemSchema = new mongoose.Schema({
   id: { type: String, default: '' },
   name: { type: String, default: '' },
@@ -161,6 +171,7 @@ const quotationSchema = new mongoose.Schema({
     website: { type: String, default: 'www.7heaventourism.in' }
   },
   itinerary: [itineraryDaySchema],
+  options: { type: [quotationOptionSchema], default: [] }, // several hotel options with their own prices (empty = one offer, as before)
   endOfTourNote: {
     type: String,
     default: '***End of the Tour***'

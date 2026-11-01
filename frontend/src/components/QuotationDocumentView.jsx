@@ -119,6 +119,53 @@ const HotelStayCard = ({ h }) => {
   );
 };
 
+const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
+
+/**
+ * Hotel options side by side: one card per option with its hotels and its price per person. The cheapest price is not
+ * singled out (the guest compares); an option the sales person recommends carries a ribbon.
+ */
+const OptionsComparison = ({ options, paxDetails }) => {
+  const columns = Math.min(options.length, 3);
+  return (
+    <div style={{ marginBottom: '10px' }}>
+      <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+        <Building2 size={13} style={{ color: '#0284c7' }} />
+        <span>Hotel Options</span>
+      </div>
+      <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '6px' }}>Please choose the option that suits you best.{paxDetails ? ` Prices are for ${paxDetails}.` : ''}</div>
+      <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: '8px', alignItems: 'stretch' }}>
+        {options.map((option, i) => (
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', border: option.recommended ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+            {option.recommended && <div style={{ background: '#f59e0b', color: '#ffffff', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', textAlign: 'center', padding: '2px 0' }}>★ RECOMMENDED</div>}
+            <div style={{ background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: 800, padding: '5px 8px' }}>{option.name || `Option ${i + 1}`}</div>
+            <div style={{ padding: '7px 8px 6px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0369a1', lineHeight: 1.1 }}>{option.pricePerPerson > 0 ? rs(option.pricePerPerson) : 'On request'}</div>
+              <div style={{ fontSize: '8px', color: '#64748b', marginTop: '1px' }}>{option.priceNote || 'Per person'}</div>
+              {option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '8.5px', color: '#0f172a', fontWeight: 700, marginTop: '3px' }}>Total: {rs(option.totalPrice)}</div>}
+            </div>
+            <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '7px', flex: 1 }}>
+              {option.hotels.map((h, k) => (
+                <div key={k}>
+                  {h.photos?.[0] && <img src={mediaUrl(h.photos[0].token)} alt={h.hotelName || ''} width={h.photos[0].width} height={h.photos[0].height} crossOrigin={photoCrossOrigin} style={{ display: 'block', width: '100%', height: '62px', objectFit: 'cover', borderRadius: '4px', marginBottom: '3px' }} />}
+                  <div style={{ fontSize: '9.5px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>
+                    {h.hotelName || 'Hotel'}
+                    {h.starRating && h.starRating !== 'Unrated' && <span style={{ marginLeft: '4px', fontSize: '8px', color: '#b45309', fontWeight: 700 }}>★ {h.starRating}</span>}
+                  </div>
+                  {h.city && <div style={{ fontSize: '8px', color: '#64748b' }}>📍 {h.city}</div>}
+                  <div style={{ fontSize: '8px', color: '#334155', marginTop: '1px' }}>{[h.nights, h.roomCategory, h.mealPlan, h.noOfRooms].filter(Boolean).join('  •  ')}</div>
+                  {h.amenities?.length > 0 && <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '1px' }}>{amenityLine(h.amenities.slice(0, 4))}</div>}
+                </div>
+              ))}
+              {option.hotels.length === 0 && <div style={{ fontSize: '8.5px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quotation-doc' }) => {
   const { pathname } = useLocation();
   const isBuilderPage = /^\/quotations\/(?:new|[^/]+\/edit)$/.test(pathname);
@@ -295,8 +342,11 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   };
 
   const hasHotels = packageDetails.hotels && packageDetails.hotels.length > 0;
+  // Several hotel options with their own prices replace the single list of hotels and the single price block.
+  const options = quotation.options || [];
+  const hasOptions = options.length > 0;
   const hasInclusions = packageDetails.inclusions && packageDetails.inclusions.length > 0;
-  const hasPackageSection = hasHotels || packageDetails.roomInfo || hasInclusions;
+  const hasPackageSection = hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
   const hasItinerary = itinerary && itinerary.length > 0;
 
   // Pricing check
@@ -354,7 +404,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
-    if (!hasPricingSection) return null;
+    if (!hasPricingSection || hasOptions) return null; // with options, each option carries its own price
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
         <h3 style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
@@ -631,8 +681,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   {getPackageSectionTitle()}
                 </h3>
 
+                {hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
+
                 {/* Hotels Table / Cards Layout */}
-                {hasHotels && (
+                {!hasOptions && hasHotels && (
                   <div style={{ marginBottom: '10px' }}>
                     <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <Building2 size={13} style={{ color: '#0284c7' }} />

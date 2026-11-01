@@ -6,6 +6,7 @@ import { friendlyMessage } from '../utils/errors.js';
 import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
 import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
 import { normalizeQuotationLists } from '../utils/quotationLists.js';
+import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 
 /**
@@ -26,13 +27,16 @@ const prepareExtras = async (body) => {
 
   const lists = normalizeQuotationLists(body);
   if (!lists.ok) return lists;
+  const options = body.options === undefined ? null : normalizeQuotationOptions(body.options);
+  if (options && !options.ok) return options;
 
-  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : [])];
+  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
   if (!loaded.ok) return loaded;
   const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
   if (days) overrides.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
   if (stays) overrides.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
   if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
   Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)
   return { ok: true, overrides };

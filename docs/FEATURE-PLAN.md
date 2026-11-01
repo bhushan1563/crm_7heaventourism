@@ -51,7 +51,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 2.4 "Create quotation" from a hotel; pick-from-list inside package hotel stays
 
 ### Step 3: Quotation upgrade (R6, rest of R9)
-- [ ] 3.1 Multiple hotel options with pricing per option (backward compatible)
+- [x] 3.1 Multiple hotel options with pricing per option (backward compatible)
 - [x] 3.2 Formatting toolbar everywhere text is entered in a quotation
 
 ### Step 4: Land service (R4)

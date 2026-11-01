@@ -60,6 +60,8 @@ import ItineraryPicker from '../components/itinerary/ItineraryPicker';
 import HotelPicker from '../components/hotel/HotelPicker';
 import TagInput from '../components/itinerary/TagInput';
 import FormattedLine from '../components/quotation/FormattedLine';
+import OptionsEditor from '../components/quotation/OptionsEditor';
+import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } from '../utils/quotationOptions';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
@@ -489,14 +491,41 @@ export const QuotationBuilderPage = () => {
   const handlePickHotel = (hotel) => {
     const target = hotelPicker;
     setFormData((prev) => {
+      const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
+      const title = retitle ? { destination: hotelTitle(hotel) } : {};
+      if (target && target.option !== undefined) {
+        // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
+        const options = (prev.options || []).map((option, i) => {
+          if (i !== target.option) return option;
+          const hotels = [...option.hotels];
+          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(stayFromHotel(hotel, blankStay()));
+          else hotels[target.hotel] = stayFromHotel(hotel, hotels[target.hotel]);
+          return { ...option, hotels };
+        });
+        return { ...prev, ...title, options };
+      }
       const hotels = [...(prev.packageDetails?.hotels || [])];
       if (target && target.mode !== 'new' && hotels[target.index]) hotels[target.index] = stayFromHotel(hotel, hotels[target.index]);
       else hotels.push(stayFromHotel(hotel, blankStay()));
-      const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
-      return { ...prev, ...(retitle ? { destination: hotelTitle(hotel) } : {}), packageDetails: { ...prev.packageDetails, hotels } };
+      return { ...prev, ...title, packageDetails: { ...prev.packageDetails, hotels } };
     });
     showToast(`${hotel.name} was taken from the hotel list. Its details and photos are copied below; you can still change them.`, 'success');
     return { ok: true };
+  };
+
+  // Hotel options: the hotels the quotation already has become Option 1 (and the quotation's own list is emptied, so the
+  // same hotels are never shown twice); going back to a single offer keeps the hotels of the first option.
+  const handleStartOptions = () => {
+    setFormData((prev) => ({
+      ...prev,
+      options: repriceOptions(startOptions(prev.packageDetails?.hotels || []), prev.paxDetails),
+      packageDetails: { ...prev.packageDetails, hotels: [] }
+    }));
+    showToast('Hotel options are on. Option 1 has the hotels you had; fill in Option 2 and the prices.', 'info');
+  };
+  const handleSingleOffer = () => {
+    setFormData((prev) => ({ ...prev, options: [], packageDetails: { ...prev.packageDetails, hotels: hotelsOfFirstOption(prev.options) } }));
+    showToast('Back to a single offer. The hotels of the first option were kept.', 'info');
   };
 
   const handleRemoveHotel = (index) => {
@@ -743,7 +772,8 @@ export const QuotationBuilderPage = () => {
       return;
     }
     // A hotel quotation is made from the hotel list: every stay must be a hotel taken from it.
-    const hotelProblem = hotelQuotationProblem(formData);
+    // With hotel options, the hotels live inside the options (each is checked there); otherwise the quotation's own stays are.
+    const hotelProblem = formData.options?.length ? optionsProblem(formData) : hotelQuotationProblem(formData);
     if (hotelProblem) {
       showToast(hotelProblem, 'warning');
       setActiveTab('package');
@@ -1042,6 +1072,7 @@ export const QuotationBuilderPage = () => {
                       setFormData(prev => {
                         const updated = { ...prev, paxDetails: newPax };
                         updated.pricing = recalculatePricing(prev.pricing?.items || DEFAULT_PRICING_ITEMS, newPax, prev.pricing);
+                        if (prev.options?.length) updated.options = repriceOptions(prev.options, newPax); // option totals follow the guests
                         return updated;
                       });
                     }}
@@ -1301,7 +1332,21 @@ export const QuotationBuilderPage = () => {
           {/* TAB 3: HOTELS & ACCOMMODATIONS (NEW FORMAT) */}
           {activeTab === 'package' && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              {/* Hotels Section */}
+              {/* Hotel options: several choices, each with its own hotels and its own price */}
+              {(formData.options || []).length > 0 && (
+                <OptionsEditor
+                  options={formData.options}
+                  onChange={(options) => setFormData((prev) => ({ ...prev, options }))}
+                  paxDetails={formData.paxDetails}
+                  quotationType={formData.quotationType}
+                  canUseList={can('hotels', 'canRead')}
+                  onChooseHotel={(option, hotel) => setHotelPicker({ option, hotel })}
+                  onSingle={handleSingleOffer}
+                />
+              )}
+
+              {/* Hotels Section (a single offer) */}
+              {(formData.options || []).length === 0 && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <div>
@@ -1331,6 +1376,10 @@ export const QuotationBuilderPage = () => {
                         <span>Add Hotel Stay</span>
                       </button>
                     )}
+                    <button type="button" onClick={handleStartOptions} className="btn btn-outline btn-sm" title="Offer the guest several hotel choices, each with its own price">
+                      <Layers size={14} />
+                      <span>Offer hotel options</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1627,6 +1676,7 @@ export const QuotationBuilderPage = () => {
                   />
                 </div>
               </div>
+              )}
 
               {/* Inclusions */}
               <div>
