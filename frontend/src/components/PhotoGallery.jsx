@@ -52,7 +52,12 @@ export const PhotoGallery = ({
       patchPending(item.id, { error: '', progress: 0 });
       uploadPhoto(item.file, purpose, (progress) => patchPending(item.id, { progress }))
         .then((ref) => {
-          commit([...latest.current, { ...ref, caption: '' }]);
+          // The server stores identical photos once, so choosing the same photo twice gives the same reference back.
+          if (latest.current.some((p) => p.token === ref.token)) {
+            setNotes((n) => [...n, `"${item.name}" is already in this list, so it was not added again.`]);
+          } else {
+            commit([...latest.current, { ...ref, caption: '' }]);
+          }
           setPending((list) => list.filter((p) => p.id !== item.id));
         })
         .catch((error) => patchPending(item.id, { error: error.message || 'The photo could not be uploaded.' }))

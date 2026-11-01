@@ -27,6 +27,11 @@ describe('RichText (display)', () => {
     expect(container.querySelector('.rich-plain').textContent).toBe('Day 1: arrive at 5 < 6 pm\nTransfer & check-in');
   });
 
+  it('shows plain text that merely contains angle brackets exactly as typed', () => {
+    const { container } = render(<RichText value={'Price: <TBC> per pax'} />);
+    expect(container.querySelector('.rich-plain').textContent).toBe('Price: <TBC> per pax');
+  });
+
   it('handles empty values', () => {
     for (const empty of [undefined, null, '']) {
       const { container } = render(<RichText value={empty} />);

@@ -73,6 +73,6 @@ export const mediaUploadLimiter = limiter({
 /** Public photo URLs: a page, a PDF or a Word export may load dozens at once, repeat views come from the browser cache. */
 export const mediaServeLimiter = limiter({
   windowMs: 60 * 1000,
-  limit: 1200,
+  limit: 600,
   message: 'Too many requests. Please slow down and try again in a minute.'
 });

@@ -48,6 +48,16 @@ describe('PhotoGallery', () => {
     expect(seen).toHaveBeenLastCalledWith([expect.objectContaining({ token: 'tok-one.jpg' }), expect.objectContaining({ token: 'tok-two.jpg' })].map((m) => m));
   });
 
+  it('does not list the same photo twice when the server recognises it', async () => {
+    uploadPhoto.mockResolvedValue(photo('same-token'));
+    const { container } = render(<Harness />);
+    await userEvent.upload(container.querySelector('input[type=file]'), jpeg('first.jpg'));
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(1));
+    await userEvent.upload(container.querySelector('input[type=file]'), jpeg('again.jpg'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('"again.jpg" is already in this list, so it was not added again.');
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+  });
+
   it('turns away files that are not usable photos, with the reason', async () => {
     const { container } = render(<Harness />);
     const input = container.querySelector('input[type=file]');

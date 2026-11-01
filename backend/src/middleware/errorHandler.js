@@ -20,11 +20,18 @@ export const errorHandler = (err, req, res, next) => {
     return res.status(400).json({ success: false, message: err.message });
   }
   // A cut-off or malformed multipart body comes out of the parser as a plain Error, not a MulterError.
-  if (/^(Unexpected end of (form|multipart data)|Multipart: |Malformed part header|Part terminated early)/.test(err.message || '')) {
+  if (/^(Unexpected end of (form|multipart data)|Multipart: |Malformed part header|Part terminated early|Unsupported content type)/.test(err.message || '')) {
     return res.status(400).json({ success: false, message: 'The upload was incomplete or malformed. Please try again.' });
   }
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({ success: false, message: 'Origin not allowed.' });
+  }
+
+  // Anything else the framework rejected as the CLIENT's fault (unreadable URL, unknown charset or encoding, too many
+  // parameters ...) carries a 4xx status: pass it on instead of reporting a server error.
+  const status = err.status || err.statusCode;
+  if (Number.isInteger(status) && status >= 400 && status < 500) {
+    return res.status(status).json({ success: false, message: status === 404 ? 'Not found.' : 'The request could not be understood.' });
   }
 
   console.error(`[7Heaven] ${req.method} ${req.originalUrl.split('?')[0]} failed:`, err);

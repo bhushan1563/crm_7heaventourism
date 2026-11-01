@@ -1,4 +1,4 @@
-import { startDbApp, fakeImage, photoForm } from './helpers-db.js';
+import { startDbApp, fakeImage, photoForm, mediaPath } from './helpers-db.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fc from 'fast-check';
@@ -20,7 +20,8 @@ after(async () => {
   await app.close();
 });
 
-const upload = (token, opts) => app.call('/api/media', { method: 'POST', token, form: photoForm(opts) });
+// What the photo is for travels in the address (it is checked before the file is read); purpose: null leaves it out.
+const upload = (token, { purpose = 'hotel', ...opts } = {}) => app.call(mediaPath(purpose), { method: 'POST', token, form: photoForm(opts) });
 const jpg = (w = 800, h = 600, pad = 2000) => fakeImage.jpeg(w, h, pad);
 
 test('upload: a photo is stored and served back byte for byte, with long-lived caching and no way to run script', async () => {
@@ -91,13 +92,17 @@ test('upload: a photo over the size limit is refused with a message, not a crash
 });
 
 test('upload: needs a session, a known purpose and create/update rights on that module', async () => {
-  const anon = await app.call('/api/media', { method: 'POST', form: photoForm({ image: jpg() }) });
+  const anon = await app.call(mediaPath('hotel'), { method: 'POST', form: photoForm({ image: jpg() }) });
   assert.equal(anon.status, 401);
 
   const noPurpose = await upload(sales.token, { image: jpg(), purpose: null });
   assert.match(noPurpose.body.message, /Unknown upload type/);
   const badPurpose = await upload(sales.token, { image: jpg(), purpose: 'users' });
   assert.match(badPurpose.body.message, /Unknown upload type/);
+  for (const inherited of ['constructor', '__proto__', 'toString', 'hasOwnProperty']) {
+    const r = await upload(admin.token, { image: jpg(), purpose: inherited });
+    assert.match(r.body.message, /^Unknown upload type/, `${inherited} is not an upload type`);
+  }
 
   const viewerTry = await upload(viewer.token, { image: jpg(), purpose: 'hotel' });
   assert.equal(viewerTry.body.success, false);
@@ -110,7 +115,7 @@ test('upload: needs a session, a known purpose and create/update rights on that 
 });
 
 test('upload: a malformed multipart body is a clean 400 JSON error', async () => {
-  const { status, body } = await app.call('/api/media', {
+  const { status, body } = await app.call(mediaPath('hotel'), {
     method: 'POST',
     token: sales.token,
     headers: { 'Content-Type': 'multipart/form-data; boundary=----x' },
@@ -176,8 +181,9 @@ test('clean-up: only photos nothing refers to, and older than the grace period, 
   const kept = (await upload(admin.token, { image: jpg(111, 111, 77), purpose: 'hotel' })).body.data.token;
   const orphan = (await upload(admin.token, { image: jpg(222, 222, 77), purpose: 'hotel' })).body.data.token;
   const fresh = (await upload(admin.token, { image: jpg(333, 333, 77), purpose: 'hotel' })).body.data.token;
-  // Mongoose protects createdAt from updates, so back-date through the raw collection.
-  await MediaModel.collection.updateMany({ token: { $in: [kept, orphan] } }, { $set: { createdAt: new Date(Date.now() - 3 * 86400000) } });
+  // Mongoose protects createdAt from updates, so back-date through the raw collection (the grace period counts from lastUsedAt).
+  const longAgo = new Date(Date.now() - 3 * 86400000);
+  await MediaModel.collection.updateMany({ token: { $in: [kept, orphan] } }, { $set: { createdAt: longAgo, lastUsedAt: longAgo } });
 
   // A stand-in record type that references one photo the same way real records will: { token }.
   const Holder = mongoose.model('TestHolder', new mongoose.Schema({ photos: [{ token: String, width: Number }], note: String }));
@@ -202,4 +208,117 @@ test('dedupe holds under a race: eight identical uploads at once store the photo
   assert.ok(results.every((r) => r.body.success), results.map((r) => r.body.message).join(' | '));
   assert.equal(new Set(results.map((r) => r.body.data.token)).size, 1);
   assert.equal(await MediaModel.countDocuments({ width: 1234, height: 765 }), 1);
+});
+
+// ---------------------------------------------------------------- hardening found by the independent review
+
+test('permission is checked BEFORE the file is read: a Viewer sending a broken body hears "permission denied", not "malformed"', async () => {
+  const r = await app.call(mediaPath('hotel'), {
+    method: 'POST',
+    token: viewer.token,
+    headers: { 'Content-Type': 'multipart/form-data; boundary=----x' },
+    form: '------x\r\nContent-Disposition: form-data; name="image"; filename="a.jpg"\r\n\r\ntruncated'
+  });
+  assert.equal(r.body.success, false);
+  assert.match(r.body.message, /Permission Denied/);
+});
+
+test('incomplete, too-many-pixel and damaged photos are refused with a clear reason', async () => {
+  const cut = fakeImage.jpeg(800, 600, 500).subarray(0, -2); // the closing marker is missing: an interrupted upload
+  assert.match((await upload(sales.token, { image: cut })).body.message, /incomplete or damaged/);
+
+  const cutPng = fakeImage.png(800, 600, 500).subarray(0, -6);
+  assert.match((await upload(sales.token, { image: cutPng, type: 'image/png', filename: 'a.png' })).body.message, /incomplete or damaged/);
+
+  const manyPixels = (await upload(sales.token, { image: fakeImage.jpeg(4500, 3000, 100) })).body;
+  assert.equal(manyPixels.success, false);
+  assert.match(manyPixels.message, /too large \(4500 x 3000 pixels\)\. It can have at most 12 megapixels/);
+
+  assert.equal((await upload(sales.token, { image: fakeImage.jpeg(4000, 3000, 100) })).body.success, true, 'exactly 12 megapixels is allowed');
+});
+
+test('one person cannot add more than the daily limit, other people are not affected, and re-adding a stored photo is free', async () => {
+  const before = app.config.mediaUserDailyMb;
+  const busy = await app.makeUser('Sales');
+  const other = await app.makeUser('Sales');
+  try {
+    app.config.mediaUserDailyMb = 0.03; // about 31 KB
+    assert.equal((await upload(busy.token, { image: jpg(910, 600, 20000) })).body.success, true);
+    const refused = await upload(busy.token, { image: jpg(911, 600, 20000) });
+    assert.equal(refused.body.success, false);
+    assert.match(refused.body.message, /already added .* of photos in the last 24 hours \(the limit is/);
+    assert.equal((await upload(other.token, { image: jpg(912, 600, 20000) })).body.success, true);
+    assert.equal((await upload(busy.token, { image: jpg(910, 600, 20000) })).body.success, true, 'a photo that is already stored costs nothing');
+  } finally {
+    app.config.mediaUserDailyMb = before;
+  }
+});
+
+test('the storage limit holds even when many different photos arrive at the same moment', async () => {
+  const before = app.config.mediaQuotaMb;
+  const usedBefore = (await app.call('/api/media/usage', { token: admin.token })).body.data.usedBytes;
+  try {
+    app.config.mediaQuotaMb = (usedBefore + 450_000) / 1048576; // room for about four 100 KB photos
+    const results = await Promise.all(Array.from({ length: 12 }, (_, i) => upload(admin.token, { image: jpg(930 + i, 600, 100_000) })));
+    const stored = results.filter((r) => r.body.success).length;
+    const usedAfter = (await app.call('/api/media/usage', { token: admin.token })).body.data.usedBytes;
+    assert.ok(stored >= 1 && stored <= 5, `stored ${stored}`);
+    assert.ok(usedAfter <= app.config.mediaQuotaMb * 1048576, `used ${usedAfter} of ${app.config.mediaQuotaMb * 1048576}`);
+    for (const r of results.filter((x) => !x.body.success)) assert.match(r.body.message, /Photo storage is full/);
+  } finally {
+    app.config.mediaQuotaMb = before;
+  }
+});
+
+test('dedupe: only the person who first uploaded a photo can add its preview', async () => {
+  const owner = await app.makeUser('Sales');
+  const stranger = await app.makeUser('Sales');
+  const image = jpg(940, 600, 3000);
+  const first = await upload(owner.token, { image }); // stored without a preview
+  assert.equal(first.body.success, true, first.body.message);
+  const thumbSizeOf = async () => (await MediaModel.findOne({ token: first.body.data.token }).select('thumbSize')).thumbSize;
+  assert.equal(await thumbSizeOf(), 0);
+
+  await upload(stranger.token, { image, thumb: fakeImage.jpeg(300, 200, 500) });
+  assert.equal(await thumbSizeOf(), 0, 'somebody else cannot attach a preview to it');
+  await upload(owner.token, { image, thumb: fakeImage.jpeg(300, 200, 500) });
+  assert.ok((await thumbSizeOf()) > 0, 'the person who uploaded it can');
+});
+
+test('handing out a stored photo again counts as using it (the clean-up leaves it alone)', async () => {
+  const { findOrphans } = await import('../../src/services/mediaCleanup.js');
+  const { default: Itinerary } = await import('../../src/models/Itinerary.js');
+  const sources = [{ model: Itinerary, select: 'photos days.photos' }];
+  const image = jpg(950, 600, 1000);
+  const token = (await upload(sales.token, { image })).body.data.token;
+  const longAgo = new Date(Date.now() - 5 * 86400000);
+  await MediaModel.collection.updateOne({ token }, { $set: { createdAt: longAgo, lastUsedAt: longAgo } });
+  assert.ok((await findOrphans(sources)).some((m) => m.token === token), 'unused for days: a candidate');
+  await upload(admin.token, { image }); // someone picks the same photo again
+  assert.ok(!(await findOrphans(sources)).some((m) => m.token === token), 'just handed out: protected');
+});
+
+test('the clean-up refuses to run without the list of places that use photos, and that list covers every model with photos', async () => {
+  const { findOrphans, deleteOrphans } = await import('../../src/services/mediaCleanup.js');
+  await assert.rejects(() => findOrphans([]), /list of places that use photos/);
+  await assert.rejects(() => deleteOrphans([]), /list of places that use photos/);
+
+  // A schema that stores photo references (a sub-document with a `token`) must be registered with the clean-up, otherwise
+  // its photos would be deleted a day after they were uploaded.
+  const mongoose = (await import('mongoose')).default;
+  const { getMediaSources } = await import('../../src/services/mediaSources.js');
+  const registered = new Set((await getMediaSources()).map((s) => s.model.modelName));
+  assert.ok(registered.size > 0);
+  const holdsPhotos = (schema) => Object.values(schema.paths).some((p) => p.schema && (p.schema.paths.token || holdsPhotos(p.schema)));
+  for (const name of mongoose.modelNames()) {
+    if (name === 'Media' || name === 'TestHolder') continue;
+    if (holdsPhotos(mongoose.model(name).schema)) assert.ok(registered.has(name), `${name} stores photo references but is not registered in services/mediaSources.js`);
+  }
+});
+
+test('a busy photo is served from memory: repeat requests do not reach the database', async () => {
+  const token = (await upload(sales.token, { image: jpg(960, 600, 1500) })).body.data.token;
+  assert.equal((await app.call(`/media/${token}`)).status, 200);
+  await MediaModel.collection.deleteOne({ token }); // gone from the database ...
+  assert.equal((await app.call(`/media/${token}`)).status, 200, '... yet the photo that was just requested still comes from memory');
 });

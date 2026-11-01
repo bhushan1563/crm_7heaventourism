@@ -36,8 +36,10 @@ const ensureHook = () => {
   });
 };
 
-const HTML_HINT = /<[a-z/!?]/i;
-/** True when the value carries markup; false for the plain text of older records. */
+// Formatted text always begins with a block the editor produces (<p>, <ul> or <ol>); anything else is plain text, shown
+// as text exactly as typed (so "Price: <TBC> per pax" stays readable). Same rule as the server.
+const HTML_HINT = /^\s*<(?:p|ul|ol)[\s>/]/i;
+/** True when the value carries formatting; false for plain text. */
 export const looksLikeHtml = (value) => typeof value === 'string' && HTML_HINT.test(value);
 
 /** Markup that is safe to put into the page. */
@@ -47,6 +49,7 @@ export const sanitizeForDisplay = (html) => {
     ALLOWED_TAGS: RICH_TAGS,
     ALLOWED_ATTR: ['style'],
     ALLOW_DATA_ATTR: false,
+    ALLOW_ARIA_ATTR: false,
     KEEP_CONTENT: true,
     FORCE_BODY: true // text after a leading <script>/<style> must survive (they are removed, the words stay)
   });

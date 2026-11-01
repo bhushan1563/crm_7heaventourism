@@ -13,7 +13,7 @@ const flagsOf = (right) => Object.fromEntries(RIGHT_FLAGS.map((flag) => [flag, B
 export const resolveRights = (user, rights) => {
   const userId = String(user._id);
   const userRights = rights.filter((r) => r.userId === userId);
-  const roleRights = rights.filter((r) => r.userRole === user.role);
+  const roleRights = rights.filter((r) => r.userRole === user.role && !r.userId); // a row tied to one person is not a role default
 
   const merged = {};
   for (const mod of RIGHT_MODULES) {
@@ -43,6 +43,11 @@ export const protect = async (req, res, next) => {
   try {
     decoded = jwt.verify(token, config.jwtSecret, { algorithms: ['HS256'] });
   } catch {
+    return unauthorized(res, 'Invalid or expired session token. Please log in again.');
+  }
+
+  // A token is only ever issued with a plain id; anything else (an object, a number) is refused before it reaches the database.
+  if (typeof decoded.id !== 'string' || !/^[0-9a-f]{24}$/i.test(decoded.id)) {
     return unauthorized(res, 'Invalid or expired session token. Please log in again.');
   }
 

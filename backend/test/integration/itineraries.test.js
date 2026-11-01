@@ -1,4 +1,4 @@
-import { startDbApp, fakeImage, photoForm } from './helpers-db.js';
+import { startDbApp, fakeImage, photoForm, mediaPath } from './helpers-db.js';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fc from 'fast-check';
@@ -16,7 +16,7 @@ let photoB;
 const api = (path, opts = {}) => app.call(`/api/itineraries${path}`, opts);
 const make = (over = {}) => ({ title: 'Bali Escape', destination: 'Bali, Indonesia', country: 'Indonesia', nights: 5, summary: '<p>A <strong>relaxing</strong> week.</p>', days: [{ title: 'Arrival', description: '<p>Welcome</p>', meals: 'Dinner', stay: 'Ubud' }], tags: ['beach'], ...over });
 const create = async (token, over) => (await api('', { method: 'POST', token, json: make(over) })).body;
-const uploadPhoto = async (token, w) => (await app.call('/api/media', { method: 'POST', token, form: photoForm({ image: fakeImage.jpeg(w, 600, w), purpose: 'itinerary' }) })).body.data;
+const uploadPhoto = async (token, w) => (await app.call(mediaPath('itinerary'), { method: 'POST', token, form: photoForm({ image: fakeImage.jpeg(w, 600, w) }) })).body.data;
 
 before(async () => {
   app = await startDbApp();
@@ -147,10 +147,10 @@ test('get one: found, not found, bad id, and deleted ones are gone', async () =>
 
 test('update: partial changes, formatting cleaned, and the audit trail follows the editor', async () => {
   const created = (await create(sales.token)).data;
-  const r = await api(`/${created._id}`, { method: 'PUT', token: ops.token, json: { title: 'Bali Deluxe', summary: '<script>x</script>New <em>text</em>' } });
+  const r = await api(`/${created._id}`, { method: 'PUT', token: ops.token, json: { title: 'Bali Deluxe', summary: '<p><script>x</script>New <em>text</em></p>' } });
   assert.equal(r.body.success, true, r.body.message);
   assert.equal(r.body.data.title, 'Bali Deluxe');
-  assert.equal(r.body.data.summary, 'New <em>text</em>');
+  assert.equal(r.body.data.summary, '<p>New <em>text</em></p>');
   assert.equal(r.body.data.destination, 'Bali, Indonesia', 'fields that were not sent are untouched');
   assert.equal(r.body.data.days.length, 1);
   assert.equal(r.body.data.createdBy, String(sales.user._id));
@@ -261,7 +261,8 @@ test('photos used by an itinerary are never treated as unused by the storage cle
   const used = await uploadPhoto(sales.token, 811);
   const unused = await uploadPhoto(sales.token, 812);
   await create(sales.token, { title: 'Uses a photo', days: [{ title: 'd', photos: [{ token: used.token }] }] });
-  await Media.collection.updateMany({ token: { $in: [used.token, unused.token] } }, { $set: { createdAt: new Date(Date.now() - 3 * 86400000) } });
+  const longAgo = new Date(Date.now() - 3 * 86400000);
+  await Media.collection.updateMany({ token: { $in: [used.token, unused.token] } }, { $set: { createdAt: longAgo, lastUsedAt: longAgo } });
   const orphans = (await findOrphans(await getMediaSources())).map((m) => m.token);
   assert.ok(!orphans.includes(used.token), 'a photo on a day of an itinerary is in use');
   assert.ok(orphans.includes(unused.token));
@@ -283,8 +284,12 @@ test('property: hostile payloads never cause a server error, and nothing dangero
       assert.ok(r.status < 500, `status ${r.status}`);
       assert.equal(typeof r.body.success, 'boolean');
       if (r.body.success) {
-        const stored = JSON.stringify(r.body.data);
-        assert.doesNotMatch(stored, /<script|onerror=/i);
+        // Formatted fields are whitelisted HTML. Plain-text fields (titles, or text with no formatting) are kept as typed and
+        // always shown as text, so angle brackets in them are harmless.
+        const d = r.body.data;
+        for (const value of [d.summary, ...d.days.map((x) => x.description), ...d.inclusions, ...d.exclusions]) {
+          if (/^\s*<(?:p|ul|ol)[\s>/]/i.test(value)) assert.doesNotMatch(value, /<script|<img|\sonerror=/i);
+        }
       } else {
         assert.equal(typeof r.body.message, 'string');
       }

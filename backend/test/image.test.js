@@ -19,12 +19,12 @@ const png = (w, h) => {
   b.write('IHDR', 12, 'latin1');
   b.writeUInt32BE(w, 16);
   b.writeUInt32BE(h, 20);
-  return b;
+  return Buffer.concat([b, Buffer.from([0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82])]); // + the closing IEND chunk
 };
 const webpX = (w, h) => {
   const b = Buffer.alloc(30);
   b.write('RIFF', 0, 'latin1');
-  b.writeUInt32LE(22, 4);
+  b.writeUInt32LE(30 - 8, 4); // the RIFF length: everything after the first 8 bytes
   b.write('WEBPVP8X', 8, 'latin1');
   b.writeUInt32LE(10, 16);
   b.writeUIntLE(w - 1, 24, 3);
@@ -50,11 +50,35 @@ const webpLossy = (w, h) => {
 };
 
 test('JPEG, PNG and the three WebP flavours are recognised with their real size', () => {
-  assert.deepEqual(inspectImage(jpeg(1600, 1067)), { mime: 'image/jpeg', width: 1600, height: 1067 });
-  assert.deepEqual(inspectImage(png(800, 600)), { mime: 'image/png', width: 800, height: 600 });
-  assert.deepEqual(inspectImage(webpX(1024, 768)), { mime: 'image/webp', width: 1024, height: 768 });
-  assert.deepEqual(inspectImage(webpL(321, 123)), { mime: 'image/webp', width: 321, height: 123 });
-  assert.deepEqual(inspectImage(webpLossy(500, 400)), { mime: 'image/webp', width: 500, height: 400 });
+  const dims = (r) => r && { mime: r.mime, width: r.width, height: r.height };
+  assert.deepEqual(dims(inspectImage(jpeg(1600, 1067))), { mime: 'image/jpeg', width: 1600, height: 1067 });
+  assert.deepEqual(dims(inspectImage(png(800, 600))), { mime: 'image/png', width: 800, height: 600 });
+  assert.deepEqual(dims(inspectImage(webpX(1024, 768))), { mime: 'image/webp', width: 1024, height: 768 });
+  assert.deepEqual(dims(inspectImage(webpL(321, 123))), { mime: 'image/webp', width: 321, height: 123 });
+  assert.deepEqual(dims(inspectImage(webpLossy(500, 400))), { mime: 'image/webp', width: 500, height: 400 });
+});
+
+test('a whole file is complete; one cut short is reported as incomplete', () => {
+  assert.equal(inspectImage(jpeg(100, 100)).complete, true);
+  assert.equal(inspectImage(png(100, 100)).complete, true);
+  assert.equal(inspectImage(webpX(100, 100)).complete, true);
+  // the same files with their ends missing (an interrupted upload): the header still reads, the file is not whole
+  assert.equal(inspectImage(jpeg(100, 100).subarray(0, -2)).complete, false);
+  assert.equal(inspectImage(png(100, 100).subarray(0, -12)).complete, false);
+  const shortWebp = webpX(100, 100);
+  shortWebp.writeUInt32LE(5000, 4); // header promises more bytes than the file has
+  assert.equal(inspectImage(shortWebp).complete, false);
+});
+
+test('property: cutting any whole file short is always noticed', () => {
+  fc.assert(
+    fc.property(fc.constantFrom(jpeg, png, webpX), fc.integer({ min: 1, max: 12 }), (build, cut) => {
+      const whole = build(64, 48);
+      const r = inspectImage(whole.subarray(0, whole.length - cut));
+      if (r) assert.equal(r.complete, false);
+    }),
+    { numRuns: 100 }
+  );
 });
 
 test('a JPEG with other segments (EXIF, thumbnails) before the frame header still reads', () => {
@@ -89,9 +113,10 @@ test('property: sizes round-trip for every format', () => {
   const side = fc.integer({ min: 1, max: 16000 });
   fc.assert(
     fc.property(side, side, (w, h) => {
-      assert.deepEqual(inspectImage(jpeg(Math.min(w, 65535), Math.min(h, 65535))), { mime: 'image/jpeg', width: w, height: h });
-      assert.deepEqual(inspectImage(png(w, h)), { mime: 'image/png', width: w, height: h });
-      assert.deepEqual(inspectImage(webpX(w, h)), { mime: 'image/webp', width: w, height: h });
+      const dims = (r) => r && { mime: r.mime, width: r.width, height: r.height };
+      assert.deepEqual(dims(inspectImage(jpeg(Math.min(w, 65535), Math.min(h, 65535)))), { mime: 'image/jpeg', width: w, height: h });
+      assert.deepEqual(dims(inspectImage(png(w, h))), { mime: 'image/png', width: w, height: h });
+      assert.deepEqual(dims(inspectImage(webpX(w, h))), { mime: 'image/webp', width: w, height: h });
     }),
     { numRuns: 400 }
   );

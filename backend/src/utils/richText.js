@@ -23,6 +23,7 @@ const OPTIONS = {
   },
   // A tag that is not allowed is dropped but its text stays; script / style / textarea are dropped together with their content.
   disallowedTagsMode: 'discard',
+  nestingLimit: 8, // deeper nesting is dropped (a deep pile of lists is slow to process and never useful)
   allowedSchemes: [],
   allowProtocolRelative: false,
   // Editors may emit <b>/<i>; store one spelling.
@@ -31,14 +32,16 @@ const OPTIONS = {
 };
 
 // Hard ceilings (the controllers turn these into plain-language messages).
-export const MAX_RICH_INPUT = 200_000; // refuse absurd payloads before parsing them
+export const MAX_RICH_INPUT = 60_000; // refuse absurd payloads before parsing them (20,000 visible characters need far less)
 export const DEFAULT_MAX_TEXT = 20_000; // visible characters
 
 // C0 control characters except tab, line feed and carriage return, plus DEL.
 const CONTROL_CHARS = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g;
 
-// Anything that could START a tag, comment or processing instruction counts as markup, even if it is never closed.
-const HTML_HINT = /<[a-z/!?]/i;
+// Formatted text always begins with a block the editor produces (<p>, <ul> or <ol>). Anything else is plain text, kept
+// exactly as typed, so "Price: <TBC> per pax" or "Call John <john@x.com>" survive. Screens and documents show plain text
+// as text (never as markup), so what it contains cannot run.
+const HTML_HINT = /^\s*<(?:p|ul|ol)[\s>/]/i;
 
 /** True when the value carries markup (so it must be sanitised); false for the plain text of older records. */
 export const looksLikeHtml = (value) => typeof value === 'string' && HTML_HINT.test(value);
@@ -73,13 +76,30 @@ export const richToText = (value) => {
   return decodeEntities(stripped).replace(/\n{3,}/g, '\n\n').trim();
 };
 
-const isEmptyHtml = (html) => richToText(html).replace(/[\s ]+/g, '') === '';
+const isEmptyHtml = (html) => richToText(html).replace(/[\s\u00a0]+/g, '') === '';
+
+/**
+ * Removes empty paragraphs (and ones holding only line breaks / non-breaking spaces) from the END. Done by walking back
+ * from the end, so it costs time in proportion to the text: a pattern for this would backtrack badly on crafted input.
+ */
+const dropTrailingEmptyParagraphs = (html) => {
+  let end = html.length;
+  for (;;) {
+    while (end > 0 && /\s/.test(html[end - 1])) end -= 1;
+    if (!html.startsWith('</p>', end - 4)) break;
+    const start = html.lastIndexOf('<p>', end - 4);
+    if (start === -1) break;
+    const inner = html.slice(start + 3, end - 4);
+    if (inner.replace(/&nbsp;|<br \/>|[\s\u00a0]/g, '') !== '') break;
+    end = start;
+  }
+  return html.slice(0, end);
+};
 
 const sanitizePass = (html) =>
-  sanitizeHtml(html, OPTIONS)
-    .replace(CONTROL_CHARS, '') // entities such as &#1; are decoded by the parser, so clean its output too
-    .replace(/(?:<p>\s*<\/p>|<p>(?:\s|&nbsp;|<br \/>)*<\/p>)+$/g, '') // trailing empty paragraphs the editor leaves behind
-    .trim();
+  dropTrailingEmptyParagraphs(
+    sanitizeHtml(html, OPTIONS).replace(CONTROL_CHARS, '') // entities such as &#1; are decoded by the parser, so clean its output too
+  ).trim();
 
 /**
  * Makes a value safe to store.

@@ -57,6 +57,8 @@ describe('plain text (older records)', () => {
   it('is recognised and shown as text with its line breaks', () => {
     expect(looksLikeHtml('Day 1: Arrival & transfer')).toBe(false);
     expect(looksLikeHtml('5 < 6 and 7 > 3')).toBe(false);
+    expect(looksLikeHtml('Price: <TBC> per pax')).toBe(false);
+    expect(looksLikeHtml('<strong>x</strong>')).toBe(false); // the editor always wraps text in a block
     expect(looksLikeHtml('<p>x</p>')).toBe(true);
     expect(plainToHtml('Line one\nLine two\n\nSecond paragraph')).toBe('<p>Line one<br>Line two</p><p>Second paragraph</p>');
     expect(toDisplayHtml('a & b <c')).not.toContain('<c');

@@ -57,6 +57,8 @@ export const config = {
   dnsServers: list(process.env.DNS_SERVERS),
   // Photos live in the same database, so cap them to leave room for the data itself (Atlas free tier = 512 MB in total).
   mediaQuotaMb: int(process.env.MEDIA_QUOTA_MB, 350),
+  // How much one person can add per 24 hours, so a single account (or a script using it) cannot fill the storage.
+  mediaUserDailyMb: int(process.env.MEDIA_USER_DAILY_MB, 100),
   // Optional first-run bootstrap: creates this Admin only when the users collection is empty.
   adminEmail: (process.env.ADMIN_EMAIL || '').trim().toLowerCase(),
   adminPassword: process.env.ADMIN_PASSWORD || ''

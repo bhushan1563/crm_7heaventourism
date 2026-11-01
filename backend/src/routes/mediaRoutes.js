@@ -33,6 +33,7 @@ router.use(protect);
 
 // Storage meter for administrators (Rights & Security permission).
 router.get('/usage', checkRights('rights', 'canUpdate'), getMediaUsage);
-router.post('/', mediaUploadLimiter, uploadPhotos, requireMediaRights, uploadMedia);
+// The permission check comes first, so a file is only read from someone who may upload it.
+router.post('/', mediaUploadLimiter, requireMediaRights, uploadPhotos, uploadMedia);
 
 export default router;

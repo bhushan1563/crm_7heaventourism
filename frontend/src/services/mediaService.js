@@ -14,12 +14,12 @@ export const mediaUrl = (token, variant = 'full') => `${API_ORIGIN}/media/${enco
 export const uploadPhoto = async (file, purpose, onProgress) => {
   const prepared = await preparePhoto(file);
   const form = new FormData();
-  form.append('purpose', purpose);
   form.append('image', prepared.full, 'photo.jpg');
   form.append('thumb', prepared.thumb, 'thumb.jpg');
   let response;
   try {
-    response = await api.post('/media', form, {
+    // The upload type travels in the address so the server can check permission before it accepts the file.
+    response = await api.post(`/media?purpose=${encodeURIComponent(purpose)}`, form, {
       headers: { 'Content-Type': 'multipart/form-data' },
       timeout: 120000,
       onUploadProgress: (event) => event.total && onProgress?.(Math.round((event.loaded / event.total) * 100))

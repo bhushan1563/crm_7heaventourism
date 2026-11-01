@@ -55,9 +55,24 @@ const webpSize = (buf) => {
   return null;
 };
 
+/** Largest picture (in pixels) accepted: a 12-megapixel photo is already far more than any document needs. */
+export const MAX_PIXELS = 12_000_000;
+
+/**
+ * Is the file whole? A photo cut short (a dropped upload) has a valid header but would break every document that uses it.
+ * JPEG must end with its end-of-image marker, PNG with its IEND chunk, WebP must be as long as its header says.
+ */
+const PNG_END = Buffer.from([0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
+const isComplete = (buf, mime) => {
+  const tail = buf.subarray(Math.max(0, buf.length - 64));
+  if (mime === 'image/jpeg') return tail.includes(Buffer.from([0xff, 0xd9]));
+  if (mime === 'image/png') return buf.subarray(-12).equals(PNG_END); // the whole closing chunk: length, 'IEND' and its checksum
+  return buf.readUInt32LE(4) + 8 <= buf.length; // webp: the RIFF length field
+};
+
 /**
  * @param {Buffer} buf
- * @returns {{ mime: 'image/jpeg'|'image/png'|'image/webp', width: number, height: number } | null}
+ * @returns {{ mime: 'image/jpeg'|'image/png'|'image/webp', width: number, height: number, complete: boolean } | null}
  *   null when the bytes are not a JPEG, PNG or WebP whose dimensions can be read.
  */
 export const inspectImage = (buf) => {
@@ -79,5 +94,5 @@ export const inspectImage = (buf) => {
     return null; // truncated or corrupt header
   }
   if (!mime || !size || !(size.width > 0) || !(size.height > 0)) return null;
-  return { mime, width: size.width, height: size.height };
+  return { mime, width: size.width, height: size.height, complete: isComplete(buf, mime) };
 };

@@ -91,12 +91,13 @@ export const fakeImage = {
     ihdr.writeUInt32BE(width, 8);
     ihdr.writeUInt32BE(height, 12);
     ihdr[16] = 8;
-    return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, Buffer.alloc(padding, 7)]);
+    const iend = Buffer.from([0, 0, 0, 0, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82]);
+    return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), ihdr, Buffer.alloc(padding, 7), iend]);
   },
   webp: (width = 640, height = 480, padding = 0) => {
     const head = Buffer.alloc(30);
     head.write('RIFF', 0, 'latin1');
-    head.writeUInt32LE(22 + padding, 4);
+    head.writeUInt32LE(30 - 8 + padding, 4);
     head.write('WEBPVP8X', 8, 'latin1');
     head.writeUInt32LE(10, 16);
     head.writeUIntLE(width - 1, 24, 3);
@@ -105,12 +106,13 @@ export const fakeImage = {
   }
 };
 
-/** multipart body for POST /api/media. Pass `image: null` to omit the photo, `thumb` to include a preview, `purpose: null` to omit the purpose. */
-export const photoForm = ({ image, thumb, purpose = 'hotel', type = 'image/jpeg', filename = 'photo.jpg', extra = {} } = {}) => {
+/** multipart body for POST /api/media (the upload type travels in the URL: use `mediaPath(purpose)`). Pass `image: null` to omit the photo. */
+export const mediaPath = (purpose = 'hotel') => (purpose === null ? '/api/media' : `/api/media?purpose=${encodeURIComponent(purpose)}`);
+
+export const photoForm = ({ image, thumb, type = 'image/jpeg', filename = 'photo.jpg', extra = {} } = {}) => {
   const form = new FormData();
   if (image) form.append('image', new Blob([image], { type }), filename);
   if (thumb) form.append('thumb', new Blob([thumb], { type }), 'thumb.jpg');
-  if (purpose !== null) form.append('purpose', purpose); // pass purpose: null to leave it out
   for (const [k, v] of Object.entries(extra)) form.append(k, v);
   return form;
 };

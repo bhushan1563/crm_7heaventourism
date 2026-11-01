@@ -59,12 +59,12 @@ export const getRights = async (req, res) => {
 export const getAllRightsMatrix = async (req, res) => {
   try {
     const users = await UserModel.find({ deleted: { $ne: true } }).select('-password').sort({ createdAt: -1 });
-    const allRights = await RightModel.find();
+    const storedRights = await RightModel.find();
     const modules = MODULES;
 
     const matrix = users.map(user => {
-      const userSpecificRights = allRights.filter(r => String(r.userId) === String(user._id));
-      const roleRights = allRights.filter(r => r.userRole === user.role);
+      const userSpecificRights = storedRights.filter(r => String(r.userId) === String(user._id));
+      const roleRights = storedRights.filter(r => r.userRole === user.role && !r.userId); // a role row never belongs to one person
 
       const modulePermissions = {};
       modules.forEach(mod => {
@@ -129,6 +129,9 @@ export const updateRight = async (req, res) => {
     }
 
     // Upserts skip schema validation, so check the identifiers here (and keep objects out of the query).
+    if (userId && userRole) {
+      return res.status(200).json({ success: false, message: 'Choose either a person or a role, not both.' });
+    }
     if (!MODULES.includes(module) || (userId && typeof userId !== 'string') || (userRole && !EDITABLE_ROLES.includes(userRole))) {
       return res.status(200).json({ success: false, message: 'Invalid module, user or role.' });
     }
@@ -137,7 +140,7 @@ export const updateRight = async (req, res) => {
       userId: userId || null,
       userRole: userRole || null,
       module,
-      canCreate: canCreate !== undefined ? !!canCreate : true,
+      canCreate: canCreate !== undefined ? !!canCreate : false,
       canRead: canRead !== undefined ? !!canRead : true,
       canUpdate: canUpdate !== undefined ? !!canUpdate : false,
       canDelete: canDelete !== undefined ? !!canDelete : false,
@@ -174,7 +177,14 @@ export const bulkUpdateUserRights = async (req, res) => {
       });
     }
 
+    if (userId && userRole) {
+      return res.status(200).json({ success: false, message: 'Choose either a person or a role, not both.' });
+    }
     const modules = Object.keys(permissions).filter((mod) => MODULES.includes(mod));
+    const malformed = modules.find((mod) => permissions[mod] === null || typeof permissions[mod] !== 'object' || Array.isArray(permissions[mod]));
+    if (malformed) {
+      return res.status(200).json({ success: false, message: `The permissions for '${malformed}' are not valid. Nothing was saved.` });
+    }
     if (modules.length === 0) {
       return res.status(200).json({ success: false, message: 'No valid modules were provided.' });
     }

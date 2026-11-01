@@ -16,6 +16,7 @@ const mediaSchema = new mongoose.Schema(
     purpose: { type: String, enum: ['hotel', 'itinerary', 'quotation'], required: true },
     data: { type: Buffer, required: true, select: false },
     thumb: { type: Buffer, select: false },
+    lastUsedAt: { type: Date, default: Date.now }, // refreshed whenever the photo is handed out again; the clean-up grace period counts from here
     createdBy: { type: String, required: true },
     createdByName: { type: String, default: '' }
   },
@@ -23,6 +24,9 @@ const mediaSchema = new mongoose.Schema(
 );
 
 mediaSchema.index({ createdAt: -1 });
+// Covered indexes: the storage meter and the per-person daily cap add up sizes without reading the photos themselves.
+mediaSchema.index({ size: 1, thumbSize: 1 });
+mediaSchema.index({ createdBy: 1, createdAt: -1, size: 1, thumbSize: 1 });
 
 export const MediaModel = mongoose.model('Media', mediaSchema);
 export default MediaModel;
