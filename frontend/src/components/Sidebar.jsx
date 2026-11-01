@@ -9,6 +9,7 @@ import {
   ScanLine,
   Sparkles,
   FileText,
+  Hotel,
   Route,
   X
 } from 'lucide-react';
@@ -36,6 +37,7 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
       items: [
         { to: '/guests', label: 'Guest List', icon: Users },
         { to: '/quotations', label: 'Quotations', icon: FileText },
+        { to: '/hotels', label: 'Hotels', icon: Hotel },
         { to: '/itineraries', label: 'Itineraries', icon: Route }
       ]
     },

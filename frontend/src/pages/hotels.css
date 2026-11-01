@@ -1,0 +1,25 @@
+/* Hotel screens: only what the itinerary stylesheet does not already provide. */
+.hotel-stars { color: #b45309; font-weight: 600; }
+html[data-theme='dark'] .hotel-stars { color: #fbbf24; }
+
+/* Room types: a name and a short description on one row, the remove button beside them. */
+.room-types { display: flex; flex-direction: column; gap: 10px; }
+.room-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start; }
+.room-fields { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr); gap: 8px; }
+.room-error { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 640px) { .room-fields { grid-template-columns: 1fr; } }
+
+/* Meal plans and amenity suggestions */
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+.choice { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface); font-size: 0.86rem; color: var(--text-primary); cursor: pointer; }
+.choice:has(input:checked) { border-color: var(--primary-text); background: var(--primary-tint); }
+.choice input { width: 17px; height: 17px; accent-color: var(--primary-text); }
+.suggestions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.suggestions button { padding: 4px 10px; border: 1px dashed var(--border-color); border-radius: 999px; background: transparent; color: var(--text-secondary); font-size: 0.78rem; cursor: pointer; }
+.suggestions button:hover:not(:disabled) { border-color: var(--primary-text); color: var(--primary-text); }
+.suggestions button:disabled { opacity: 0.45; cursor: default; }
+.suggestions-label { width: 100%; margin: 0; font-size: 0.78rem; color: var(--text-muted); }
+.hotel-contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.hotel-times { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 760px) { .hotel-contact-grid, .hotel-times { grid-template-columns: 1fr; } }
+@media (pointer: coarse) { .choice { padding: 12px; } .suggestions button { padding: 8px 12px; } }

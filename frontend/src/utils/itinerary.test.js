@@ -60,6 +60,19 @@ describe('addTag', () => {
   });
 });
 
+describe('addTag with other rules (a hotel\'s amenities)', () => {
+  const amenities = { max: 40, maxLength: 40, lower: false, noun: 'amenity', plural: 'amenities', owner: 'A hotel' };
+  it('keeps the capitals as typed but still ignores repeats in any case', () => {
+    expect(addTag([], '  Rooftop   Bar ', amenities).tags).toEqual(['Rooftop Bar']);
+    expect(addTag(['Pool'], 'pool', amenities).tags).toEqual(['Pool']);
+  });
+  it('names the thing in its messages', () => {
+    expect(addTag([], 'x'.repeat(41), amenities).error).toBe('Each amenity can have at most 40 characters.');
+    expect(addTag([], 'x'.repeat(31)).error).toBe('Each tag can have at most 30 characters.');
+    expect(addTag(Array.from({ length: 40 }, (_, i) => `a${i}`), 'one more', amenities).error).toBe('A hotel can have at most 40 amenities.');
+  });
+});
+
 describe('moveItem', () => {
   it('moves within bounds and ignores impossible moves', () => {
     expect(moveItem([1, 2, 3], 0, 1)).toEqual([2, 1, 3]);

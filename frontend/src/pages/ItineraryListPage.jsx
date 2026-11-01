@@ -179,6 +179,11 @@ export const ItineraryListPage = () => {
             </button>
           ))}
         </div>
+        {hasFilters && (
+          <button type="button" className="btn btn-outline btn-sm" onClick={clearFilters}>
+            Reset filters
+          </button>
+        )}
       </div>
 
       {error ? (

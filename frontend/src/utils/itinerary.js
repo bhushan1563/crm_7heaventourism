@@ -101,13 +101,17 @@ export const firstErrorKey = (errors, form) => {
   return day >= 0 ? `day-${day}` : null;
 };
 
-/** Adds a tag (lower-case, no duplicates, within the limits). Returns the new list, or an error message. */
-export const addTag = (tags, raw) => {
-  const tag = String(raw || '').trim().replace(/\s+/g, ' ').toLowerCase();
+/**
+ * Adds a short label to a list (no duplicates, within the limits). Returns the new list, or an error message.
+ * By default it adds an itinerary tag (lower case, up to 10); other lists pass their own rules, e.g. a hotel's amenities.
+ */
+export const addTag = (tags, raw, { max = LIMITS.tags, maxLength = LIMITS.tagLength, lower = true, noun = 'tag', plural = 'tags', owner = 'An itinerary' } = {}) => {
+  const text = String(raw || '').trim().replace(/\s+/g, ' ');
+  const tag = lower ? text.toLowerCase() : text;
   if (!tag) return { tags };
-  if (tag.length > LIMITS.tagLength) return { tags, error: `A tag can have at most ${LIMITS.tagLength} characters.` };
-  if (tags.includes(tag)) return { tags };
-  if (tags.length >= LIMITS.tags) return { tags, error: `An itinerary can have at most ${LIMITS.tags} tags.` };
+  if (tag.length > maxLength) return { tags, error: `Each ${noun} can have at most ${maxLength} characters.` };
+  if (tags.some((t) => t.toLowerCase() === tag.toLowerCase())) return { tags };
+  if (tags.length >= max) return { tags, error: `${owner} can have at most ${max} ${plural}.` };
   return { tags: [...tags, tag] };
 };
 
