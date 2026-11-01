@@ -508,10 +508,11 @@ export const QuotationListPage = () => {
                     {/* Pricing */}
                     <td data-label="Pricing">
                       <div style={{ fontWeight: 700, color: 'var(--fg-059669)', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
-                        ₹{(q.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
+                        {/* A land service is priced for the whole trip (its vehicles), not per person. */}
+                        ₹{((q.quotationType === 'Land Service' ? q.pricing?.grandTotal : q.pricing?.totalCostPerPerson) || 0).toLocaleString('en-IN')}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
-                        {q.pricing?.grandTotal ? `Total: ₹${q.pricing.grandTotal.toLocaleString('en-IN')}` : 'Incl. GST'}
+                        {q.quotationType === 'Land Service' ? 'For the whole trip' : q.pricing?.grandTotal ? `Total: ₹${q.pricing.grandTotal.toLocaleString('en-IN')}` : 'Incl. GST'}
                       </div>
                     </td>
 

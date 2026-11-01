@@ -1,0 +1,29 @@
+/* The "Vehicles & Rates" tab of a land service quotation. */
+.vehicles-editor { display: flex; flex-direction: column; gap: 22px; }
+.ve-heading { margin: 0; font-size: 0.9rem; font-weight: 800; color: var(--text-primary); }
+.ve-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.ve-tools { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.ve-hint { margin: 0 0 8px; font-size: 0.78rem; color: var(--text-muted); }
+.ve-trip-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; margin-top: 8px; }
+.ve-wide { grid-column: 1 / -1; }
+.ve-rows { display: flex; flex-direction: column; gap: 12px; }
+.ve-row { display: grid; grid-template-columns: minmax(180px, 2.2fr) minmax(70px, 0.7fr) minmax(86px, 0.8fr) minmax(70px, 0.7fr) minmax(120px, 1.2fr) minmax(110px, 1fr) 36px; gap: 8px; align-items: end; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.ve-notes { grid-column: 1 / -1; }
+.ve-amount-value { min-height: 38px; display: flex; align-items: center; font-weight: 800; color: var(--text-primary); }
+.ve-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.ve-total { display: flex; justify-content: space-between; align-items: center; margin: 12px 0; padding: 10px 14px; border: 1px solid var(--primary-border); border-radius: 10px; background: var(--primary-tint); font-size: 0.9rem; color: var(--text-primary); }
+.ve-total strong { font-size: 1.15rem; }
+.ve-incl-list { display: flex; flex-direction: column; gap: 6px; }
+.ve-incl { display: flex; align-items: center; gap: 8px; }
+.ve-tick { color: #10b981; font-weight: 800; }
+@media (max-width: 900px) {
+  .ve-row { grid-template-columns: 1fr 1fr 1fr; }
+  .ve-type { grid-column: 1 / -1; }
+  .ve-amount { grid-column: span 2; }
+  .ve-remove { justify-self: end; }
+}
+@media (max-width: 520px) {
+  .ve-trip-grid { grid-template-columns: 1fr; }
+  .ve-row { grid-template-columns: 1fr 1fr; }
+  .ve-amount { grid-column: 1 / -1; }
+}

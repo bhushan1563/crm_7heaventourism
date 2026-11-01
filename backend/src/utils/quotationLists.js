@@ -13,6 +13,7 @@ const TOP_LEVEL_LISTS = [
   ['paymentPolicy', 'The payment policy'],
   ['cancellationPolicy', 'The cancellation policy'],
   ['vehicleNotes', 'The vehicle notes'],
+  ['vehicleInclusions', 'The vehicle inclusions'],
   ['importantNotes', 'The important notes']
 ];
 

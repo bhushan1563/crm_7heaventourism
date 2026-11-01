@@ -5,6 +5,7 @@ import logoImg from '../assets/logo.webp';
 import { formatDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
+import { vehicleTotal } from '../utils/landService';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
 
@@ -120,6 +121,72 @@ const HotelStayCard = ({ h }) => {
 };
 
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
+
+/**
+ * The vehicle part of a LAND SERVICE quotation (vehicle only): the trip, a table of vehicles with their rates and amounts,
+ * the total, and what the vehicle includes. The price of the quotation is this table.
+ */
+const LandServiceSection = ({ vehicles, trip, inclusions }) => {
+  const total = vehicleTotal(vehicles);
+  const columns = '2.7fr 0.7fr 0.85fr 0.6fr 1.15fr 1.25fr';
+  const facts = [['Route', trip.route], ['Pick-up', trip.pickupPoint], ['Drop', trip.dropPoint], ['Kilometres', trip.kmPolicy]].filter(([, v]) => v);
+  const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#1f2937' };
+  return (
+    <div>
+      {facts.length > 0 && (
+        <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', marginBottom: '8px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
+          {facts.map(([label, value]) => (
+            <div key={label}>
+              <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {vehicles.length > 0 && (
+        <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: columns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {['Vehicle', 'Seats', 'AC', 'Qty', 'Rate / vehicle', 'Amount'].map((h, i) => (
+              <div key={h} style={{ padding: '5px 6px', textAlign: i >= 4 ? 'right' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {vehicles.map((v, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: columns, borderTop: '1px solid #e2e8f0', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff', alignItems: 'start' }}>
+              <div style={{ ...cell, fontWeight: 700, color: '#0f172a' }}>
+                {v.vehicleType || 'Vehicle'}
+                {v.notes && <div style={{ fontWeight: 400, fontSize: '8.5px', color: '#64748b' }}>{v.notes}</div>}
+              </div>
+              <div style={cell}>{v.seats > 0 ? v.seats : '–'}</div>
+              <div style={cell}>{v.acType || '–'}</div>
+              <div style={cell}>{v.quantity}</div>
+              <div style={{ ...cell, textAlign: 'right' }}>{rs(v.rate)}</div>
+              <div style={{ ...cell, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{rs((Number(v.quantity) || 0) * (Number(v.rate) || 0))}</div>
+            </div>
+          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '5.6fr 1.25fr', borderTop: '2px solid #0f172a', backgroundColor: '#fef9c3' }}>
+            <div style={{ padding: '6px 8px', fontSize: '10.5px', fontWeight: 800, color: '#0f172a' }}>Total for the trip</div>
+            <div style={{ padding: '6px 6px', fontSize: '11.5px', fontWeight: 800, color: '#0f172a', textAlign: 'right' }}>{total > 0 ? rs(total) : 'On request'}</div>
+          </div>
+        </div>
+      )}
+      {trip.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: {trip.priceNote}</div>}
+
+      {inclusions.length > 0 && (
+        <div>
+          <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>Vehicle Inclusions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5px', paddingLeft: '2px' }}>
+            {inclusions.map((inc, i) => (
+              <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#1f2937' }}>
+                <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>✓</span>
+                <Line value={inc} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 /**
  * Hotel options side by side: one card per option with its hotels and its price per person. The cheapest price is not
@@ -345,8 +412,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // Several hotel options with their own prices replace the single list of hotels and the single price block.
   const options = quotation.options || [];
   const hasOptions = options.length > 0;
+  // A land service is vehicle only: the vehicle table is its price, and there are no hotels.
+  const isLand = quotationType === 'Land Service';
+  const vehicles = quotation.vehicles || [];
+  const vehicleInclusions = quotation.vehicleInclusions || [];
   const hasInclusions = packageDetails.inclusions && packageDetails.inclusions.length > 0;
-  const hasPackageSection = hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
+  const hasPackageSection = isLand ? vehicles.length > 0 || vehicleInclusions.length > 0 : hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
   const hasItinerary = itinerary && itinerary.length > 0;
 
   // Pricing check
@@ -374,6 +445,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         return 'Hotel & Accommodation Details: -';
       case 'Events / Corporate':
         return 'Venue, Hotel & Inclusions: -';
+      case 'Land Service':
+        return 'Vehicle & Rates: -';
       default:
         return 'Package Details: -';
     }
@@ -404,7 +477,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
-    if (!hasPricingSection || hasOptions) return null; // with options, each option carries its own price
+    if (!hasPricingSection || hasOptions || isLand) return null; // with options each option carries its own price; a land service's price is its vehicle table
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
         <h3 style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
@@ -681,10 +754,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   {getPackageSectionTitle()}
                 </h3>
 
-                {hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
+                {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
+
+                {!isLand && hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
 
                 {/* Hotels Table / Cards Layout */}
-                {!hasOptions && hasHotels && (
+                {!isLand && !hasOptions && hasHotels && (
                   <div style={{ marginBottom: '10px' }}>
                     <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <Building2 size={13} style={{ color: '#0284c7' }} />
@@ -794,14 +869,14 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 )}
 
                 {/* Room info fallback */}
-                {packageDetails.roomInfo && (
+                {!isLand && packageDetails.roomInfo && (
                   <div className="quotation-keep" style={{ fontSize: '10.5px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
                     Room Allocation: {packageDetails.roomInfo}
                   </div>
                 )}
 
                 {/* Inclusions */}
-                {hasInclusions && (
+                {!isLand && hasInclusions && (
                   <div>
                     <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>
                       Inclusions

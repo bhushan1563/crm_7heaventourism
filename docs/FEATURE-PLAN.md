@@ -55,6 +55,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 3.2 Formatting toolbar everywhere text is entered in a quotation
 
 ### Step 4: Land service (R4)
+- [x] 4.1 "Land Service" quotation type (vehicle only): vehicles with type, seats, AC, quantity and rate (the price is the vehicle table), trip details, vehicle inclusions (formattable), itinerary (including copy from the library), own tabs and print layout; the amount shown in lists follows the vehicle total
 ### Step 5: Visa (R3)
 ### Step 6: Confirmation (R1), when the client's fields arrive
 ### Step 7: Rights pass (R8), misc (R10)

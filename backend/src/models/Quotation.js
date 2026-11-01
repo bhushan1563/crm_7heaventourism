@@ -49,6 +49,16 @@ const hotelStaySchema = new mongoose.Schema({
   checkOutTime: { type: String, default: '' }
 }, { _id: false });
 
+// A vehicle of a land service quotation (vehicle only, no hotels): what it is, how many, and the rate for the whole trip.
+const vehicleSchema = new mongoose.Schema({
+  vehicleType: { type: String, default: '' }, // e.g. "SUV (Innova Crysta)", "Tempo Traveller (12 seater)"
+  seats: { type: Number, default: 0 },
+  quantity: { type: Number, default: 1 },
+  acType: { type: String, default: 'AC' }, // 'AC' | 'Non-AC' | ''
+  rate: { type: Number, default: 0 }, // for the whole trip, per vehicle
+  notes: { type: String, default: '' }
+}, { _id: false });
+
 // One choice offered to the guest ("Option A: 4-star hotels", "Option B: 5-star hotels"): its own hotels and its own price.
 const quotationOptionSchema = new mongoose.Schema({
   name: { type: String, default: '' },
@@ -99,7 +109,7 @@ const quotationSchema = new mongoose.Schema({
   },
   quotationType: {
     type: String,
-    enum: ['Only Hotel', 'Package', 'Events / Corporate'],
+    enum: ['Only Hotel', 'Package', 'Events / Corporate', 'Land Service'],
     default: 'Package'
   },
   guestId: {
@@ -172,6 +182,16 @@ const quotationSchema = new mongoose.Schema({
   },
   itinerary: [itineraryDaySchema],
   options: { type: [quotationOptionSchema], default: [] }, // several hotel options with their own prices (empty = one offer, as before)
+  // Land service (vehicle only): the vehicles and their rates, what the vehicle includes, and the trip they are for.
+  vehicles: { type: [vehicleSchema], default: [] },
+  vehicleInclusions: [{ type: String }],
+  landService: {
+    route: { type: String, default: '' },
+    pickupPoint: { type: String, default: '' },
+    dropPoint: { type: String, default: '' },
+    kmPolicy: { type: String, default: '' }, // e.g. "250 km per day, extra km at actuals"
+    priceNote: { type: String, default: '' } // e.g. "GST extra; toll and parking as actuals"
+  },
   endOfTourNote: {
     type: String,
     default: '***End of the Tour***'

@@ -7,6 +7,7 @@ import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quot
 import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
 import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
+import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 
 /**
@@ -29,6 +30,8 @@ const prepareExtras = async (body) => {
   if (!lists.ok) return lists;
   const options = body.options === undefined ? null : normalizeQuotationOptions(body.options);
   if (options && !options.ok) return options;
+  const vehicles = normalizeQuotationVehicles(body);
+  if (!vehicles.ok) return vehicles;
 
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
@@ -36,6 +39,13 @@ const prepareExtras = async (body) => {
   const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
   if (days) overrides.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
   if (stays) overrides.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  if (vehicles.vehicles) overrides.vehicles = vehicles.vehicles;
+  if (vehicles.landService) overrides.landService = vehicles.landService;
+  // The price of a land service quotation IS its vehicles: keep the amount the lists and statistics read (pricing.grandTotal)
+  // equal to the vehicle total, so the two can never disagree.
+  if (vehicles.vehicles && body.quotationType === 'Land Service' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
+    overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
+  }
   if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
   if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
   Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)

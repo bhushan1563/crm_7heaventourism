@@ -23,7 +23,8 @@ export const QUOTATION_STATUS_TABS = ['ALL', ...QUOTATION_STATUSES];
 export const QUOTATION_TYPES = [
     { value: 'Only Hotel', label: '1. Only Hotel', desc: 'Accommodation only' },
     { value: 'Package', label: '2. Package', desc: 'Full Tour Package' },
-    { value: 'Events / Corporate', label: '3. Events / Corporate', desc: 'MICE & Retreats' }
+    { value: 'Events / Corporate', label: '3. Events / Corporate', desc: 'MICE & Retreats' },
+    { value: 'Land Service', label: '4. Land Service', desc: 'Vehicle only' }
 ];
 
 export const HOTEL_STAR_RATINGS = [
