@@ -41,6 +41,8 @@ npm run dev                                  # API on :5000 + web app on :5173
 
 Open http://localhost:5173.
 
+**Just want to try it, with no database to set up?** `npm run dev:local` starts the whole app with its own private database (kept in `.local-db/`, never the live data), adds sample guests, suppliers and quotations, and prints the logins. `npm run dev:local -- --fresh` starts again from scratch.
+
 ### Run it the way production does (one server)
 
 ```bash
@@ -53,6 +55,7 @@ npm start          # http://localhost:5000  -> web app + API from the same proce
 | Script | What it does |
 |---|---|
 | `npm run dev` | API (`node --watch`) and Vite dev server together |
+| `npm run dev:local` | the same, on a private local database with sample data (safe to experiment) |
 | `npm run dev:backend` / `dev:frontend` | one side only |
 | `npm run build` | build the web app into `frontend/dist` |
 | `npm start` | start the API; it also serves `frontend/dist` if it exists |
