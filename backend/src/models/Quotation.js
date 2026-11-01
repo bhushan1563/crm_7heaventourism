@@ -38,7 +38,15 @@ const hotelStaySchema = new mongoose.Schema({
   contactNumber: { type: String, default: '' },
   contactPerson: { type: String, default: '' },
   email: { type: String, default: '' },
-  notes: { type: String, default: '' }
+  notes: { type: String, default: '' },
+  // When the stay was taken from the hotel list: which hotel, and a copy of what was shown, so editing the hotel later
+  // never changes a quotation that was already sent.
+  hotelId: { type: String, default: '' },
+  photos: { type: [dayPhotoSchema], default: [] },
+  amenities: { type: [String], default: [] },
+  roomOptions: { type: [String], default: [] }, // the room types the hotel offers (suggestions for "Room category")
+  checkInTime: { type: String, default: '' },
+  checkOutTime: { type: String, default: '' }
 }, { _id: false });
 
 const pricingItemSchema = new mongoose.Schema({

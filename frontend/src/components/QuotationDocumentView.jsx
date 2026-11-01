@@ -52,6 +52,67 @@ const DayPhotos = ({ photos, maxRowHeight = 150 }) => {
   );
 };
 
+const amenityLine = (amenities) => (amenities || []).join('  •  ');
+const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean).join('  •  ');
+
+/**
+ * One hotel of a HOTEL quotation. A hotel quotation shows more about the hotel than a package does: a large cover photo
+ * with a strip of more photos, the address and contact details, the stay, the room and meal plan, the check-in and
+ * check-out times and the amenities.
+ */
+const HotelStayCard = ({ h }) => {
+  const [cover, ...more] = h.photos || [];
+  const facts = [
+    (h.checkInDate || h.checkOutDate) && ['Stay', [h.checkInDate ? formatDate(h.checkInDate) : '', h.checkOutDate ? formatDate(h.checkOutDate) : ''].filter(Boolean).join(' to ')],
+    h.nights && ['Nights', h.nights],
+    h.noOfRooms && ['Rooms', h.noOfRooms],
+    h.roomCategory && ['Room', h.roomCategory],
+    h.mealPlan && ['Meal plan', h.mealPlan],
+    timesLine(h) && ['Timings', timesLine(h)]
+  ].filter(Boolean);
+  return (
+    <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+      {cover && (
+        <figure style={{ margin: 0 }}>
+          <img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} width={cover.width} height={cover.height} crossOrigin={photoCrossOrigin} style={{ display: 'block', width: '100%', height: '175px', objectFit: 'cover' }} />
+          {cover.caption && <figcaption style={{ padding: '2px 8px', fontSize: '8px', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>{cover.caption}</figcaption>}
+        </figure>
+      )}
+      {more.length > 0 && <div style={{ padding: '6px 8px 0' }}><DayPhotos photos={more.slice(0, 3)} maxRowHeight={85} /></div>}
+      <div style={{ padding: '9px 12px 10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+          <div>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</div>
+            {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {[h.address, h.city].filter(Boolean).join(', ')}</div>}
+          </div>
+          {h.starRating && h.starRating !== 'Unrated' && (
+            <span style={{ flex: 'none', fontSize: '9px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '2px 7px', borderRadius: '3px' }}>★ {h.starRating}</span>
+          )}
+        </div>
+        {facts.length > 0 && (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '4px 12px', marginTop: '7px', paddingTop: '6px', borderTop: '1px solid #e2e8f0', fontSize: '9px', color: '#334155' }}>
+            {facts.map(([label, value]) => (
+              <div key={label}>
+                <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
+              </div>
+            ))}
+          </div>
+        )}
+        {h.amenities?.length > 0 && (
+          <div style={{ marginTop: '6px', fontSize: '8.5px', color: '#475569' }}>
+            <strong style={{ color: '#0f172a' }}>Amenities:</strong> {amenityLine(h.amenities)}
+          </div>
+        )}
+        {(h.contactNumber || h.email || h.contactPerson) && (
+          <div style={{ marginTop: '5px', fontSize: '8.5px', color: '#64748b' }}>
+            {[h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quotation-doc' }) => {
   const { pathname } = useLocation();
   const isBuilderPage = /^\/quotations\/(?:new|[^/]+\/edit)$/.test(pathname);
@@ -573,7 +634,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {packageDetails.hotels.map((h, i) => (
+                      {packageDetails.hotels.map((h, i) => (quotationType === 'Only Hotel' ? (
+                        <HotelStayCard key={i} h={h} />
+                      ) : (
                         <div
                           key={i}
                           className="quotation-keep"
@@ -632,7 +695,19 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                                 <strong style={{ color: '#0f172a' }}>🚪 Rooms:</strong> {h.noOfRooms}
                               </div>
                             )}
+                            {timesLine(h) && (
+                              <div>
+                                <strong style={{ color: '#0f172a' }}>🕑 Timings:</strong> {timesLine(h)}
+                              </div>
+                            )}
                           </div>
+
+                          {h.photos?.length > 0 && <DayPhotos photos={h.photos.slice(0, 3)} maxRowHeight={90} />}
+                          {h.amenities?.length > 0 && (
+                            <div style={{ fontSize: '8.5px', color: '#475569', marginTop: '4px' }}>
+                              <strong style={{ color: '#0f172a' }}>Amenities:</strong> {amenityLine(h.amenities)}
+                            </div>
+                          )}
 
                           {/* Address & Contact Info if provided */}
                           {(h.address || h.contactNumber || h.email || h.contactPerson) && (
@@ -655,7 +730,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                             </div>
                           )}
                         </div>
-                      ))}
+                      )))}
                     </div>
                   </div>
                 )}

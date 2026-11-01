@@ -47,8 +47,8 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 ### Step 2: Hotel list and hotel quotation (R2)
 - [x] 2.1 Model + API + photos + search
 - [x] 2.2 Hotels screens
-- [ ] 2.3 Hotel quotation type driven by the list (+ quick add) and its layout
-- [ ] 2.4 "Create quotation" from a hotel; pick-from-list inside package hotel stays
+- [x] 2.3 Hotel quotation type driven by the list (+ quick add) and its layout
+- [x] 2.4 "Create quotation" from a hotel; pick-from-list inside package hotel stays
 
 ### Step 3: Quotation upgrade (R6, rest of R9)
 - [ ] 3.1 Multiple hotel options with pricing per option (backward compatible)

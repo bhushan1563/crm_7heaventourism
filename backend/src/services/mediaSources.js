@@ -7,8 +7,8 @@ export const getMediaSources = async () => {
   return [
     // The itinerary's own gallery and the photos of each day.
     { model: Itinerary, select: 'photos days.photos' },
-    // The photos on the days of a quotation (copied in from the library or added there).
-    { model: Quotation, select: 'itinerary.photos' },
+    // The photos on the days of a quotation and on its hotel stays (copied in from the libraries or added there).
+    { model: Quotation, select: 'itinerary.photos packageDetails.hotels.photos' },
     // The photo gallery of each hotel in the hotel list.
     { model: Hotel, select: 'photos' }
   ];

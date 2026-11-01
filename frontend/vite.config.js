@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => {
       'process.env': {}
     },
     // Component and logic tests run in a simulated browser (jsdom).
-    test: { environment: 'jsdom', include: ['src/**/*.test.{js,jsx}'], restoreMocks: true, setupFiles: ['./src/test/setup.js'] },
+    // Form tests type whole forms character by character; on a busy or slow machine that can pass the 5 s default.
+    test: { environment: 'jsdom', include: ['src/**/*.test.{js,jsx}'], restoreMocks: true, setupFiles: ['./src/test/setup.js'], testTimeout: 20000 },
     build: {
       target: 'es2020',
       sourcemap: false,

@@ -4,21 +4,31 @@ import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
 import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
+import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 
 /**
- * The cleaned `itinerary` of a request body, or nothing when the request does not touch it (an update that only changes the
- * status must leave the days alone). Descriptions are sanitised, photos are confirmed to exist and get their size from the
- * database.
- * @returns {Promise<{ ok: true, itinerary?: object[] } | { ok: false, message: string }>}
+ * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days and the hotel stays. A part
+ * the request does not mention is left out (an update that only changes the status must leave the days alone). Text is
+ * sanitised, and every photo is confirmed to exist and gets its size from the database (one lookup for all of them).
+ * @returns {Promise<{ ok: true, itinerary?: object[], packageDetails?: object } | { ok: false, message: string }>}
  */
-const prepareItinerary = async (body) => {
-  if (!body || body.itinerary === undefined) return { ok: true };
-  const days = normalizeQuotationItinerary(body.itinerary);
-  if (!days.ok) return days;
-  const loaded = await loadPhotoSizes(itineraryPhotoTokens(days.value));
+const prepareExtras = async (body) => {
+  const out = { ok: true };
+  if (!body) return out;
+  const days = body.itinerary === undefined ? null : normalizeQuotationItinerary(body.itinerary);
+  if (days && !days.ok) return days;
+  const hasStays = body.packageDetails && typeof body.packageDetails === 'object' && body.packageDetails.hotels !== undefined;
+  const stays = hasStays ? normalizeQuotationHotels(body.packageDetails.hotels) : null;
+  if (stays && !stays.ok) return stays;
+
+  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : [])];
+  const loaded = await loadPhotoSizes(tokens);
   if (!loaded.ok) return loaded;
-  return { ok: true, itinerary: days.value.map((d) => ({ ...d, photos: d.photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) })) })) };
+  const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
+  if (days) out.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
+  if (stays) out.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  return out;
 };
 
 export const findQuotationDocument = async (id) => {
@@ -107,8 +117,8 @@ export const getQuotationById = async (req, res) => {
 
 export const createQuotation = async (req, res) => {
   try {
-    const days = await prepareItinerary(req.body);
-    if (!days.ok) return res.status(200).json({ success: false, message: days.message });
+    const extras = await prepareExtras(req.body);
+    if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
 
     const quotationNo = req.body.quotationNo || await getNextQuotationNo();
     const createdBy = req.user._id;
@@ -116,7 +126,8 @@ export const createQuotation = async (req, res) => {
 
     const quotationData = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
-      ...(days.itinerary ? { itinerary: days.itinerary } : {}),
+      ...(extras.itinerary ? { itinerary: extras.itinerary } : {}),
+      ...(extras.packageDetails ? { packageDetails: extras.packageDetails } : {}),
       quotationNo,
       createdBy,
       createdByName,
@@ -138,11 +149,15 @@ export const createQuotation = async (req, res) => {
 
 export const updateQuotation = async (req, res) => {
   try {
-    const days = await prepareItinerary(req.body);
-    if (!days.ok) return res.status(200).json({ success: false, message: days.message });
+    const extras = await prepareExtras(req.body);
+    if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
 
     const existing = await findQuotationDocument(req.params.id);
-    const changes = { ...omit(req.body, PROTECTED_QUOTATION_FIELDS), ...(days.itinerary ? { itinerary: days.itinerary } : {}) };
+    const changes = {
+      ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
+      ...(extras.itinerary ? { itinerary: extras.itinerary } : {}),
+      ...(extras.packageDetails ? { packageDetails: extras.packageDetails } : {})
+    };
     const updated = existing ? await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true }) : null;
     if (!updated) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });

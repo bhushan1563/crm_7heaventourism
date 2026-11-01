@@ -41,3 +41,7 @@ html[data-theme='dark'] .picker-problem { color: #fca5a5; }
   .picker-row { padding: 10px; }
   .picker-options input[type='checkbox'], .picker-options input[type='radio'] { width: 20px; height: 20px; }
 }
+
+/* Quick-add of a hotel inside the hotel picker */
+.quick-add { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .quick-add { grid-template-columns: 1fr; } }

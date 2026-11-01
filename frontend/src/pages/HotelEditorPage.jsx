@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, Archive, ArchiveRestore, ArrowLeft, Lock, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { AlertCircle, Archive, ArchiveRestore, ArrowLeft, FileText, Lock, RefreshCw, Save, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hotelService from '../services/hotelService';
@@ -212,6 +212,11 @@ export const HotelEditorPage = () => {
           <p className="page-subtitle">{isEdit ? 'Changes apply to the hotel list and to new quotations; quotations that were already made keep what they showed.' : 'Fill in the basics, then add photos and room types. Only the name and the city are required.'}</p>
         </div>
         <div className="page-actions">
+          {isEdit && form.status === 'Active' && can('quotations', 'canCreate') && (
+            <button type="button" className="btn btn-primary" onClick={() => navigate(`/quotations/new?hotelId=${id}`)} disabled={dirty} title={dirty ? 'Save your changes first' : 'Start a quotation for this hotel'}>
+              <FileText size={14} /> Create quotation
+            </button>
+          )}
           {isEdit && !readOnly && (
             <button type="button" className="btn btn-outline" onClick={changeStatus} disabled={dirty} title={dirty ? 'Save your changes first' : undefined}>
               {form.status === 'Archived' ? <ArchiveRestore size={14} /> : <Archive size={14} />} {form.status === 'Archived' ? 'Restore' : 'Archive'}

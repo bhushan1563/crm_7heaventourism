@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, BedDouble, ChevronLeft, ChevronRight, Edit2, Eye, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, BedDouble, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hotelService from '../services/hotelService';
@@ -254,6 +254,11 @@ export const HotelListPage = () => {
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/hotels/${item._id}/edit`)}>
                     {editable ? <Edit2 size={13} /> : <Eye size={13} />} {editable ? 'Edit' : 'View'}
                   </button>
+                  {item.status === 'Active' && can('quotations', 'canCreate') && (
+                    <button type="button" className="btn-icon btn-outline" onClick={() => navigate(`/quotations/new?hotelId=${item._id}`)} title="Create a quotation for this hotel" aria-label={`Create quotation for ${item.name}`}>
+                      <FileText size={14} />
+                    </button>
+                  )}
                   {editable && (
                     <button type="button" className="btn-icon btn-outline" onClick={() => toggleArchive(item)} disabled={busy} title={item.status === 'Archived' ? 'Restore' : 'Archive'} aria-label={`${item.status === 'Archived' ? 'Restore' : 'Archive'} ${item.name}`}>
                       {item.status === 'Archived' ? <ArchiveRestore size={14} /> : <Archive size={14} />}

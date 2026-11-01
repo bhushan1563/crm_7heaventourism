@@ -4,10 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true, delete: true, edit: true } }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true, delete: true, edit: true, quote: true } }));
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    can: (module, action) => (action === 'canCreate' ? h.perms.create : action === 'canDelete' ? h.perms.delete : true),
+    can: (module, action) => (module === 'quotations' ? h.perms.quote : action === 'canCreate' ? h.perms.create : action === 'canDelete' ? h.perms.delete : true),
     canEditRecord: () => h.perms.edit
   })
 }));
@@ -28,7 +28,7 @@ beforeEach(() => {
   hotelService.cities.mockResolvedValue({ success: true, data: [{ city: 'Goa', count: 2 }, { city: 'Ubud', count: 1 }] });
   h.showToast.mockReset();
   h.navigate.mockReset();
-  Object.assign(h.perms, { create: true, delete: true, edit: true });
+  Object.assign(h.perms, { create: true, delete: true, edit: true, quote: true });
 });
 afterEach(cleanup);
 
@@ -106,6 +106,20 @@ describe('HotelListPage', () => {
     expect(screen.getByLabelText('Filter by rating')).toHaveValue('');
     await waitFor(() => expect(hotelService.list).toHaveBeenLastCalledWith(expect.not.objectContaining({ city: 'Goa' })));
     expect(screen.queryByRole('button', { name: 'Reset filters' })).toBeNull();
+  });
+
+  it('starts a quotation for an active hotel straight from its card, and not for an archived one or without the right', async () => {
+    hotelService.list.mockResolvedValue(page([hotel(1), hotel(2, { status: 'Archived' })]));
+    show();
+    await screen.findByText('Hotel 1');
+    expect(screen.queryByRole('button', { name: 'Create quotation for Hotel 2' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quotation for Hotel 1' }));
+    expect(h.navigate).toHaveBeenCalledWith('/quotations/new?hotelId=id1');
+    cleanup();
+    h.perms.quote = false;
+    show();
+    await screen.findByText('Hotel 1');
+    expect(screen.queryByRole('button', { name: /Create quotation for/ })).toBeNull();
   });
 
   it('pages through long lists', async () => {

@@ -30,8 +30,10 @@ export const HOTEL_STAR_RATINGS = [
     { value: '5 star', label: '5 Star Luxury' },
     { value: '4 star', label: '4 Star Premium' },
     { value: '3 star', label: '3 Star Deluxe' },
+    { value: '2 star', label: '2 Star Standard' },
     { value: 'Heritage / Palace', label: 'Heritage / Palace' },
-    { value: 'Resort / Villa', label: 'Resort / Villa' }
+    { value: 'Resort / Villa', label: 'Resort / Villa' },
+    { value: 'Unrated', label: 'Not rated' }
 ];
 
 export const MEAL_PLANS = [

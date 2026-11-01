@@ -4,14 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), perms: { create: true, delete: true, edit: true } }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true, delete: true, edit: true, quote: true } }));
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({
-    can: (m, a) => (a === 'canCreate' ? h.perms.create : a === 'canDelete' ? h.perms.delete : true),
+    can: (m, a) => (m === 'quotations' ? h.perms.quote : a === 'canCreate' ? h.perms.create : a === 'canDelete' ? h.perms.delete : true),
     canEditRecord: () => h.perms.edit
   })
 }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
+vi.mock('react-router-dom', async (orig) => {
+  const real = await orig();
+  return { ...real, useNavigate: () => { const go = real.useNavigate(); return (to, opts) => (String(to).startsWith('/quotations') ? h.navigate(to) : go(to, opts)); } };
+});
 vi.mock('../services/hotelService', () => ({ default: { get: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() } }));
 // The real editor and gallery have their own tests; here they are simple stand-ins so this file tests the page's logic.
 vi.mock('../components/LazyRichTextEditor', () => ({
@@ -74,7 +78,8 @@ const open = (path = '/hotels/new') =>
 beforeEach(() => {
   Object.values(hotelService).forEach((fn) => fn.mockReset());
   h.showToast.mockReset();
-  Object.assign(h.perms, { create: true, delete: true, edit: true });
+  Object.assign(h.perms, { create: true, delete: true, edit: true, quote: true });
+  h.navigate.mockReset();
 });
 afterEach(cleanup);
 
@@ -242,6 +247,29 @@ describe('editing a hotel', () => {
     await screen.findByText('All changes saved');
     await userEvent.click(screen.getByRole('button', { name: /hotel list/i }));
     expect(await screen.findByText('LIST')).toBeInTheDocument();
+  });
+
+  it('starts a quotation for the saved hotel, but only when nothing is waiting to be saved, the hotel is active and the user may create quotations', async () => {
+    hotelService.get.mockResolvedValue({ success: true, data: stored() });
+    open('/hotels/abc123/edit');
+    await screen.findByText('All changes saved');
+    await userEvent.click(screen.getByRole('button', { name: /create quotation/i }));
+    expect(h.navigate).toHaveBeenCalledWith('/quotations/new?hotelId=abc123');
+    await userEvent.type(screen.getByLabelText('Area'), 'x');
+    expect(screen.getByRole('button', { name: /create quotation/i })).toBeDisabled();
+    cleanup();
+
+    hotelService.get.mockResolvedValue({ success: true, data: stored({ status: 'Archived' }) });
+    open('/hotels/abc123/edit');
+    await screen.findByText('All changes saved');
+    expect(screen.queryByRole('button', { name: /create quotation/i })).toBeNull();
+    cleanup();
+
+    h.perms.quote = false;
+    hotelService.get.mockResolvedValue({ success: true, data: stored() });
+    open('/hotels/abc123/edit');
+    await screen.findByText('All changes saved');
+    expect(screen.queryByRole('button', { name: /create quotation/i })).toBeNull();
   });
 
   it('explains when the hotel no longer exists', async () => {
