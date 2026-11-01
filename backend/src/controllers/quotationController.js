@@ -8,6 +8,7 @@ import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHot
 import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
+import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 
 /**
@@ -32,6 +33,8 @@ const prepareExtras = async (body) => {
   if (options && !options.ok) return options;
   const vehicles = normalizeQuotationVehicles(body);
   if (!vehicles.ok) return vehicles;
+  const visa = normalizeQuotationVisa(body);
+  if (!visa.ok) return visa;
 
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
@@ -45,6 +48,13 @@ const prepareExtras = async (body) => {
   // equal to the vehicle total, so the two can never disagree.
   if (vehicles.vehicles && body.quotationType === 'Land Service' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
     overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
+  }
+  if (visa.visa) overrides.visa = visa.visa;
+  if (visa.visaFees) overrides.visaFees = visa.visaFees;
+  // The price of a visa quotation IS its fees (per applicant or for the group): keep the amount that lists and statistics read
+  // (pricing.grandTotal) equal to the fee total.
+  if (visa.total !== undefined && body.quotationType === 'Visa' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
+    overrides.pricing = { ...body.pricing, grandTotal: visa.total, totalCostPerPerson: 0, totalCostNote: `Rs ${visa.total.toLocaleString('en-IN')} total` };
   }
   if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
   if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };

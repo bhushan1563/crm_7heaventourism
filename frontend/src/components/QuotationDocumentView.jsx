@@ -6,6 +6,7 @@ import { formatDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { vehicleTotal } from '../utils/landService';
+import { feeAmount, visaFeeTotal } from '../utils/visa';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
 
@@ -121,6 +122,80 @@ const HotelStayCard = ({ h }) => {
 };
 
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
+
+/**
+ * The body of a VISA quotation: the visa itself, the documents the applicants must bring (a checklist), the fees (per applicant or
+ * for the whole group) with their total, and what the service includes. The price of the quotation is the fee table.
+ */
+const VisaSection = ({ visa, fees, documents, inclusions }) => {
+  const applicants = Math.max(1, Number(visa.applicants) || 1);
+  const total = visaFeeTotal(fees, applicants);
+  const columns = '3fr 1.7fr 1.1fr 1.2fr';
+  const facts = [
+    ['Country', visa.country],
+    ['Visa type', visa.visaType],
+    ['Entry', visa.entryType],
+    ['Issued as', visa.mode],
+    ['Processing time', visa.processingTime],
+    ['Validity', visa.validity],
+    ['Length of stay', visa.stay],
+    ['Applicants', String(applicants)]
+  ].filter(([, v]) => v);
+  const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#1f2937' };
+  const checklist = (title, items, tick) => (
+    <div style={{ marginBottom: '10px' }}>
+      <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>{title}</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5px', paddingLeft: '2px' }}>
+        {items.map((item, i) => (
+          <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#1f2937' }}>
+            <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>{tick}</span>
+            <Line value={item} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+  return (
+    <div>
+      {facts.length > 0 && (
+        <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', marginBottom: '10px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
+          {facts.map(([label, value]) => (
+            <div key={label}>
+              <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {documents.length > 0 && checklist('Documents Required', documents, '✓')}
+
+      {fees.length > 0 && (
+        <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: columns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+            {['Fee', 'Charged', 'Rate', 'Amount'].map((h, i) => (
+              <div key={h} style={{ padding: '5px 6px', textAlign: i >= 2 ? 'right' : 'left' }}>{h}</div>
+            ))}
+          </div>
+          {fees.map((f, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: columns, borderTop: '1px solid #e2e8f0', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff', alignItems: 'start' }}>
+              <div style={{ ...cell, fontWeight: 700, color: '#0f172a' }}>{f.label || 'Fee'}</div>
+              <div style={cell}>{f.per === 'group' ? 'Whole group' : `Per applicant × ${applicants}`}</div>
+              <div style={{ ...cell, textAlign: 'right' }}>{rs(f.amount)}</div>
+              <div style={{ ...cell, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{rs(feeAmount(f, applicants))}</div>
+            </div>
+          ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '5.8fr 1.2fr', borderTop: '2px solid #0f172a', backgroundColor: '#fef9c3' }}>
+            <div style={{ padding: '6px 8px', fontSize: '10.5px', fontWeight: 800, color: '#0f172a' }}>Total for {applicants} applicant{applicants === 1 ? '' : 's'}</div>
+            <div style={{ padding: '6px 6px', fontSize: '11.5px', fontWeight: 800, color: '#0f172a', textAlign: 'right' }}>{total > 0 ? rs(total) : 'On request'}</div>
+          </div>
+        </div>
+      )}
+      {visa.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: {visa.priceNote}</div>}
+
+      {inclusions.length > 0 && checklist('Visa Inclusions', inclusions, '✓')}
+    </div>
+  );
+};
 
 /**
  * The vehicle part of a LAND SERVICE quotation (vehicle only): the trip, a table of vehicles with their rates and amounts,
@@ -259,7 +334,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const exclusions = quotation.exclusions || [];
   const paymentPolicy = quotation.paymentPolicy || [];
   const cancellationPolicy = quotation.cancellationPolicy || [];
-  const vehicleNotes = quotation.vehicleNotes || [];
+  const vehicleNotes = quotationType === 'Visa' ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
   const importantNotes = quotation.importantNotes || [];
 
   // Header Component
@@ -416,8 +491,16 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const isLand = quotationType === 'Land Service';
   const vehicles = quotation.vehicles || [];
   const vehicleInclusions = quotation.vehicleInclusions || [];
+  // A visa has no itinerary or hotels: its documents checklist and fees are the whole body, and the fee table is its price.
+  const isVisaQuotation = quotationType === 'Visa';
+  const visa = quotation.visa || {};
+  const visaFees = quotation.visaFees || [];
+  const visaDocuments = quotation.visaDocuments || [];
+  const visaInclusions = quotation.visaInclusions || [];
   const hasInclusions = packageDetails.inclusions && packageDetails.inclusions.length > 0;
-  const hasPackageSection = isLand ? vehicles.length > 0 || vehicleInclusions.length > 0 : hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
+  const hasPackageSection = isVisaQuotation
+    ? true // a visa quotation always shows the visa; an empty one still says which country and who it is for
+    : isLand ? vehicles.length > 0 || vehicleInclusions.length > 0 : hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
   const hasItinerary = itinerary && itinerary.length > 0;
 
   // Pricing check
@@ -431,7 +514,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     pricing.grandTotal > 0 ||
     pricing.totalCostNote;
 
-  const hasFlightSection = quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0);
+  const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0));
   const hasExclusions = exclusions && exclusions.length > 0;
   const hasPaymentPolicy = paymentPolicy && paymentPolicy.length > 0;
   const hasCancellationPolicy = cancellationPolicy && cancellationPolicy.length > 0;
@@ -447,6 +530,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         return 'Venue, Hotel & Inclusions: -';
       case 'Land Service':
         return 'Vehicle & Rates: -';
+      case 'Visa':
+        return 'Visa Details, Documents & Fees: -';
       default:
         return 'Package Details: -';
     }
@@ -477,7 +562,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
-    if (!hasPricingSection || hasOptions || isLand) return null; // with options each option carries its own price; a land service's price is its vehicle table
+    if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
         <h3 style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
@@ -548,7 +633,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   return (
     <div id={id} className="quotation-doc-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '24px' }}>
       {/* ================= PAGE 1: ITINERARY & TOUR OVERVIEW ================= */}
-      {(!pageNumber || pageNumber === 1) && (hasItinerary || quotationType !== 'Only Hotel') && (
+      {(!pageNumber || pageNumber === 1) && !isVisaQuotation && (hasItinerary || quotationType !== 'Only Hotel') && (
         <div className="quotation-page" id={`${id}-page-1`} style={pageContainerStyle}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <DocumentHeader />
@@ -754,12 +839,14 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   {getPackageSectionTitle()}
                 </h3>
 
+                {isVisaQuotation && <VisaSection visa={visa} fees={visaFees} documents={visaDocuments} inclusions={visaInclusions} />}
+
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
+                {!isLand && !isVisaQuotation && hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
 
                 {/* Hotels Table / Cards Layout */}
-                {!isLand && !hasOptions && hasHotels && (
+                {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (
                   <div style={{ marginBottom: '10px' }}>
                     <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
                       <Building2 size={13} style={{ color: '#0284c7' }} />
@@ -869,14 +956,14 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 )}
 
                 {/* Room info fallback */}
-                {!isLand && packageDetails.roomInfo && (
+                {!isLand && !isVisaQuotation && packageDetails.roomInfo && (
                   <div className="quotation-keep" style={{ fontSize: '10.5px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
                     Room Allocation: {packageDetails.roomInfo}
                   </div>
                 )}
 
                 {/* Inclusions */}
-                {!isLand && hasInclusions && (
+                {!isLand && !isVisaQuotation && hasInclusions && (
                   <div>
                     <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>
                       Inclusions

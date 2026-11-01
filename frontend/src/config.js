@@ -24,7 +24,8 @@ export const QUOTATION_TYPES = [
     { value: 'Only Hotel', label: '1. Only Hotel', desc: 'Accommodation only' },
     { value: 'Package', label: '2. Package', desc: 'Full Tour Package' },
     { value: 'Events / Corporate', label: '3. Events / Corporate', desc: 'MICE & Retreats' },
-    { value: 'Land Service', label: '4. Land Service', desc: 'Vehicle only' }
+    { value: 'Land Service', label: '4. Land Service', desc: 'Vehicle only' },
+    { value: 'Visa', label: '5. Visa', desc: 'Documents & fees' }
 ];
 
 export const HOTEL_STAR_RATINGS = [

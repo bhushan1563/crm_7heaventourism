@@ -57,6 +57,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 ### Step 4: Land service (R4)
 - [x] 4.1 "Land Service" quotation type (vehicle only): vehicles with type, seats, AC, quantity and rate (the price is the vehicle table), trip details, vehicle inclusions (formattable), itinerary (including copy from the library), own tabs and print layout; the amount shown in lists follows the vehicle total
 ### Step 5: Visa (R3)
+- [x] 5.1 "Visa" quotation type: the visa (country, type, entry, how issued, validity, stay, processing time, applicants), a documents checklist (starts empty because it depends on the country; one click adds a standard checklist to edit), fees charged per applicant or once for the whole group (the price is the fee table; the amount shown in lists follows its total), visa inclusions, price note, all formattable; own tabs (no itinerary, hotels or flights) and print layout
 ### Step 6: Confirmation (R1), when the client's fields arrive
 ### Step 7: Rights pass (R8), misc (R10)
 

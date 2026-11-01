@@ -65,11 +65,42 @@ import OptionsEditor from '../components/quotation/OptionsEditor';
 import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } from '../utils/quotationOptions';
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
+import VisaEditor from '../components/quotation/VisaEditor';
+import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
 import './quotationHotels.css';
+
+// The tabs of the builder for a quotation type. A land service has no hotels, flights or separate price tab (its vehicles carry the
+// rates); a visa has no itinerary, hotels or flights either: the visa with its documents, and the fees, take their place.
+const tabsFor = (quotation) => {
+  if (isLandService(quotation)) {
+    return [
+      { id: 'overview', label: '1. Trip & Type', icon: Users },
+      { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
+      { id: 'package', label: '3. Vehicles & Rates', icon: Car },
+      { id: 'notes', label: '4. Notes & Terms', icon: FileText }
+    ];
+  }
+  if (isVisa(quotation)) {
+    return [
+      { id: 'overview', label: '1. Client & Type', icon: Users },
+      { id: 'visa', label: '2. Visa & Documents', icon: FileCheck },
+      { id: 'visaFees', label: '3. Fees & Services', icon: Receipt },
+      { id: 'notes', label: '4. Notes & Terms', icon: FileText }
+    ];
+  }
+  return [
+    { id: 'overview', label: '1. Trip & Type', icon: Users },
+    { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
+    { id: 'package', label: '3. Hotel Details', icon: Building2 },
+    { id: 'flights', label: '4. Flights', icon: Plane },
+    { id: 'pricing', label: '5. Pricing', icon: DollarSign },
+    { id: 'notes', label: '6. Notes & Terms', icon: FileText }
+  ];
+};
 
 const DEFAULT_COMPANY = {
   name: '7HEAVEN TOURISM',
@@ -304,6 +335,7 @@ export const QuotationBuilderPage = () => {
       clientPhone: guest.contactNumber || prev.clientPhone,
       destination: guest.destination || prev.destination,
       paxDetails: `${guest.paxCount || 2} Adults`,
+      ...followGuests(prev, `${guest.paxCount || 2} Adults`),
       travelDate: guest.travelDate || prev.travelDate,
       sales: guest.sales || prev.sales,
       salesId: guest.salesId || prev.salesId,
@@ -775,9 +807,15 @@ export const QuotationBuilderPage = () => {
       return;
     }
     // A hotel quotation is made from the hotel list: every stay must be a hotel taken from it.
-    // A land service is checked on its vehicles; otherwise: with hotel options the hotels live inside the options (each is
-    // checked there), and without them the quotation's own stays are.
-    const hotelProblem = isLandService(formData) ? landServiceProblem(formData) : formData.options?.length ? optionsProblem(formData) : hotelQuotationProblem(formData);
+    // A visa is checked on its country, applicants and fees; a land service on its vehicles; otherwise: with hotel options the
+    // hotels live inside the options (each is checked there), and without them the quotation's own stays are.
+    const visaTrouble = visaIssue(formData);
+    if (visaTrouble) {
+      showToast(visaTrouble.message, 'warning');
+      setActiveTab(visaTrouble.tab);
+      return;
+    }
+    const hotelProblem = isVisa(formData) ? null : isLandService(formData) ? landServiceProblem(formData) : formData.options?.length ? optionsProblem(formData) : hotelQuotationProblem(formData);
     if (hotelProblem) {
       showToast(hotelProblem, 'warning');
       setActiveTab('package');
@@ -787,7 +825,9 @@ export const QuotationBuilderPage = () => {
     try {
       setSaving(true);
       let res;
-      const payload = isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
+      const payload = isVisa(formData)
+        ? { ...formData, visa: visaPayload(formData.visa), visaFees: feesPayload(formData.visaFees) }
+        : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
       if (isEditMode) {
         res = await quotationService.updateQuotation(id, payload);
       } else {
@@ -907,23 +947,7 @@ export const QuotationBuilderPage = () => {
               overflowX: 'auto'
             }}
           >
-            {(isLandService(formData)
-              // A land service has no hotels, flights or separate price tab: its vehicles carry the rates.
-              ? [
-                { id: 'overview', label: '1. Trip & Type', icon: Users },
-                { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
-                { id: 'package', label: '3. Vehicles & Rates', icon: Car },
-                { id: 'notes', label: '4. Notes & Terms', icon: FileText }
-              ]
-              : [
-                { id: 'overview', label: '1. Trip & Type', icon: Users },
-                { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
-                { id: 'package', label: '3. Hotel Details', icon: Building2 },
-                { id: 'flights', label: '4. Flights', icon: Plane },
-                { id: 'pricing', label: '5. Pricing', icon: DollarSign },
-                { id: 'notes', label: '6. Notes & Terms', icon: FileText }
-              ]
-            ).map(tab => {
+            {tabsFor(formData).map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -978,7 +1002,7 @@ export const QuotationBuilderPage = () => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '8px' }}>
                   {QUOTATION_TYPES.map(opt => {
                     const isSelected = (formData.quotationType || 'Package') === opt.value;
-                    const Icon = opt.value === 'Only Hotel' ? Hotel : opt.value === 'Events / Corporate' ? Briefcase : opt.value === 'Land Service' ? Car : Luggage;
+                    const Icon = opt.value === 'Only Hotel' ? Hotel : opt.value === 'Events / Corporate' ? Briefcase : opt.value === 'Land Service' ? Car : opt.value === 'Visa' ? FileCheck : Luggage;
                     return (
                       <button
                         key={opt.value}
@@ -989,9 +1013,12 @@ export const QuotationBuilderPage = () => {
                             quotationType: opt.value,
                             destination: prev.destination || (opt.value === 'Only Hotel' ? 'LUXURY HOTEL BOOKING' : ''),
                             // A land service starts with one vehicle line and the standard inclusions (nothing typed is replaced).
-                            ...(opt.value === 'Land Service' ? startLandService(prev) : {})
+                            ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
+                            // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
+                            ...(opt.value === 'Visa' ? startVisa(prev) : {})
                           }));
-                          if (opt.value === 'Land Service' && !['overview', 'itinerary', 'package', 'notes'].includes(activeTab)) setActiveTab('overview');
+                          // Go back to the first tab when the one being looked at does not exist for the new type.
+                          if (!tabsFor({ quotationType: opt.value }).some((t) => t.id === activeTab)) setActiveTab('overview');
                           showToast(`Quotation format switched to ${opt.value}`, 'info');
                         }}
                         style={{
@@ -1044,14 +1071,14 @@ export const QuotationBuilderPage = () => {
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px' }}>
                 <div className="form-group">
                   <label className="form-label">
-                    {formData.quotationType === 'Only Hotel' ? 'Hotel / City Title *' : isLandService(formData) ? 'Trip / Route Title *' : 'Package Title / Destination *'}
+                    {formData.quotationType === 'Only Hotel' ? 'Hotel / City Title *' : isLandService(formData) ? 'Trip / Route Title *' : isVisa(formData) ? 'Visa Title *' : 'Package Title / Destination *'}
                   </label>
                   <input
                     type="text"
                     className="form-input"
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                    placeholder={formData.quotationType === 'Only Hotel' ? 'e.g. TAJ LAKE PALACE, UDAIPUR' : isLandService(formData) ? 'e.g. DELHI - AGRA - JAIPUR BY SUV' : 'e.g. VARANASI & AYODHYA'}
+                    placeholder={formData.quotationType === 'Only Hotel' ? 'e.g. TAJ LAKE PALACE, UDAIPUR' : isLandService(formData) ? 'e.g. DELHI - AGRA - JAIPUR BY SUV' : isVisa(formData) ? 'e.g. UNITED ARAB EMIRATES TOURIST VISA' : 'e.g. VARANASI & AYODHYA'}
                   />
                 </div>
                 <div className="form-group">
@@ -1090,6 +1117,7 @@ export const QuotationBuilderPage = () => {
                         const updated = { ...prev, paxDetails: newPax };
                         updated.pricing = recalculatePricing(prev.pricing?.items || DEFAULT_PRICING_ITEMS, newPax, prev.pricing);
                         if (prev.options?.length) updated.options = repriceOptions(prev.options, newPax); // option totals follow the guests
+                        Object.assign(updated, followGuests(prev, newPax)); // a visa's applicants follow the guests until set by hand
                         return updated;
                       });
                     }}
@@ -1354,7 +1382,14 @@ export const QuotationBuilderPage = () => {
             </div>
           )}
 
-          {activeTab === 'package' && !isLandService(formData) && (
+          {/* The two tabs of a visa quotation: the visa with its documents checklist, and the fees */}
+          {(activeTab === 'visa' || activeTab === 'visaFees') && isVisa(formData) && (
+            <div className="animate-fade-in">
+              <VisaEditor quotation={formData} section={activeTab === 'visa' ? 'details' : 'fees'} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
+            </div>
+          )}
+
+          {activeTab === 'package' && !isLandService(formData) && !isVisa(formData) && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               {/* Hotel options: several choices, each with its own hotels and its own price */}
               {(formData.options || []).length > 0 && (
@@ -2582,7 +2617,8 @@ export const QuotationBuilderPage = () => {
                 )}
               </div>
 
-              {/* Vehicle Guidelines */}
+              {/* Vehicle Guidelines (not for a visa) */}
+              {!isVisa(formData) && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2636,6 +2672,7 @@ export const QuotationBuilderPage = () => {
                   </div>
                 )}
               </div>
+              )}
 
               {/* Important Notes & Terms */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

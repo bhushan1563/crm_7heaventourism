@@ -14,6 +14,8 @@ const TOP_LEVEL_LISTS = [
   ['cancellationPolicy', 'The cancellation policy'],
   ['vehicleNotes', 'The vehicle notes'],
   ['vehicleInclusions', 'The vehicle inclusions'],
+  ['visaDocuments', 'The documents checklist'],
+  ['visaInclusions', 'The visa inclusions'],
   ['importantNotes', 'The important notes']
 ];
 

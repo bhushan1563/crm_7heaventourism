@@ -59,6 +59,13 @@ const vehicleSchema = new mongoose.Schema({
   notes: { type: String, default: '' }
 }, { _id: false });
 
+// A fee line of a visa quotation: what it is and what it costs, per applicant or once for the whole group.
+const visaFeeSchema = new mongoose.Schema({
+  label: { type: String, default: '' }, // e.g. "Visa fee", "Service charge", "Courier"
+  amount: { type: Number, default: 0 },
+  per: { type: String, default: 'applicant' } // 'applicant' | 'group'
+}, { _id: false });
+
 // One choice offered to the guest ("Option A: 4-star hotels", "Option B: 5-star hotels"): its own hotels and its own price.
 const quotationOptionSchema = new mongoose.Schema({
   name: { type: String, default: '' },
@@ -109,7 +116,7 @@ const quotationSchema = new mongoose.Schema({
   },
   quotationType: {
     type: String,
-    enum: ['Only Hotel', 'Package', 'Events / Corporate', 'Land Service'],
+    enum: ['Only Hotel', 'Package', 'Events / Corporate', 'Land Service', 'Visa'],
     default: 'Package'
   },
   guestId: {
@@ -182,6 +189,21 @@ const quotationSchema = new mongoose.Schema({
   },
   itinerary: [itineraryDaySchema],
   options: { type: [quotationOptionSchema], default: [] }, // several hotel options with their own prices (empty = one offer, as before)
+  // Visa: what the visa is, the documents the applicant must bring (a checklist), the fees, and what the service includes.
+  visa: {
+    country: { type: String, default: '' },
+    visaType: { type: String, default: '' }, // e.g. Tourist, Business
+    entryType: { type: String, default: '' }, // 'Single entry' | 'Double entry' | 'Multiple entry' | ''
+    mode: { type: String, default: '' }, // e.g. e-Visa, Sticker visa
+    validity: { type: String, default: '' },
+    stay: { type: String, default: '' }, // maximum stay
+    processingTime: { type: String, default: '' },
+    applicants: { type: Number, default: 1 },
+    priceNote: { type: String, default: '' }
+  },
+  visaFees: { type: [visaFeeSchema], default: [] },
+  visaDocuments: [{ type: String }],
+  visaInclusions: [{ type: String }],
   // Land service (vehicle only): the vehicles and their rates, what the vehicle includes, and the trip they are for.
   vehicles: { type: [vehicleSchema], default: [] },
   vehicleInclusions: [{ type: String }],
