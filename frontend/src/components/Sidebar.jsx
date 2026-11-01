@@ -9,6 +9,7 @@ import {
   ScanLine,
   Sparkles,
   FileText,
+  Route,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +35,8 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
       label: 'Sales',
       items: [
         { to: '/guests', label: 'Guest List', icon: Users },
-        { to: '/quotations', label: 'Quotations', icon: FileText }
+        { to: '/quotations', label: 'Quotations', icon: FileText },
+        { to: '/itineraries', label: 'Itineraries', icon: Route }
       ]
     },
     {

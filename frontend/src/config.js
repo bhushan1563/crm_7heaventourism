@@ -103,3 +103,13 @@ export const FOLLOW_UP_CHANNELS = [
     { value: 'Email', label: 'Channel: Email' },
     { value: 'Meeting', label: 'Channel: In-Person' }
 ];
+
+// Printed on documents the app generates (itineraries; quotations carry their own copy per quotation).
+export const COMPANY = {
+    name: '7HEAVEN TOURISM',
+    tagline: 'Travel with the Trust',
+    address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
+    phone: '+91 7862829178',
+    email: 'sales@7heaventourism.in',
+    website: 'www.7heaventourism.in'
+};
