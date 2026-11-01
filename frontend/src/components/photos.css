@@ -109,6 +109,10 @@ html[data-theme='dark'] .photo-note { color: #fbbf24; }
 
 .photo-lightbox { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .photo-lightbox img { max-width: 100%; max-height: 70vh; border-radius: 8px; object-fit: contain; }
+/* Fingers need bigger targets than a mouse pointer. */
+@media (max-width: 760px), (pointer: coarse) {
+  .photo-actions button { width: 34px; height: 34px; }
+}
 @media (max-width: 640px) {
   .photo-grid { grid-template-columns: repeat(2, 1fr); padding: 8px; gap: 8px; }
   .photo-lightbox { flex-direction: column; }

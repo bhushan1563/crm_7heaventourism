@@ -118,6 +118,12 @@ input[aria-invalid='true'] { border-color: #ef4444 !important; }
 .edit-bar-status.is-dirty { color: #b45309; font-weight: 700; }
 html[data-theme='dark'] .edit-bar-status.is-dirty { color: #fbbf24; }
 
+/* Fingers need bigger targets than a mouse pointer. */
+@media (max-width: 760px), (pointer: coarse) {
+  .itin-tabs button { min-height: 36px; }
+  .itin-back { min-height: 36px; }
+  .tag-input-box input { padding: 8px 2px; }
+}
 @media (max-width: 760px) {
   .basics-grid, .day-fields, .itin-two-col { grid-template-columns: 1fr; }
   .day-head { flex-wrap: wrap; }
