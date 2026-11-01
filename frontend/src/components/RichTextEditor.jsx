@@ -124,7 +124,8 @@ export const RichTextEditor = ({
   minHeight = 140,
   ariaLabel = 'Text',
   disabled = false,
-  error = ''
+  error = '',
+  autoFocus = false // put the cursor at the end of the text as soon as the editor appears
 }) => {
   const lastEmitted = useRef(value);
   const [menu, setMenu] = useState(null);
@@ -140,6 +141,7 @@ export const RichTextEditor = ({
       Highlight.configure({ multicolor: true })
     ],
     content: toEditorHtml(value),
+    autofocus: autoFocus ? 'end' : false,
     editable: !disabled,
     editorProps: {
       attributes: { class: 'rich-editor-content rich-text', role: 'textbox', 'aria-multiline': 'true', 'aria-label': ariaLabel, 'data-placeholder': placeholder }

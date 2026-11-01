@@ -3,7 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { Plane, Check, X, Diamond, Building2, Calendar, MapPin, Phone, Mail, Award, Coffee, Utensils, CreditCard, AlertCircle } from 'lucide-react';
 import logoImg from '../assets/logo.webp';
 import { formatDate } from '../utils/dateHelper';
-import { toDisplayHtml } from '../utils/richText';
+import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
@@ -18,7 +18,13 @@ const DAY_TEXT_CSS = `
 .qd-rich > :last-child { margin-bottom: 0; }
 .qd-rich mark { padding: 0 1px; border-radius: 2px; color: #111827; }
 .qd-rich [style^="color:"] mark, .qd-rich [style*=";color:"] mark, .qd-rich [style*="; color:"] mark { color: inherit; }
+/* One line of a list (an inclusion, a policy, a note): formatted text that runs on like ordinary text. */
+.qd-line p { display: inline; margin: 0; }
+.qd-line ul, .qd-line ol { margin: 0; }
 `;
+
+/** A line of a list on the document. Plain text from older quotations prints exactly as before; formatted text keeps its bold, colour, highlight and size. */
+const Line = ({ value }) => <span className="qd-rich qd-line" dangerouslySetInnerHTML={{ __html: toDisplayHtml(value) }} />;
 
 const photoCrossOrigin = API_ORIGIN ? 'anonymous' : undefined;
 
@@ -752,7 +758,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                       {packageDetails.inclusions.map((inc, i) => (
                         <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#1f2937' }}>
                           <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>✓</span>
-                          <span>{inc}</span>
+                          <Line value={inc} />
                         </div>
                       ))}
                     </div>
@@ -971,7 +977,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               )}
               {importantNotes.map((note, i) => (
                 <div key={i} className="quotation-keep" style={{ fontSize: '10px', color: '#1f2937', lineHeight: 1.45 }}>
-                  {note.startsWith(`${i + 1}.`) ? note : `${i + 1}. ${note}`}
+                  {richToPlainText(note).startsWith(`${i + 1}.`) ? '' : `${i + 1}. `}<Line value={note} />
                 </div>
               ))}
 
@@ -988,7 +994,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {paymentPolicy.map((item, i) => (
                 <div key={`pay-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#1f2937', lineHeight: 1.45 }}>
                   <span style={{ color: '#0284c7', fontWeight: 800, flexShrink: 0 }}>💳</span>
-                  <span>{item}</span>
+                  <Line value={item} />
                 </div>
               ))}
               {hasCancellationPolicy && (
@@ -999,7 +1005,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {cancellationPolicy.map((item, i) => (
                 <div key={`can-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#1f2937', lineHeight: 1.45 }}>
                   <span style={{ color: '#d97706', fontWeight: 800, flexShrink: 0 }}>⚠️</span>
-                  <span>{item}</span>
+                  <Line value={item} />
                 </div>
               ))}
 
@@ -1016,7 +1022,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {exclusions.map((exc, i) => (
                 <div key={`exc-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#1f2937', lineHeight: 1.45 }}>
                   <span style={{ color: '#dc2626', fontWeight: 800, flexShrink: 0 }}>×</span>
-                  <span>{exc}</span>
+                  <Line value={exc} />
                 </div>
               ))}
               {hasVehicleNotes && (
@@ -1027,7 +1033,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {vehicleNotes.map((vn, i) => (
                 <div key={`vn-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#1f2937', lineHeight: 1.45 }}>
                   <span style={{ color: '#0f172a', fontWeight: 700, flexShrink: 0 }}>❖</span>
-                  <span>{vn}</span>
+                  <Line value={vn} />
                 </div>
               ))}
               <div className="quotation-keep" style={{ textAlign: 'center', fontSize: '11px', fontWeight: 700, color: '#64748b', marginTop: '12px' }}>

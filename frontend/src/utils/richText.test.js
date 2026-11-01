@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { RICH_TAGS, cleanStyle, looksLikeHtml, plainToHtml, richToPlainText, sanitizeForDisplay, toDisplayHtml } from './richText';
+import { RICH_TAGS, cleanStyle, looksLikeHtml, plainToHtml, richToPlainText, sanitizeForDisplay, simplifyRich, toDisplayHtml } from './richText';
 
 describe('cleanStyle', () => {
   it('keeps colour, highlight and font size with valid values', () => {
@@ -74,5 +74,38 @@ describe('richToPlainText', () => {
     expect(richToPlainText('<ul><li>a</li><li>b</li></ul>')).toBe('a\nb');
     expect(richToPlainText('plain text')).toBe('plain text');
     expect(richToPlainText(undefined)).toBe('');
+  });
+});
+
+describe('simplifyRich', () => {
+  it('keeps text with no formatting as plain text, exactly as typed', () => {
+    expect(simplifyRich('<p>Hello world</p>')).toBe('Hello world');
+    expect(simplifyRich('<p>Fish &amp; chips &lt;TBC&gt;</p>')).toBe('Fish & chips <TBC>');
+    expect(simplifyRich('Already plain')).toBe('Already plain');
+    expect(simplifyRich('')).toBe('');
+    expect(simplifyRich('<p></p>')).toBe('');
+    expect(simplifyRich(undefined)).toBe('');
+  });
+  it('does not turn typed text that looks like formatting into real formatting', () => {
+    expect(simplifyRich('<p>&lt;p&gt;not a paragraph</p>')).toBe('<p>&lt;p&gt;not a paragraph</p>');
+    expect(simplifyRich('<p>&lt;ul&gt;</p>')).toBe('<p>&lt;ul&gt;</p>');
+    expect(simplifyRich('<p>Price: &lt;TBC&gt;</p>')).toBe('Price: <TBC>');
+  });
+  it('keeps anything that has real formatting', () => {
+    for (const html of ['<p><strong>Bold</strong> text</p>', '<p><span style="color:#dc2626">Red</span></p>', '<p>a<br>b</p>', '<p>One</p><p>Two</p>', '<ul><li>x</li></ul>', '<p><mark style="background-color:#fde047">Hi</mark></p>']) {
+      expect(simplifyRich(html), html).toBe(html);
+    }
+  });
+  it('property: plain text survives a round trip through the editor form and back', () => {
+    fc.assert(
+      fc.property(fc.string({ maxLength: 40 }).filter((s) => s.trim() && !/[\n\r\u0000-\u001f]/.test(s)), (text) => {
+        const typed = text.replace(/\s+/g, ' ').trim();
+        const editorForm = plainToHtml(typed); // what the editor would hold and report
+        const stored = simplifyRich(editorForm);
+        // Either the text itself, or (only when the text looks like formatting) the safe escaped form; never a misreading.
+        expect(stored === typed || stored === editorForm).toBe(true);
+        expect(richToPlainText(stored)).toBe(typed);
+      })
+    );
   });
 });

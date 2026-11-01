@@ -52,7 +52,7 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 
 ### Step 3: Quotation upgrade (R6, rest of R9)
 - [ ] 3.1 Multiple hotel options with pricing per option (backward compatible)
-- [ ] 3.2 Formatting toolbar everywhere text is entered in a quotation
+- [x] 3.2 Formatting toolbar everywhere text is entered in a quotation
 
 ### Step 4: Land service (R4)
 ### Step 5: Visa (R3)

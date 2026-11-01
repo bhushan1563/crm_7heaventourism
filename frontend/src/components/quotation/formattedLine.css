@@ -1,0 +1,7 @@
+/* A line of a quotation list: a text-box look until it is pressed, then the formatting editor. */
+.fline { flex: 1; min-width: 0; min-height: 38px; height: auto; text-align: left; font-size: 0.82rem; line-height: 1.4; cursor: text; overflow-wrap: anywhere; white-space: normal; }
+.fline .rich-text { display: inline; }
+.fline .rich-text p { display: inline; margin: 0; }
+.fline-placeholder { color: var(--text-muted); }
+.fline-editing { flex: 1; min-width: 0; }
+.fline:focus-visible { outline: 2px solid var(--primary-text); outline-offset: 1px; }

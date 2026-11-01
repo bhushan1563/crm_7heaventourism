@@ -5,30 +5,37 @@ import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
 import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
 import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
+import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 
 /**
- * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days and the hotel stays. A part
- * the request does not mention is left out (an update that only changes the status must leave the days alone). Text is
- * sanitised, and every photo is confirmed to exist and gets its size from the database (one lookup for all of them).
- * @returns {Promise<{ ok: true, itinerary?: object[], packageDetails?: object } | { ok: false, message: string }>}
+ * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days, the hotel stays and the lists
+ * of lines (inclusions, exclusions, policies, notes). A part the request does not mention is left out (an update that only
+ * changes the status must leave the days alone). Text is sanitised, and every photo is confirmed to exist and gets its size
+ * from the database (one lookup for all of them).
+ * @returns {Promise<{ ok: true, overrides: object } | { ok: false, message: string }>} `overrides` replace those fields of the body
  */
 const prepareExtras = async (body) => {
-  const out = { ok: true };
-  if (!body) return out;
+  const overrides = {};
+  if (!body) return { ok: true, overrides };
   const days = body.itinerary === undefined ? null : normalizeQuotationItinerary(body.itinerary);
   if (days && !days.ok) return days;
   const hasStays = body.packageDetails && typeof body.packageDetails === 'object' && body.packageDetails.hotels !== undefined;
   const stays = hasStays ? normalizeQuotationHotels(body.packageDetails.hotels) : null;
   if (stays && !stays.ok) return stays;
 
+  const lists = normalizeQuotationLists(body);
+  if (!lists.ok) return lists;
+
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
   if (!loaded.ok) return loaded;
   const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
-  if (days) out.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
-  if (stays) out.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
-  return out;
+  if (days) overrides.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
+  if (stays) overrides.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
+  Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)
+  return { ok: true, overrides };
 };
 
 export const findQuotationDocument = async (id) => {
@@ -126,8 +133,7 @@ export const createQuotation = async (req, res) => {
 
     const quotationData = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
-      ...(extras.itinerary ? { itinerary: extras.itinerary } : {}),
-      ...(extras.packageDetails ? { packageDetails: extras.packageDetails } : {}),
+      ...extras.overrides,
       quotationNo,
       createdBy,
       createdByName,
@@ -155,8 +161,7 @@ export const updateQuotation = async (req, res) => {
     const existing = await findQuotationDocument(req.params.id);
     const changes = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
-      ...(extras.itinerary ? { itinerary: extras.itinerary } : {}),
-      ...(extras.packageDetails ? { packageDetails: extras.packageDetails } : {})
+      ...extras.overrides
     };
     const updated = existing ? await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true }) : null;
     if (!updated) {

@@ -59,6 +59,7 @@ import PhotoGallery from '../components/PhotoGallery';
 import ItineraryPicker from '../components/itinerary/ItineraryPicker';
 import HotelPicker from '../components/hotel/HotelPicker';
 import TagInput from '../components/itinerary/TagInput';
+import FormattedLine from '../components/quotation/FormattedLine';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
@@ -1646,13 +1647,11 @@ export const QuotationBuilderPage = () => {
                   {(formData.packageDetails?.inclusions || []).map((inc, idx) => (
                     <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <span style={{ color: 'var(--fg-10B981)', fontWeight: 800 }}>✓</span>
-                      <input
-                        type="text"
-                        className="form-input"
-                        style={{ flex: 1 }}
+                      <FormattedLine
                         value={inc}
                         placeholder="Inclusion item..."
-                        onChange={(e) => handleUpdateInclusion(idx, e.target.value)}
+                        ariaLabel={`Inclusion ${idx + 1}`}
+                        onChange={(value) => handleUpdateInclusion(idx, value)}
                       />
                       <button
                         type="button"
@@ -2359,13 +2358,11 @@ export const QuotationBuilderPage = () => {
                     {formData.exclusions.map((exc, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-EF4444)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>×</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={exc}
                           placeholder="e.g. Monument entry fees / personal expenses..."
-                          onChange={(e) => handleUpdateExclusion(idx, e.target.value)}
+                          ariaLabel={`Exclusion ${idx + 1}`}
+                          onChange={(value) => handleUpdateExclusion(idx, value)}
                         />
                         <button
                           type="button"
@@ -2426,13 +2423,11 @@ export const QuotationBuilderPage = () => {
                     {formData.paymentPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>•</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={item}
                           placeholder="e.g. 25% Advance token payment at confirmation..."
-                          onChange={(e) => handleUpdatePaymentPolicy(idx, e.target.value)}
+                          ariaLabel={`Payment policy point ${idx + 1}`}
+                          onChange={(value) => handleUpdatePaymentPolicy(idx, value)}
                         />
                         <button
                           type="button"
@@ -2493,13 +2488,11 @@ export const QuotationBuilderPage = () => {
                     {formData.cancellationPolicy.map((item, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-F59E0B)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>⚠️</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={item}
                           placeholder="e.g. 30 days or more prior to departure: 10% cancellation fee..."
-                          onChange={(e) => handleUpdateCancellationPolicy(idx, e.target.value)}
+                          ariaLabel={`Cancellation policy point ${idx + 1}`}
+                          onChange={(value) => handleUpdateCancellationPolicy(idx, value)}
                         />
                         <button
                           type="button"
@@ -2550,13 +2543,11 @@ export const QuotationBuilderPage = () => {
                     {formData.vehicleNotes.map((vn, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                         <span style={{ color: 'var(--fg-0369A1)', fontWeight: 800, minWidth: '14px', textAlign: 'center' }}>❖</span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={vn}
                           placeholder="e.g. AC will be switched off in ghat sections..."
-                          onChange={(e) => handleUpdateVehicleNote(idx, e.target.value)}
+                          ariaLabel={`Vehicle note ${idx + 1}`}
+                          onChange={(value) => handleUpdateVehicleNote(idx, value)}
                         />
                         <button
                           type="button"
@@ -2609,13 +2600,11 @@ export const QuotationBuilderPage = () => {
                         <span style={{ color: 'var(--fg-94A3B8)', fontWeight: 700, fontSize: '0.78rem', minWidth: '20px' }}>
                           {idx + 1}.
                         </span>
-                        <input
-                          type="text"
-                          className="form-input"
-                          style={{ flex: 1, fontSize: '0.82rem' }}
+                        <FormattedLine
                           value={note}
                           placeholder="e.g. Standard check-in 12:00 PM, valid photo ID required..."
-                          onChange={(e) => handleUpdateImportantNote(idx, e.target.value)}
+                          ariaLabel={`Important note ${idx + 1}`}
+                          onChange={(value) => handleUpdateImportantNote(idx, value)}
                         />
                         <button
                           type="button"

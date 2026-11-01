@@ -78,3 +78,18 @@ export const richToPlainText = (value) => {
   const doc = new DOMParser().parseFromString(withBreaks, 'text/html');
   return (doc.body.textContent || '').replace(/\n{3,}/g, '\n\n').trim();
 };
+
+/**
+ * What to store for text typed in the formatting editor. The editor always answers in formatted form ("<p>Hello</p>"), but
+ * a line with no formatting at all is just text: keep it as plain text, so older records, other screens and the mobile app
+ * see exactly what was typed. Anything with real formatting (bold, colour, a list, a line break...) is kept as formatted text.
+ */
+export const simplifyRich = (html) => {
+  if (typeof html !== 'string' || !html.trim()) return '';
+  if (!looksLikeHtml(html)) return html;
+  const body = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html').body;
+  const only = body.children.length === 1 ? body.children[0] : null;
+  const justText = only && only.tagName === 'P' && only.children.length === 0 && body.childNodes.length === 1;
+  // (Text that itself starts like formatting, e.g. someone typing "<p>", must stay in its escaped form or it would be misread.)
+  return justText && !looksLikeHtml(only.textContent) ? only.textContent : html;
+};
