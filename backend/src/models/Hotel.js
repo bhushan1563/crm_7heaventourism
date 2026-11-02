@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { priceTableSchema } from './priceTableSchema.js';
 
 // A hotel in the company's hotel list. It is kept forever: hotels are archived, not destroyed, and a quotation that used a
 // hotel keeps its own copy of what it showed, so later edits here never change a quotation that was already sent.
@@ -42,6 +43,9 @@ const hotelSchema = new mongoose.Schema(
     amenities: { type: [String], default: [] },
     roomTypes: { type: [roomTypeSchema], default: [] },
     mealPlans: { type: [String], default: [] }, // the meal plans this hotel offers
+    // The usual prices of this hotel, in the layout of the company's pricing sheet (Option 1, Option 2 ... each with its own name).
+    // A hotel quotation made with this hotel starts with a copy of them.
+    priceTables: { type: [priceTableSchema], default: [] },
     cancellationPolicy: { type: String, default: '' }, // printed on quotations
     notes: { type: String, default: '' }, // internal: never printed
     tags: { type: [String], default: [] },

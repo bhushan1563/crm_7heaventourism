@@ -10,6 +10,8 @@ import PageLoader from '../components/PageLoader';
 import PhotoGallery from '../components/PhotoGallery';
 import LazyRichTextEditor from '../components/LazyRichTextEditor';
 import RoomTypesEditor from '../components/hotel/RoomTypesEditor';
+import PriceTablesEditor from '../components/quotation/PriceTablesEditor';
+import { startPriceTables } from '../utils/priceTables';
 import TagInput from '../components/itinerary/TagInput';
 import { AMENITY_RULES, AMENITY_SUGGESTIONS, HOTEL_LIMITS, HOTEL_TAG_RULES, MEAL_PLAN_CHOICES, STAR_OPTIONS, emptyHotel, firstErrorKey, toPayload, validateHotel } from '../utils/hotel';
 import { addTag } from '../utils/itinerary';
@@ -19,7 +21,9 @@ import './hotels.css';
 const toForm = (data) => ({
   ...emptyHotel(),
   ...Object.fromEntries(Object.keys(emptyHotel()).map((key) => [key, data[key] ?? emptyHotel()[key]])),
-  roomTypes: (data.roomTypes || []).map((r) => ({ name: r.name || '', details: r.details || '' }))
+  roomTypes: (data.roomTypes || []).map((r) => ({ name: r.name || '', details: r.details || '' })),
+  // A hotel with no prices yet starts with the usual two options, ready to be named and filled in.
+  priceTables: data.priceTables?.length ? data.priceTables : startPriceTables().priceTables
 });
 
 export const HotelEditorPage = () => {
@@ -328,6 +332,17 @@ export const HotelEditorPage = () => {
             ))}
           </div>
         </div>
+      </section>
+
+      <section className="glass-panel edit-section" aria-labelledby="sec-pricing">
+        <h3 id="sec-pricing" className="sr-only">Pricing</h3>
+        <p className="edit-hint" style={{ margin: 0 }}>The usual prices of this hotel. Give each option its own name (for example the room type or the season). A hotel quotation made with this hotel starts with a copy of these prices, which can still be changed there.</p>
+        <fieldset disabled={readOnly} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
+          <div id="field-priceTables" tabIndex={-1}>
+            <PriceTablesEditor tables={form.priceTables} onChange={(priceTables) => set({ priceTables })} />
+          </div>
+        </fieldset>
+        {errors.priceTables && <p className="field-error" id="error-priceTables" role="alert">{errors.priceTables}</p>}
       </section>
 
       <section className="glass-panel edit-section" aria-labelledby="sec-policy">

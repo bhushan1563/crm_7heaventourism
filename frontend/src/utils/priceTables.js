@@ -33,6 +33,19 @@ export const lowestTotal = (quotation) => {
   return totals.length ? Math.min(...totals) : 0;
 };
 
+/** True when any option of these tables has something entered. */
+export const hasPriceData = (tables) => (tables || []).some(tableHasData);
+
+/**
+ * The pricing tables of a hotel of the hotel list, as a hotel quotation starts with them: a copy of all of them (names included) when
+ * the hotel has any prices entered, else null (the quotation then starts with the usual empty Option 1 and Option 2).
+ */
+export const tablesFromHotel = (hotel) => {
+  const tables = hotel?.priceTables || [];
+  if (!hasPriceData(tables)) return null;
+  return tables.map((table) => ({ name: table.name || '', rows: (table.rows || []).map((row) => ({ ...row })) }));
+};
+
 /** What a quotation list shows for a hotel quotation priced with the tables: the lowest Grand Total, and what that means, or null. */
 export const listPrice = (quotation) => {
   if (!usesPriceTables(quotation)) return null;

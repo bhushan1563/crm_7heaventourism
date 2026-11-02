@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { priceTableSchema } from './priceTableSchema.js';
 
 const parseDateValue = (val) => {
   if (!val || val === '' || val === null || val === undefined) return null;
@@ -202,13 +203,7 @@ const quotationSchema = new mongoose.Schema({
     priceNote: { type: String, default: '' }
   },
   // The pricing tables of a hotel quotation (see utils/quotationPriceTables.js): option -> rows of Package/Airfare/Visa/TCS and PAX.
-  priceTables: {
-    type: [new mongoose.Schema({
-      name: { type: String, default: '' },
-      rows: [new mongoose.Schema({ label: { type: String, required: true }, package: { type: Number, default: 0 }, airfare: { type: Number, default: 0 }, visa: { type: Number, default: 0 }, tcs: { type: Number, default: 0 }, pax: { type: Number, default: 0 } }, { _id: false })]
-    }, { _id: false })],
-    default: []
-  },
+  priceTables: { type: [priceTableSchema], default: [] },
   visaFees: { type: [visaFeeSchema], default: [] },
   visaDocuments: [{ type: String }],
   visaInclusions: [{ type: String }],

@@ -89,3 +89,31 @@ describe('property', () => {
     );
   });
 });
+
+describe('the prices of a hotel of the list', () => {
+  const hotelWith = (tables) => ({ priceTables: tables });
+  it('says whether any option has something entered', async () => {
+    const { hasPriceData } = await import('./priceTables');
+    expect(hasPriceData([blankTable('Option 1'), blankTable('Option 2')])).toBe(false);
+    expect(hasPriceData([blankTable('Option 1'), { name: 'Suite', rows: [row('Adult')] }])).toBe(true);
+    expect(hasPriceData(undefined)).toBe(false);
+  });
+  it('gives a hotel quotation a copy of the hotel\'s prices, names included, and never the hotel\'s own objects', async () => {
+    const { tablesFromHotel } = await import('./priceTables');
+    const hotel = hotelWith([{ name: 'Deluxe room', rows: [row('Adult')] }, { name: 'Suite', rows: [row('Adult', { package: 50000 })] }]);
+    const copy = tablesFromHotel(hotel);
+    expect(copy.map((t) => t.name)).toEqual(['Deluxe room', 'Suite']);
+    expect(copy[1].rows[0].package).toBe(50000);
+    copy[0].rows[0].package = 1;
+    copy[0].name = 'changed';
+    expect(hotel.priceTables[0].rows[0].package).toBe(30000);
+    expect(hotel.priceTables[0].name).toBe('Deluxe room');
+  });
+  it('gives nothing when the hotel has no prices entered, so the quotation starts with the usual empty options', async () => {
+    const { tablesFromHotel } = await import('./priceTables');
+    expect(tablesFromHotel(hotelWith([blankTable('Option 1')]))).toBeNull();
+    expect(tablesFromHotel(hotelWith([]))).toBeNull();
+    expect(tablesFromHotel({})).toBeNull();
+    expect(tablesFromHotel(undefined)).toBeNull();
+  });
+});

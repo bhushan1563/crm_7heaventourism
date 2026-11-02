@@ -72,7 +72,7 @@ import VisaPicker from '../components/visa/VisaPicker';
 import ConfirmDialog from '../components/ConfirmDialog';
 import visaService from '../services/visaService';
 import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
-import { priceTablesPayload, priceTablesProblem, startPriceTables, usesPriceTables } from '../utils/priceTables';
+import { hasPriceData, priceTablesPayload, priceTablesProblem, startPriceTables, tablesFromHotel, usesPriceTables } from '../utils/priceTables';
 import { nextPriceNote } from '../utils/pricingNote';
 import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
@@ -336,7 +336,8 @@ export const QuotationBuilderPage = () => {
               destination: draft.destination,
               duration: draft.duration,
               packageDetails: { ...prev.packageDetails, hotels: [draft.stay] },
-              ...startPriceTables(prev) // the pricing table of a hotel quotation
+              // The pricing table of a hotel quotation: the hotel's own prices when it has any, else Option 1 and Option 2 to fill in.
+              ...(draft.priceTables ? { priceTables: draft.priceTables } : startPriceTables(prev))
             }));
             showToast(`A hotel quotation for ${hRes.data.name} was started. Add the client and the dates, then the prices.`, 'success');
           } else {
@@ -555,7 +556,9 @@ export const QuotationBuilderPage = () => {
     const target = hotelPicker;
     setFormData((prev) => {
       const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
-      const title = retitle ? { destination: hotelTitle(hotel) } : {};
+      // A hotel quotation that has no prices yet takes the hotel's own (what is already typed is never replaced).
+      const hotelPrices = prev.quotationType === 'Only Hotel' && !hasPriceData(prev.priceTables) ? tablesFromHotel(hotel) : null;
+      const title = { ...(retitle ? { destination: hotelTitle(hotel) } : {}), ...(hotelPrices ? { priceTables: hotelPrices } : {}) };
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
         const options = (prev.options || []).map((option, i) => {
