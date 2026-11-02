@@ -41,7 +41,8 @@ describe('FormattedLine', () => {
   it('opens the formatting toolbar for that line when pressed', async () => {
     line({ value: 'Daily breakfast' });
     await userEvent.click(screen.getByRole('button', { name: /Press to edit and format/ }));
-    const toolbar = await screen.findByRole('toolbar', { name: 'Text formatting' }, { timeout: 8000 });
+    // The editor is a big lazily loaded library; the first load inside a busy full-suite run has taken 7 to 8 seconds, so allow far more than that.
+    const toolbar = await screen.findByRole('toolbar', { name: 'Text formatting' }, { timeout: 15000 });
     for (const label of ['Bold', 'Font size', 'Text colour', 'Highlight']) expect(toolbar.querySelector(`[aria-label="${label}"]`), label).not.toBeNull();
     expect(screen.getByRole('textbox', { name: 'Inclusion 1' })).toBeInTheDocument();
   });

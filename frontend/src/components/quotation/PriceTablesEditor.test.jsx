@@ -101,23 +101,14 @@ describe('PriceTablesEditor', () => {
     expect(hint).toHaveTextContent('worked out for you as you type');
   });
 
-  it('labels every cell of a row, so a narrow screen can show each row as a card with named fields', () => {
-    render(<Harness initial={start()} />);
-    const firstRow = screen.getByRole('region', { name: 'Option 1' }).querySelector('tbody tr');
-    expect([...firstRow.querySelectorAll('td[data-label]')].map((td) => td.dataset.label)).toEqual(['Package', 'Airfare', 'Visa', 'TCS', 'Total', 'PAX', 'Final Price']);
-  });
-
-  it('keeps a running Grand Total at the top of each option for narrow screens, without a second copy of the figure in the text', async () => {
+  it('is always the sheet: one table per option, never a stack of boxes', () => {
     render(<Harness initial={start()} />);
     const first = screen.getByRole('region', { name: 'Option 1' });
-    const chip = first.querySelector('.pt-chip');
-    expect(chip).toHaveAttribute('aria-hidden', 'true');
-    expect(chip).toHaveAttribute('data-total', 'Rs 0');
-    await userEvent.type(field('Package', 'Adult'), '1000');
-    await userEvent.type(field('PAX', 'Adult'), '3');
-    expect(chip).toHaveAttribute('data-total', 'Rs 3,000');
-    expect(chip).toBeEmptyDOMElement(); // drawn by the style sheet from the attributes
-    expect(within(first).getAllByText('Rs 3,000')).toHaveLength(1); // only the Grand Total of the table itself
+    expect(first.querySelectorAll('table')).toHaveLength(1);
+    expect(first.querySelectorAll('tbody tr')).toHaveLength(4);
+    expect(first.querySelector('.pt-chip')).toBeNull();
+    const css = fs.readFileSync(path.resolve(__dirname, './priceTables.css'), 'utf8');
+    expect(css).not.toMatch(/@container|display:\s*grid/); // no layout that turns the rows into cards
   });
 
   it('has no text that is only for screen readers showing on screen: that style is in the global style sheet, which every page loads', () => {

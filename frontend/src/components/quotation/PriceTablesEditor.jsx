@@ -32,8 +32,6 @@ export const PriceTablesEditor = ({ tables, onChange }) => {
         <section className="pt-card" key={i} aria-label={nameOf(table, i)}>
           <div className="pt-card-head">
             <input type="text" className="form-input pt-name" value={table.name} maxLength={L.name} placeholder={`Option ${i + 1}`} aria-label={`Name of option ${i + 1}`} onChange={(e) => setTable(i, { name: e.target.value })} />
-            {/* A look-alike of the Grand Total for narrow screens, where the real one is far down the list of rows. Drawn by the style sheet from these attributes, so it is not a second copy of the figure for screen readers or text search. */}
-            <span className="pt-chip" aria-hidden="true" data-label="Grand Total" data-total={money(tableTotal(table))} />
             <span className="pt-card-tools">
               <button type="button" className="btn btn-outline btn-sm" onClick={() => onChange([...tables.slice(0, i + 1), { ...table, name: `${nameOf(table, i)} (copy)`.slice(0, L.name), rows: table.rows.map((r) => ({ ...r })) }, ...tables.slice(i + 1)])} disabled={tables.length >= L.tables} title="Make another option with the same figures" aria-label={`Copy ${nameOf(table, i)}`}>
                 <Copy size={13} /> <span>Copy</span>
@@ -77,15 +75,15 @@ export const PriceTablesEditor = ({ tables, onChange }) => {
                         <input type="text" className="form-input pt-label" value={row.label} maxLength={L.label} placeholder="e.g. Adult" aria-label={`Name of row ${r + 1} in ${nameOf(table, i)}`} onChange={(e) => setRow(i, r, { label: e.target.value })} />
                       </th>
                       {AMOUNT_COLUMNS.map(([key, title]) => (
-                        <td key={key} data-label={title}>
+                        <td key={key}>
                           <input type="number" min={0} step="any" inputMode="decimal" className="form-input pt-num" value={row[key]} aria-label={`${title} of ${rowName} in ${nameOf(table, i)}`} onChange={(e) => setRow(i, r, { [key]: e.target.value })} />
                         </td>
                       ))}
-                      <td className="pt-calc" data-label="Total" aria-label={`Total of ${rowName} in ${nameOf(table, i)}`}>{cell(rowTotal(row))}</td>
-                      <td data-label="PAX">
+                      <td className="pt-calc" aria-label={`Total of ${rowName} in ${nameOf(table, i)}`}>{cell(rowTotal(row))}</td>
+                      <td>
                         <input type="number" min={0} max={L.maxPax} step={1} inputMode="numeric" className="form-input pt-num pt-pax" value={row.pax} aria-label={`PAX of ${rowName} in ${nameOf(table, i)}`} onChange={(e) => setRow(i, r, { pax: e.target.value })} />
                       </td>
-                      <td className="pt-calc pt-final" data-label="Final Price" aria-label={`Final Price of ${rowName} in ${nameOf(table, i)}`}>{cell(rowFinal(row))}</td>
+                      <td className="pt-calc pt-final" aria-label={`Final Price of ${rowName} in ${nameOf(table, i)}`}>{cell(rowFinal(row))}</td>
                       <td className="pt-remove">
                         <button type="button" className="btn-icon btn-outline" onClick={() => setTable(i, { rows: table.rows.filter((_, k) => k !== r) })} disabled={table.rows.length <= 1} aria-label={`Remove ${rowName} from ${nameOf(table, i)}`} title="Remove this row">
                           <Trash2 size={13} />
