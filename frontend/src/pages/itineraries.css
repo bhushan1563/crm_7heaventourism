@@ -136,4 +136,3 @@ html[data-theme='dark'] .edit-bar-status.is-dirty { color: #fbbf24; }
 /* ---- Downloads ---- */
 .export-buttons { display: inline-flex; align-items: center; gap: 6px; }
 .export-buttons .btn span { min-width: 2.2em; text-align: left; }
-.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

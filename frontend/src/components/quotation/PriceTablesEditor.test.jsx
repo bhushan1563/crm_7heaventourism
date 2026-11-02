@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -96,5 +98,30 @@ describe('PriceTablesEditor', () => {
     const hint = document.querySelector('.pt-hint');
     expect(hint).toHaveTextContent('Total is Package + Airfare + Visa + TCS, Final Price is Total × PAX');
     expect(hint).toHaveTextContent('An option with nothing entered is not printed');
+    expect(hint).toHaveTextContent('worked out for you as you type');
+  });
+
+  it('labels every cell of a row, so a narrow screen can show each row as a card with named fields', () => {
+    render(<Harness initial={start()} />);
+    const firstRow = screen.getByRole('region', { name: 'Option 1' }).querySelector('tbody tr');
+    expect([...firstRow.querySelectorAll('td[data-label]')].map((td) => td.dataset.label)).toEqual(['Package', 'Airfare', 'Visa', 'TCS', 'Total', 'PAX', 'Final Price']);
+  });
+
+  it('keeps a running Grand Total at the top of each option for narrow screens, without a second copy of the figure in the text', async () => {
+    render(<Harness initial={start()} />);
+    const first = screen.getByRole('region', { name: 'Option 1' });
+    const chip = first.querySelector('.pt-chip');
+    expect(chip).toHaveAttribute('aria-hidden', 'true');
+    expect(chip).toHaveAttribute('data-total', 'Rs 0');
+    await userEvent.type(field('Package', 'Adult'), '1000');
+    await userEvent.type(field('PAX', 'Adult'), '3');
+    expect(chip).toHaveAttribute('data-total', 'Rs 3,000');
+    expect(chip).toBeEmptyDOMElement(); // drawn by the style sheet from the attributes
+    expect(within(first).getAllByText('Rs 3,000')).toHaveLength(1); // only the Grand Total of the table itself
+  });
+
+  it('has no text that is only for screen readers showing on screen: that style is in the global style sheet, which every page loads', () => {
+    const css = fs.readFileSync(path.resolve(__dirname, '../../index.css'), 'utf8');
+    expect(css).toMatch(/\.sr-only\s*\{[^}]*clip:\s*rect\(0, 0, 0, 0\)/);
   });
 });

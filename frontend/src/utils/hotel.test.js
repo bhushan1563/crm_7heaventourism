@@ -93,3 +93,35 @@ describe('property', () => {
     );
   });
 });
+
+describe('the pricing tables of a hotel', () => {
+  const row = (label, over = {}) => ({ label, package: 18000, airfare: '', visa: '', tcs: '', pax: 2, ...over });
+  it('a new hotel starts with Option 1 and Option 2, each with Adult, Extra bed, CWB and CNB', () => {
+    const form = emptyHotel();
+    expect(form.priceTables.map((t) => t.name)).toEqual(['Option 1', 'Option 2']);
+    expect(form.priceTables[0].rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
+    expect(emptyHotel().priceTables).not.toBe(form.priceTables); // each form has its own
+  });
+  it('are sent as numbers with tidy names, and renaming an option is part of the payload', () => {
+    const form = { ...emptyHotel(), name: 'Taj', city: 'Udaipur', priceTables: [{ name: ' Deluxe room ', rows: [row('Adult', { package: '18000', pax: '2' })] }] };
+    expect(toPayload(form).priceTables).toEqual([{ name: 'Deluxe room', rows: [{ label: 'Adult', package: 18000, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }]);
+  });
+  it('are checked before saving, in plain words naming the option and the row', () => {
+    const form = { ...emptyHotel(), name: 'Taj', city: 'Udaipur' };
+    expect(validateHotel(form).priceTables).toBeUndefined();
+    const bad = { ...form, priceTables: [{ name: 'Suite', rows: [row('Adult', { pax: '1.5' })] }] };
+    expect(validateHotel(bad).priceTables).toBe('The PAX of "Adult" in Suite must be a whole number from 0 to 999.');
+    expect(firstErrorKey(validateHotel(bad), bad)).toBe('priceTables');
+    const both = { ...bad, city: '' };
+    expect(firstErrorKey(validateHotel(both), both)).toBe('city'); // the basics come first
+  });
+});
+
+describe('a quotation made from a hotel', () => {
+  it('brings the hotel\'s prices when it has any, and nothing when it has none', async () => {
+    const { quotationFromHotel } = await import('./hotelStay');
+    const priced = { _id: 'h1', name: 'Taj', city: 'Udaipur', priceTables: [{ name: 'Suite', rows: [{ label: 'Adult', package: 30000, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }] };
+    expect(quotationFromHotel(priced).priceTables.map((t) => t.name)).toEqual(['Suite']);
+    expect(quotationFromHotel({ _id: 'h2', name: 'Plain', city: 'Goa' }).priceTables).toBeNull();
+  });
+});
