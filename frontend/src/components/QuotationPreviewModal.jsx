@@ -24,7 +24,8 @@ const fitZoom = () => {
 };
 
 // `before` adds pages ahead of the quotation and `documentLabel` names the document (a booking confirmation uses both).
-export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation' }) => {
+// `canDownload` is the person's Download right: without it the document can be looked at but not printed or saved as a PDF.
+export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true }) => {
   const { showToast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -163,7 +164,14 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
               </button>
             </div>
 
+            {!canDownload && (
+              <span className="qpm-no-download" style={{ fontSize: '0.72rem', color: '#94a3b8' }} title="Ask an Admin for the Download right on the Rights screen">
+                Viewing only: you do not have the Download right
+              </span>
+            )}
+
             {/* Print Button */}
+            {canDownload && (
             <button
               onClick={handlePrint}
               className="btn btn-outline btn-sm"
@@ -172,8 +180,10 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
               <Printer size={14} />
               <span>Print</span>
             </button>
+            )}
 
             {/* Download PDF Button */}
+            {canDownload && (
             <button
               onClick={handleDownloadPDF}
               className="btn btn-gold btn-sm"
@@ -191,6 +201,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
                 </>
               )}
             </button>
+            )}
 
             {/* Close Button */}
             <button

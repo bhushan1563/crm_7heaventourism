@@ -190,7 +190,7 @@ const VisaSection = ({ visa, fees, documents, inclusions }) => {
           </div>
         </div>
       )}
-      {visa.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: {visa.priceNote}</div>}
+      {visa.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={visa.priceNote} /></div>}
 
       {inclusions.length > 0 && checklist('Visa Inclusions', inclusions, '✓')}
     </div>
@@ -229,7 +229,7 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
             <div key={i} style={{ display: 'grid', gridTemplateColumns: columns, borderTop: '1px solid #e2e8f0', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff', alignItems: 'start' }}>
               <div style={{ ...cell, fontWeight: 700, color: '#0f172a' }}>
                 {v.vehicleType || 'Vehicle'}
-                {v.notes && <div style={{ fontWeight: 400, fontSize: '8.5px', color: '#64748b' }}>{v.notes}</div>}
+                {v.notes && <div style={{ fontWeight: 400, fontSize: '8.5px', color: '#64748b' }}><Line value={v.notes} /></div>}
               </div>
               <div style={cell}>{v.seats > 0 ? v.seats : '–'}</div>
               <div style={cell}>{v.acType || '–'}</div>
@@ -244,7 +244,7 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
           </div>
         </div>
       )}
-      {trip.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: {trip.priceNote}</div>}
+      {trip.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={trip.priceNote} /></div>}
 
       {inclusions.length > 0 && (
         <div>
@@ -283,7 +283,7 @@ const OptionsComparison = ({ options, paxDetails }) => {
             <div style={{ background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: 800, padding: '5px 8px' }}>{option.name || `Option ${i + 1}`}</div>
             <div style={{ padding: '7px 8px 6px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
               <div style={{ fontSize: '15px', fontWeight: 800, color: '#0369a1', lineHeight: 1.1 }}>{option.pricePerPerson > 0 ? rs(option.pricePerPerson) : 'On request'}</div>
-              <div style={{ fontSize: '8px', color: '#64748b', marginTop: '1px' }}>{option.priceNote || 'Per person'}</div>
+              <div style={{ fontSize: '8px', color: '#64748b', marginTop: '1px' }}><Line value={option.priceNote || 'Per person'} /></div>
               {option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '8.5px', color: '#0f172a', fontWeight: 700, marginTop: '3px' }}>Total: {rs(option.totalPrice)}</div>}
             </div>
             <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '7px', flex: 1 }}>
@@ -615,7 +615,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}
           >
-            {pricing.totalCostNote || (pricing.totalCostPerPerson > 0 ? `Rs ${pricing.totalCostPerPerson.toLocaleString('en-IN')} Per person (Incl of GST)` : 'Custom Rate on Request')}
+            <Line value={pricing.totalCostNote || (pricing.totalCostPerPerson > 0 ? `Rs ${pricing.totalCostPerPerson.toLocaleString('en-IN')} Per person (Incl of GST)` : 'Custom Rate on Request')} />
           </div>
           {pricing.grandTotal > 0 && (
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
@@ -625,7 +625,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         </div>
         {pricing.notes && (
           <div style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginTop: '6px' }}>
-            Note: {pricing.notes}
+            Note: <Line value={pricing.notes} />
           </div>
         )}
       </div>
@@ -789,7 +789,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   textTransform: 'uppercase'
                 }}
               >
-                {quotation.endOfTourNote || '***End of the Tour***'}
+                <Line value={quotation.endOfTourNote || '***End of the Tour***'} />
               </div>
             </div>
             </div>
@@ -961,7 +961,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 {/* Room info fallback */}
                 {!isLand && !isVisaQuotation && packageDetails.roomInfo && (
                   <div className="quotation-keep" style={{ fontSize: '10.5px', fontWeight: 700, color: '#0f172a', marginBottom: '8px' }}>
-                    Room Allocation: {packageDetails.roomInfo}
+                    Room Allocation: <Line value={packageDetails.roomInfo} />
                   </div>
                 )}
 
@@ -1054,7 +1054,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                       </span>
                     </div>
                     <div style={{ fontSize: '9.5px', color: '#334155', lineHeight: 1.4, paddingLeft: '21px' }}>
-                      {quotation.flightTicketNote || 'Official airline PNR and flight e-tickets will be issued & shared upon final booking confirmation.'}
+                      <Line value={quotation.flightTicketNote || 'Official airline PNR and flight e-tickets will be issued & shared upon final booking confirmation.'} />
                     </div>
                     {quotation.flightTicketUrl && (
                       <div style={{ fontSize: '8.5px', color: '#0284c7', fontWeight: 600, paddingLeft: '21px', marginTop: '2px' }}>

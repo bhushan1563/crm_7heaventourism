@@ -1,7 +1,7 @@
 import { friendlyMessage } from '../utils/errors.js';
 
 export const checkRights = (moduleName, action) => {
-  return (req, res, next) => {
+  const middleware = (req, res, next) => {
     // Admin bypasses all checks
     if (req.user && (req.user.role === 'Admin' || req.user.role === 'SuperAdmin')) {
       return next();
@@ -29,6 +29,9 @@ export const checkRights = (moduleName, action) => {
 
     next();
   };
+  // The module and action are kept on the middleware so a test can read the rights of every route straight from the routers.
+  middleware.rights = { moduleName, action };
+  return middleware;
 };
 
 export const checkRecordOwnership = (recordFinder) => {

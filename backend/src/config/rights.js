@@ -32,3 +32,20 @@ const ROLE_DEFAULTS = {
 export const defaultRightsFor = (role, moduleName) => flagsFrom(ROLE_DEFAULTS[moduleName]?.[role] ?? ['canRead']);
 
 export const allRights = () => flagsFrom(RIGHT_FLAGS);
+
+const FLAG_WORDS = { canRead: 'read', canCreate: 'create', canUpdate: 'update', canDelete: 'delete', canDownload: 'download', canEditOthers: 'edit others' };
+export const RIGHT_ROLES = ['Admin', 'Sales', 'Ops', 'Viewer'];
+
+/** What each role may do in each module when nothing has been stored on the Rights screen, as a markdown table (see docs/RIGHTS.md). */
+export const defaultRightsTable = () => {
+  const cell = (role, moduleName) => {
+    if (role === 'Admin') return 'everything';
+    const words = RIGHT_FLAGS.filter((flag) => defaultRightsFor(role, moduleName)[flag]).map((flag) => FLAG_WORDS[flag]);
+    return words.join(', ') || 'nothing';
+  };
+  return [
+    `| Module | ${RIGHT_ROLES.join(' | ')} |`,
+    `|---|${RIGHT_ROLES.map(() => '---').join('|')}|`,
+    ...RIGHT_MODULES.map((m) => `| \`${m}\` | ${RIGHT_ROLES.map((role) => cell(role, m)).join(' | ')} |`)
+  ].join('\n');
+};

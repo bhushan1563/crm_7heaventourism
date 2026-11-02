@@ -1,4 +1,5 @@
 import { line } from './itineraryInput.js';
+import { richLine } from './quotationText.js';
 
 // A visa quotation: what the visa is, how many people apply, and the fees. The price of the quotation is the fees: each fee is
 // either charged per applicant (amount x applicants) or once for the whole group. The documents checklist and the inclusions are
@@ -33,7 +34,7 @@ export const normalizeQuotationVisa = (body) => {
     const v = body.visa;
     const visa = {};
     for (const [key, label, max] of [['country', 'the country', L.text], ['visaType', 'the visa type', L.text], ['mode', 'how the visa is issued', L.text], ['validity', 'the validity', L.text], ['stay', 'the maximum stay', L.text], ['processingTime', 'the processing time', L.text], ['priceNote', 'the price note', L.note]]) {
-      const r = line(v[key], label, max);
+      const r = key === 'priceNote' ? richLine(v[key], label, max) : line(v[key], label, max); // the price note can be formatted
       if (!r.ok) return r;
       visa[key] = r.value;
     }

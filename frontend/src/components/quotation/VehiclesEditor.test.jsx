@@ -7,6 +7,9 @@ import { DEFAULT_VEHICLE_INCLUSIONS, blankVehicle } from '../../utils/landServic
 
 afterEach(cleanup);
 
+// The real formatting editor has its own tests; here it is a simple stand-in so these tests stay about the screen's own logic.
+vi.mock('../LazyRichTextEditor', () => ({ default: ({ value, onChange, ariaLabel }) => <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} /> }));
+
 // Holds the quotation the way the builder does, and reports every state it reaches.
 const Harness = ({ initial, onState }) => {
   const [quotation, setQuotation] = useState(initial);
@@ -76,6 +79,7 @@ describe('VehiclesEditor', () => {
     await userEvent.type(screen.getByLabelText('Route'), 'Delhi - Agra');
     await userEvent.type(screen.getByLabelText('Pick-up point'), 'IGI Airport');
     await userEvent.type(screen.getByLabelText('Kilometre policy'), '250 km per day');
+    await userEvent.click(screen.getByRole('button', { name: /^Price note:/ })); // the price note is a formattable line: press it to edit
     await userEvent.type(screen.getByLabelText('Price note'), 'GST extra');
     expect(seen.mock.lastCall[0].landService).toEqual({ route: 'Delhi - Agra', pickupPoint: 'IGI Airport', kmPolicy: '250 km per day', priceNote: 'GST extra' });
   });

@@ -688,6 +688,7 @@ export const QuotationListPage = () => {
             setPreviewQuotation(null);
           }}
           quotation={previewQuotation}
+          canDownload={hasDownloadRight}
         />
       )}
 

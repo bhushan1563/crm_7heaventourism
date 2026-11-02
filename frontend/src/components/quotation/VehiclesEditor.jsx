@@ -90,7 +90,7 @@ export const VehiclesEditor = ({ quotation, onChange }) => {
                 <Trash2 size={14} />
               </button>
               <div className="ve-notes">
-                <input type="text" className="form-input" value={v.notes || ''} maxLength={VEHICLE_LIMITS.notes} placeholder="Notes about this vehicle (optional), e.g. with driver, luggage space" aria-label={`Notes for vehicle ${i + 1}`} onChange={(e) => setVehicle(i, { notes: e.target.value })} />
+                <FormattedLine value={v.notes || ''} maxLength={VEHICLE_LIMITS.notes} placeholder="Notes about this vehicle (optional), e.g. with driver, luggage space" ariaLabel={`Notes for vehicle ${i + 1}`} onChange={(value) => setVehicle(i, { notes: value })} />
               </div>
             </div>
           ))}
@@ -100,8 +100,8 @@ export const VehiclesEditor = ({ quotation, onChange }) => {
           <strong aria-live="polite">{total > 0 ? money(total) : '—'}</strong>
         </div>
         <div className="form-group">
-          <label className="form-label" htmlFor="trip-priceNote">Price note</label>
-          <input id="trip-priceNote" type="text" className="form-input" value={trip.priceNote || ''} maxLength={VEHICLE_LIMITS.priceNote} placeholder="e.g. GST extra; toll and parking as actuals" onChange={(e) => setTrip('priceNote', e.target.value)} />
+          <span className="form-label">Price note</span>
+          <FormattedLine value={trip.priceNote || ''} maxLength={VEHICLE_LIMITS.priceNote} placeholder="e.g. GST extra; toll and parking as actuals" ariaLabel="Price note" onChange={(value) => setTrip('priceNote', value)} />
         </div>
       </section>
 

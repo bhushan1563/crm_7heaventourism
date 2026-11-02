@@ -1,4 +1,5 @@
 import { line } from './itineraryInput.js';
+import { richLine } from './quotationText.js';
 import { normalizeQuotationHotels, stayPhotoTokens } from './quotationHotels.js';
 
 // Hotel options of a quotation: several choices offered side by side, each with its own hotels and its own price.
@@ -39,7 +40,7 @@ export const normalizeQuotationOptions = (value) => {
     if (!perPerson.ok) return perPerson;
     const total = price(raw.totalPrice, `The total price of option ${n}`);
     if (!total.ok) return total;
-    const note = line(raw.priceNote, `the price note of option ${n}`, L.note);
+    const note = richLine(raw.priceNote, `the price note of option ${n}`, L.note); // can be formatted
     if (!note.ok) return note;
     if (raw.recommended !== undefined && raw.recommended !== null && typeof raw.recommended !== 'boolean') return fail(`Whether option ${n} is recommended must be yes or no.`);
     if (raw.recommended === true) recommended += 1;

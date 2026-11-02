@@ -67,6 +67,8 @@ import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } fro
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
+import { nextPriceNote } from '../utils/pricingNote';
+import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
@@ -392,7 +394,7 @@ export const QuotationBuilderPage = () => {
       otherCostPerPerson: othItem ? othItem.costPerPerson : (currentPricing.otherCostPerPerson || 0),
       otherCostNote: othItem ? othItem.note : (currentPricing.otherCostNote || `Per person`),
       totalCostPerPerson: totalPerPerson,
-      totalCostNote: `Rs ${totalPerPerson.toLocaleString('en-IN')} Per person (Incl of GST)`,
+      totalCostNote: nextPriceNote(currentPricing.totalCostNote, currentPricing.totalCostPerPerson, totalPerPerson), // follows the price until someone writes their own
       grandTotal: grandTotal
     };
   };
@@ -921,6 +923,8 @@ export const QuotationBuilderPage = () => {
           <button
             onClick={() => printQuotation('quotation-live-render-view')}
             className="btn btn-outline btn-sm"
+            disabled={!can('quotations', 'canDownload')}
+            title={can('quotations', 'canDownload') ? undefined : 'You do not have the Download right, so printing is not available'}
           >
             <Printer size={14} />
             <span>Print Preview</span>
@@ -1383,13 +1387,12 @@ export const QuotationBuilderPage = () => {
                   <Sparkles size={15} />
                   <span>End of Tour / Event Conclusion Banner</span>
                 </div>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ fontWeight: 600, color: 'var(--fg-0F172A)', background: 'var(--bg-FFFFFF)' }}
+                <FormattedLine
                   value={formData.endOfTourNote || '***End of the Tour***'}
-                  onChange={(e) => setFormData({ ...formData, endOfTourNote: e.target.value })}
                   placeholder="e.g. ***End of the Tour***"
+                  ariaLabel="End of the tour banner"
+                  maxLength={200}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, endOfTourNote: value }))}
                 />
               </div>
             </div>
@@ -1744,15 +1747,12 @@ export const QuotationBuilderPage = () => {
 
                 <div className="form-group" style={{ marginTop: '14px' }}>
                   <label className="form-label">General Room Allocation Info</label>
-                  <input
-                    type="text"
-                    className="form-input"
+                  <FormattedLine
                     value={formData.packageDetails?.roomInfo || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      packageDetails: { ...formData.packageDetails, roomInfo: e.target.value }
-                    })}
                     placeholder="e.g. 2 Double Rooms + 1 Extra Mattress"
+                    ariaLabel="General room allocation info"
+                    maxLength={300}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, packageDetails: { ...prev.packageDetails, roomInfo: value } }))}
                   />
                 </div>
               </div>
@@ -1815,8 +1815,9 @@ export const QuotationBuilderPage = () => {
                   <button
                     type="button"
                     onClick={() => printFlightVoucher(formData)}
+                    disabled={!can('quotations', 'canDownload')}
                     className="btn btn-secondary btn-sm"
-                    title="Print Flight Voucher"
+                    title={can('quotations', 'canDownload') ? 'Print Flight Voucher' : 'You do not have the Download right, so printing is not available'}
                   >
                     <Printer size={14} />
                     <span>Print Voucher</span>
@@ -1888,12 +1889,13 @@ export const QuotationBuilderPage = () => {
                   <label className="form-label" style={{ fontWeight: 700, color: 'var(--fg-0284C7)' }}>
                     Flight Ticket Statement & Notes to Guest
                   </label>
-                  <textarea
-                    className="form-textarea"
-                    rows={3}
+                  <LazyRichTextEditor
                     value={formData.flightTicketNote || ''}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, flightTicketNote: value }))}
+                    maxLength={500}
+                    minHeight={80}
+                    ariaLabel="Flight ticket statement and notes to guest"
                     placeholder="Flight details will be as per confirmed flight ticket."
-                    onChange={(e) => setFormData({ ...formData, flightTicketNote: e.target.value })}
                   />
                   <div className="form-group" style={{ marginTop: '6px' }}>
                     <label className="form-label">Flight Ticket Document / URL (Optional)</label>
@@ -2400,7 +2402,7 @@ export const QuotationBuilderPage = () => {
                         ₹{(formData.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-713F12)', marginTop: '2px' }}>
-                        {formData.pricing?.totalCostNote || 'Rs 0 Per person (Incl of GST)'}
+                        {richToPlainText(formData.pricing?.totalCostNote) || 'Rs 0 Per person (Incl of GST)'}
                       </div>
                     </div>
 
@@ -2420,28 +2422,23 @@ export const QuotationBuilderPage = () => {
                   {/* Total Cost Highlight Note & Payment Terms */}
                   <div className="form-group">
                     <label className="form-label">Total Banner Note (Printed in Document)</label>
-                    <input
-                      type="text"
-                      className="form-input"
+                    <FormattedLine
                       value={formData.pricing?.totalCostNote || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: { ...formData.pricing, totalCostNote: e.target.value }
-                      })}
                       placeholder="e.g. Rs 43,000 Per person (Incl of GST)"
+                      ariaLabel="Total banner note"
+                      maxLength={300}
+                      onChange={(value) => setFormData((prev) => ({ ...prev, pricing: { ...prev.pricing, totalCostNote: value } }))}
                     />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Payment Terms & Additional Pricing Remarks</label>
-                    <textarea
-                      className="form-textarea"
-                      rows={2}
+                    <LazyRichTextEditor
                       value={formData.pricing?.notes || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: { ...formData.pricing, notes: e.target.value }
-                      })}
+                      onChange={(value) => setFormData((prev) => ({ ...prev, pricing: { ...prev.pricing, notes: value } }))}
+                      maxLength={1000}
+                      minHeight={70}
+                      ariaLabel="Payment terms and additional pricing remarks"
                       placeholder="e.g. 50% advance upon confirmation, balance 15 days before travel date."
                     />
                   </div>

@@ -11,7 +11,8 @@ router.use(protect);
 router.get('/', checkRights('confirmations', 'canRead'), getConfirmations);
 router.get('/:id', checkRights('confirmations', 'canRead'), getConfirmationById);
 // Confirming is checked against the quotation being confirmed: only the people assigned to it (or someone allowed to edit others') may.
-router.post('/', checkRights('confirmations', 'canCreate'), checkRecordOwnership(findQuotationToConfirm), createConfirmation);
+// It reads the quotation and locks it, so reading quotations is needed too.
+router.post('/', checkRights('confirmations', 'canCreate'), checkRights('quotations', 'canRead'), checkRecordOwnership(findQuotationToConfirm), createConfirmation);
 router.put('/:id', checkRights('confirmations', 'canUpdate'), checkRecordOwnership(findConfirmation), updateConfirmation);
 router.post('/:id/cancel', checkRights('confirmations', 'canUpdate'), checkRecordOwnership(findConfirmation), cancelConfirmation);
 

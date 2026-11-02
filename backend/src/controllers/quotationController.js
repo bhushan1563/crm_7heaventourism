@@ -9,6 +9,7 @@ import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
+import { normalizeQuotationText } from '../utils/quotationText.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
 
@@ -36,6 +37,8 @@ const prepareExtras = async (body) => {
   if (!vehicles.ok) return vehicles;
   const visa = normalizeQuotationVisa(body);
   if (!visa.ok) return visa;
+  const texts = normalizeQuotationText(body);
+  if (!texts.ok) return texts;
 
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
@@ -59,6 +62,12 @@ const prepareExtras = async (body) => {
   }
   if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
   if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
+  // The texts staff can format (price line and notes, room allocation, flight ticket note, end-of-tour banner). The price line of a
+  // land service or visa is worked out from its vehicles or fees, so that one is never replaced.
+  if (texts.pricing) overrides.pricing = { ...(overrides.pricing || body.pricing), ...(overrides.pricing ? { notes: texts.pricing.notes ?? overrides.pricing.notes } : texts.pricing) };
+  if (texts.roomInfo !== undefined) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), roomInfo: texts.roomInfo };
+  if (texts.flightTicketNote !== undefined) overrides.flightTicketNote = texts.flightTicketNote;
+  if (texts.endOfTourNote !== undefined) overrides.endOfTourNote = texts.endOfTourNote;
   Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)
   return { ok: true, overrides };
 };

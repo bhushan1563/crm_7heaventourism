@@ -375,3 +375,16 @@ test('a left-behind claim whose confirmation was in fact created is linked to it
   const listed = (await quote('', { token: admin.token })).body.data.find((x) => x._id === q._id);
   assert.deepEqual([listed.confirmationId, listed.confirmationNo, listed.isLocked], [c._id, c.confirmationNo, true]);
 });
+
+test('someone who may create bookings but has no access to quotations cannot confirm one, and nothing is locked', async () => {
+  const person = await app.makeUser('Sales');
+  const q = await makeQuotation({ sales: `${person.user.firstName} ${person.user.lastName}`, salesId: String(person.user._id) });
+  const setRight = (flags) => app.call('/api/rights', { method: 'POST', token: admin.token, json: { userId: String(person.user._id), module: 'quotations', ...flags } });
+  assert.equal((await setRight({ canRead: false })).body.success, true);
+  const refused = await confirm(q, {}, person);
+  assert.equal(refused.success, false);
+  assert.match(refused.message, /Permission Denied: You do not have 'Read' rights for quotations/);
+  assert.equal((await QuotationModel.findById(q._id)).confirmationId, '');
+  assert.equal((await setRight({ canRead: true })).body.success, true);
+  assert.equal((await confirm(q, {}, person)).success, true, 'and once they may read quotations again they can');
+});

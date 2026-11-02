@@ -106,8 +106,8 @@ export const VisaEditor = ({ quotation, section, onChange }) => {
             <strong aria-live="polite">{total > 0 ? money(total) : '—'}</strong>
           </div>
           <div className="form-group">
-            <label className="form-label" htmlFor="visa-priceNote">Price note</label>
-            <input id="visa-priceNote" type="text" className="form-input" value={visa.priceNote || ''} maxLength={VISA_LIMITS.note} placeholder="e.g. Embassy fees may change without notice; GST extra" onChange={(e) => setVisa('priceNote', e.target.value)} />
+            <span className="form-label">Price note</span>
+            <FormattedLine value={visa.priceNote || ''} maxLength={VISA_LIMITS.note} placeholder="e.g. Embassy fees may change without notice; GST extra" ariaLabel="Price note" onChange={(value) => setVisa('priceNote', value)} />
           </div>
         </section>
 

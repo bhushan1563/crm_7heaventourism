@@ -69,6 +69,12 @@ The client's own list of extra fields has not arrived, so this is a first versio
 - [x] 6.3 Screens: Confirmations list and editor, "Confirm booking" on the quotation list, locked banner on the quotation
 - [x] 6.4 Confirmation document: booking page followed by the quotation pages, in preview, PDF and print
 ### Step 7: Rights pass (R8), misc (R10)
+- [x] 7.1 Formatting everywhere (R9, completed): the price line and pricing notes, room allocation, flight ticket note, end-of-tour banner, hotel option price notes, vehicle notes, land service and visa price notes can all be formatted (size, bold, colour, highlight) in the editor, are cleaned on the server and print with their formatting. A price line that was written or formatted by hand is no longer overwritten when the price changes. Names, dates, numbers and the quotation title stay plain on purpose (they are used in lists, search and file names)
+- [x] 7.2 Every route audited by a test that reads the real routers: each is signed-in and guarded by the right module and the right action; confirming a booking also needs read access to quotations
+- [x] 7.3 The Download right is honoured everywhere a PDF or print can be made (preview windows, builder Print buttons, booking preview), not only on the list's download button
+- [x] 7.3b The Rights screen shows what people really have (their own rights, else their role's, else the built-in default), not only the rows someone had saved. Before, it drew Quotations, Hotels, Itineraries and Bookings as "off" for people with nothing saved for them, and saving the screen would have taken that access away
+- [x] 7.4 `docs/RIGHTS.md`: what each right means, the built-in defaults per role (generated from the code, checked by a test), the lock rules and the open points
+- [ ] 7.5 R10 (miscellaneous requests): waiting for the client's list; per quotation type visibility (R8 extension) waiting for the client's answer
 
 Open for Step 6 once the client sends their list: promote the fields they name from "Additional details" to fixed fields (and decide whether Viewers should see passport numbers: by default every role can read, as for the other modules; an Admin can change that on the Rights screen).
 
