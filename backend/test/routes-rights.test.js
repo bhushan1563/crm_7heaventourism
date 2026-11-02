@@ -18,6 +18,7 @@ const ROUTERS = {
   media: () => import('../src/routes/mediaRoutes.js'),
   itineraries: () => import('../src/routes/itineraryRoutes.js'),
   hotels: () => import('../src/routes/hotelRoutes.js'),
+  visas: () => import('../src/routes/visaRoutes.js'),
   confirmations: () => import('../src/routes/confirmationRoutes.js')
 };
 
@@ -82,7 +83,7 @@ test('every business route is guarded by a right, and the exceptions are written
 });
 
 test('every right names a real module and a real action, in the module the router belongs to', async () => {
-  const ownModule = { guests: 'guest_list', suppliers: 'supplier_list', quotations: 'quotations', users: 'users', rights: 'rights', scanner: 'scanner', itineraries: 'itineraries', hotels: 'hotels', confirmations: 'confirmations' };
+  const ownModule = { guests: 'guest_list', suppliers: 'supplier_list', quotations: 'quotations', users: 'users', rights: 'rights', scanner: 'scanner', itineraries: 'itineraries', hotels: 'hotels', visas: 'visas', confirmations: 'confirmations' };
   for (const row of await routesOf()) {
     for (const { moduleName, action } of row.rights) {
       assert.ok(RIGHT_MODULES.includes(moduleName), `${row.key}: "${moduleName}" is not a rights module`);

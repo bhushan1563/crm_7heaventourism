@@ -7,6 +7,7 @@ import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
+import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableTotal } from '../utils/priceTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
 
@@ -122,6 +123,55 @@ const HotelStayCard = ({ h }) => {
 };
 
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
+
+/**
+ * The PRICING of a hotel quotation, laid out like the company's sheet: a box titled PRICING, then for each option its name, a table
+ * (Sr No, Package, Airfare, Visa, TCS, Total, PAX, Final Price; a row for Adult, Extra bed, CWB, CNB ...) and the Grand Total.
+ * Empty cells stay empty, as on the sheet. Totals are worked out here from the amounts and PAX, so they always agree.
+ */
+const PriceTablesSection = ({ tables }) => {
+  const border = '1px solid #0f172a';
+  const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
+  const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
+  return (
+    <div style={{ marginBottom: '14px' }}>
+      <div className="quotation-keep" style={{ border: '1.5px solid #0f172a', textAlign: 'center', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', padding: '4px 0', color: '#0f172a' }}>PRICING</div>
+      {tables.map((table, i) => (
+        <div key={i} className="quotation-keep" style={{ marginTop: '8px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th colSpan={8} style={{ ...head, fontSize: '10.5px', borderBottom: 'none' }}>{table.name || `Option ${i + 1}`}</th>
+              </tr>
+              <tr>
+                {['Sr No', ...AMOUNT_COLUMNS.map(([, title]) => title), 'Total', 'PAX', 'Final Price'].map((title, c) => (
+                  <th key={title} style={{ ...head, width: c === 0 ? '14%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(table.rows || []).map((row, r) => (
+                <tr key={r}>
+                  <td style={{ ...cell, textAlign: 'left', fontWeight: 800 }}>{row.label}</td>
+                  {AMOUNT_COLUMNS.map(([key]) => (
+                    <td key={key} style={cell}>{cellText(row[key])}</td>
+                  ))}
+                  <td style={cell}>{cellText(rowTotal(row))}</td>
+                  <td style={{ ...cell, textAlign: 'center' }}>{Number(row.pax) > 0 ? Number(row.pax) : ''}</td>
+                  <td style={{ ...cell, fontWeight: 800 }}>{cellText(rowFinal(row))}</td>
+                </tr>
+              ))}
+              <tr>
+                <td colSpan={7} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 /**
  * The body of a VISA quotation: the visa itself, the documents the applicants must bring (a checklist), the fees (per applicant or
@@ -516,6 +566,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     pricing.grandTotal > 0 ||
     pricing.totalCostNote;
 
+  // A hotel quotation priced with the pricing tables prints them (only the options with something entered) instead of the price list.
+  const priceTables = quotationType === 'Only Hotel' ? (quotation.priceTables || []).filter(tableHasData) : [];
+  const hasPriceTables = priceTables.length > 0;
   const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0));
   const hasExclusions = exclusions && exclusions.length > 0;
   const hasPaymentPolicy = paymentPolicy && paymentPolicy.length > 0;
@@ -564,6 +617,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
+    if (hasPriceTables) return <PriceTablesSection tables={priceTables} />;
     if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
@@ -800,7 +854,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
       )}
 
       {/* ================= PAGE 2: PACKAGE DETAILS & INCLUSIONS ================= */}
-      {(!pageNumber || pageNumber === 2) && (hasPackageSection || (hasPricingSection && !hasFlightSection)) && (
+      {(!pageNumber || pageNumber === 2) && (hasPackageSection || hasPriceTables || (hasPricingSection && !hasFlightSection)) && (
         <div className="quotation-page" id={`${id}-page-2`} style={pageContainerStyle}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <DocumentHeader />

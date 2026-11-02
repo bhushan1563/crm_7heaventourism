@@ -78,7 +78,12 @@ The client's own list of extra fields has not arrived, so this is a first versio
 
 Open for Step 6 once the client sends their list: promote the fields they name from "Additional details" to fixed fields (and decide whether Viewers should see passport numbers: by default every role can read, as for the other modules; an Admin can change that on the Rights screen).
 
-(Step 7 is expanded into its own checklist when it starts.)
+### Step 8: From the client's sheet and the team (added 2026-11-03)
+- [x] 8.1 Hotel quotation PRICING table (R6, the client's sheet): per option (Option 1, Option 2 ... up to 6, each nameable, copyable) rows Adult / Extra bed / CWB / CNB (more rows can be added) with Package, Airfare, Visa and TCS per person, Total, PAX and Final Price (Total x PAX), and a Grand Total. Entered on the Pricing tab, printed as the sheet (an option with nothing entered is not printed), shown in the quotation list as the lowest Grand Total, and confirming a booking asks which option the client accepted. Hotel quotations that already have the older per-person price list keep it, with a button to switch
+- [x] 8.2 Admin can reset anyone's password (Reset password button in User Management: strong password generator, shown once, copy button; the person is signed out everywhere). One password rule for creating, editing and resetting (8 to 72 characters, no outer spaces, not the email). Checked for the team's addresses typed with capitals and stray spaces, deactivation, and what each role can do
+- [x] 8.3 Visa list (sidebar "Visas", like Hotels): saved visas (country, type, entry, how issued, validity, stay, processing time, documents checklist, usual fees, inclusions, price note, internal notes) that can be archived, never duplicated, and used in two ways: "Create quotation" on a visa, or "Choose from the visa list" inside a visa quotation (asks before replacing anything typed). Own rights module (Visa List): Sales and Ops can work on it out of the box, never delete
+
+(Step 7 and 8 are complete; what remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

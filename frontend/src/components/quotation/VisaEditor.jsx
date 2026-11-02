@@ -10,7 +10,8 @@ const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
  * The two visa tabs. `section="details"` is the visa itself and the documents checklist; `section="fees"` is the fees (the price
  * IS the fees) and what they include. `onChange(patch)` receives the fields that changed (visa, visaFees, visaDocuments, visaInclusions).
  */
-export const VisaEditor = ({ quotation, section, onChange }) => {
+// `hideApplicants` is for the visa list: a visa there is priced for one applicant, and the number of applicants belongs to a quotation.
+export const VisaEditor = ({ quotation, section, onChange, hideApplicants = false }) => {
   const visa = quotation.visa || {};
   const fees = quotation.visaFees || [];
   const documents = quotation.visaDocuments || [];
@@ -67,7 +68,11 @@ export const VisaEditor = ({ quotation, section, onChange }) => {
             </button>
           </div>
           <p className="vz-hint">
-            Worked out for <strong>{applicants} applicant{applicants === 1 ? '' : 's'}</strong> (change this on the "Visa & Documents" tab). A fee marked "Per applicant" is multiplied by the applicants; a fee for the "Whole group" is charged once. The price of the quotation is the total of these lines.
+            {hideApplicants ? (
+              <>The usual fees <strong>for one applicant</strong>. In a quotation, a fee marked "Per applicant" is multiplied by the number of applicants and a fee for the "Whole group" is charged once. Leave an amount empty if it changes every time.</>
+            ) : (
+              <>Worked out for <strong>{applicants} applicant{applicants === 1 ? '' : 's'}</strong> (change this on the "Visa & Documents" tab). A fee marked "Per applicant" is multiplied by the applicants; a fee for the "Whole group" is charged once. The price of the quotation is the total of these lines.</>
+            )}
           </p>
           {fees.length === 0 && <p className="vz-hint">No fee yet. Add the visa fee and your service charge to give a price.</p>}
           <div className="vz-rows">
@@ -154,10 +159,12 @@ export const VisaEditor = ({ quotation, section, onChange }) => {
           {field('processingTime', 'Processing time', 'e.g. 3 to 5 working days', VISA_LIMITS.text)}
           {field('validity', 'Validity', 'e.g. 60 days from issue', VISA_LIMITS.text)}
           {field('stay', 'Length of stay', 'e.g. 30 days per visit', VISA_LIMITS.text)}
+          {!hideApplicants && (
           <div className="form-group">
             <label className="form-label" htmlFor="visa-applicants">Number of applicants *</label>
             <input id="visa-applicants" type="number" min={1} max={VISA_LIMITS.applicants} className="form-input" value={visa.applicants ?? ''} onChange={(e) => setVisa('applicants', e.target.value)} />
           </div>
+          )}
         </div>
       </section>
 

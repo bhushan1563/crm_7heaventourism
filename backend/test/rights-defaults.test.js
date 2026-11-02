@@ -11,7 +11,7 @@ const stored = (over) => ({ userId: null, userRole: null, module: 'hotels', ...O
 
 test('the module list has no duplicates and includes the new modules', () => {
   assert.equal(new Set(RIGHT_MODULES).size, RIGHT_MODULES.length);
-  for (const m of ['guest_list', 'supplier_list', 'quotations', 'hotels', 'itineraries', 'confirmations', 'users', 'rights', 'scanner', 'reports']) {
+  for (const m of ['guest_list', 'supplier_list', 'quotations', 'hotels', 'itineraries', 'visas', 'confirmations', 'users', 'rights', 'scanner', 'reports']) {
     assert.ok(RIGHT_MODULES.includes(m), m);
   }
 });

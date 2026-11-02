@@ -26,7 +26,7 @@ describe('ConfirmBookingDialog', () => {
     expect(screen.getByText('mark the guest as Confirmed')).toBeInTheDocument();
     expect(screen.queryByText(/Which hotel option/)).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: /Confirm booking/ }));
-    expect(onConfirm).toHaveBeenCalledWith(undefined);
+    expect(onConfirm).toHaveBeenCalledWith(undefined, undefined);
   });
 
   it('does not talk about the guest when the quotation has none', () => {
@@ -39,14 +39,14 @@ describe('ConfirmBookingDialog', () => {
     render(<ConfirmBookingDialog quotation={withOptions()} isOpen onClose={() => {}} onConfirm={onConfirm} />);
     const confirm = screen.getByRole('button', { name: /Confirm booking/ });
     expect(confirm).toBeDisabled();
-    expect(screen.getByText('Choose the option the client accepted to continue.')).toBeInTheDocument();
+    expect(screen.getByText('Choose what the client accepted to continue.')).toBeInTheDocument();
     expect(screen.getByText(/Rs 30,000 per person · Rs 60,000 in all/)).toBeInTheDocument();
     expect(screen.getByText(/Rs 45,000 per person · Rs 90,000 in all/)).toBeInTheDocument(); // no stored total: price x 2 guests
     expect(screen.getByText('Hotel A, Hotel A2')).toBeInTheDocument();
     await userEvent.click(screen.getByLabelText(/Option B/));
     expect(confirm).toBeEnabled();
     await userEvent.click(confirm);
-    expect(onConfirm).toHaveBeenCalledWith(1);
+    expect(onConfirm).toHaveBeenCalledWith(1, undefined);
   });
 
   it('starts with no option chosen each time it opens', async () => {
@@ -67,6 +67,53 @@ describe('ConfirmBookingDialog', () => {
   it('prices an option with no stored total as the price per person times the guests', () => {
     expect(optionTotal({ pricePerPerson: 1000.5, totalPrice: 0 }, '3 Adults + 1 Child')).toBe(3001.5);
     expect(optionTotal({ pricePerPerson: 1000, totalPrice: 5000 }, '3 Adults')).toBe(5000);
+  });
+});
+
+describe('ConfirmBookingDialog with pricing options', () => {
+  const row = (over = {}) => ({ label: 'Adult', package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
+  const hotel = (priceTables, over = {}) => quotation({ quotationType: 'Only Hotel', priceTables, ...over });
+  const two = () => [{ name: 'Option 1', rows: [row()] }, { name: 'Option 2', rows: [row({ package: 36000 })] }];
+
+  it('asks which pricing option the client accepted, with each Grand Total, and sends its number', async () => {
+    const onConfirm = vi.fn();
+    render(<ConfirmBookingDialog quotation={hotel(two())} isOpen onClose={() => {}} onConfirm={onConfirm} />);
+    expect(screen.getByText('Which pricing option did the client accept?')).toBeInTheDocument();
+    expect(screen.getByText('Grand Total Rs 99,000')).toBeInTheDocument();
+    expect(screen.getByText('Grand Total Rs 1,11,000')).toBeInTheDocument();
+    const confirm = screen.getByRole('button', { name: /Confirm booking/ });
+    expect(confirm).toBeDisabled();
+    await userEvent.click(screen.getByLabelText(/Option 2/));
+    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledWith(undefined, 1);
+  });
+
+  it('does not offer an option that was left empty, and needs no choice when only one is filled in', async () => {
+    const onConfirm = vi.fn();
+    const q = hotel([{ name: 'Option 1', rows: [row()] }, { name: 'Option 2', rows: [row({ package: 0, airfare: 0, visa: 0, tcs: 0, pax: 0 })] }]);
+    render(<ConfirmBookingDialog quotation={q} isOpen onClose={() => {}} onConfirm={onConfirm} />);
+    expect(screen.queryByText('Which pricing option did the client accept?')).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: /Confirm booking/ }));
+    expect(onConfirm).toHaveBeenCalledWith(undefined, undefined);
+  });
+
+  it('needs both choices when the quotation also offers hotel options', async () => {
+    const onConfirm = vi.fn();
+    const q = hotel(two(), { options: [{ name: 'Hotel A', pricePerPerson: 1, totalPrice: 2, hotels: [] }, { name: 'Hotel B', pricePerPerson: 3, totalPrice: 6, hotels: [] }] });
+    render(<ConfirmBookingDialog quotation={q} isOpen onClose={() => {}} onConfirm={onConfirm} />);
+    const confirm = screen.getByRole('button', { name: /Confirm booking/ });
+    await userEvent.click(screen.getByLabelText(/Hotel B/));
+    expect(confirm).toBeDisabled();
+    await userEvent.click(screen.getByLabelText(/Option 1/));
+    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledWith(1, 0);
+  });
+
+  it('ignores pricing options on a quotation that is not a hotel quotation', () => {
+    render(<ConfirmBookingDialog quotation={hotel(two(), { quotationType: 'Package' })} isOpen onClose={() => {}} onConfirm={() => {}} />);
+    expect(screen.queryByText('Which pricing option did the client accept?')).toBeNull();
   });
 });
 

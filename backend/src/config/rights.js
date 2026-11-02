@@ -9,6 +9,7 @@ export const RIGHT_MODULES = [
   'quotations',
   'hotels',
   'itineraries',
+  'visas',
   'confirmations',
   'users',
   'rights',
@@ -23,6 +24,7 @@ const flagsFrom = (enabled = []) => Object.fromEntries(RIGHT_FLAGS.map((flag) =>
 const TEAM_EDITOR = ['canCreate', 'canRead', 'canUpdate', 'canEditOthers'];
 const ROLE_DEFAULTS = {
   hotels: { Sales: TEAM_EDITOR, Ops: TEAM_EDITOR },
+  visas: { Sales: TEAM_EDITOR, Ops: TEAM_EDITOR },
   itineraries: { Sales: [...TEAM_EDITOR, 'canDownload'], Ops: [...TEAM_EDITOR, 'canDownload'] },
   // Booking confirmations are cancelled, never deleted, so nobody but an Admin ever needs canDelete.
   confirmations: { Sales: [...TEAM_EDITOR, 'canDownload'], Ops: [...TEAM_EDITOR, 'canDownload'] }

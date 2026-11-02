@@ -30,6 +30,7 @@ import quotationService from '../services/quotationService';
 import confirmationService from '../services/confirmationService';
 import ConfirmBookingDialog from '../components/confirmation/ConfirmBookingDialog';
 import { confirmBlockedReason } from '../utils/confirmation';
+import { listPrice } from '../utils/priceTables';
 import StatusBadge from '../components/StatusBadge';
 import ConfirmDialog from '../components/ConfirmDialog';
 import ExportButton from '../components/ExportButton';
@@ -104,10 +105,10 @@ export const QuotationListPage = () => {
     fetchQuotations();
   }, []);
 
-  const handleConfirmBooking = async (optionIndex) => {
+  const handleConfirmBooking = async (optionIndex, priceTableIndex) => {
     setIsConfirming(true);
     try {
-      const res = await confirmationService.confirm(confirmItem._id, optionIndex);
+      const res = await confirmationService.confirm(confirmItem._id, optionIndex, priceTableIndex);
       if (res.success) {
         showToast(res.message || 'Booking confirmed.', 'success');
         setConfirmItem(null);
@@ -536,10 +537,10 @@ export const QuotationListPage = () => {
                     <td data-label="Pricing">
                       <div style={{ fontWeight: 700, color: 'var(--fg-059669)', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         {/* A land service is priced for the whole trip (its vehicles) and a visa for all its applicants (its fees), not per person. */}
-                        ₹{((q.quotationType === 'Land Service' || q.quotationType === 'Visa' ? q.pricing?.grandTotal : q.pricing?.totalCostPerPerson) || 0).toLocaleString('en-IN')}
+                        ₹{((listPrice(q) ? listPrice(q).amount : q.quotationType === 'Land Service' || q.quotationType === 'Visa' ? q.pricing?.grandTotal : q.pricing?.totalCostPerPerson) || 0).toLocaleString('en-IN')}
                       </div>
                       <div style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
-                        {q.quotationType === 'Land Service' ? 'For the whole trip' : q.quotationType === 'Visa' ? 'For all applicants' : q.pricing?.grandTotal ? `Total: ₹${q.pricing.grandTotal.toLocaleString('en-IN')}` : 'Incl. GST'}
+                        {listPrice(q) ? listPrice(q).note : q.quotationType === 'Land Service' ? 'For the whole trip' : q.quotationType === 'Visa' ? 'For all applicants' : q.pricing?.grandTotal ? `Total: ₹${q.pricing.grandTotal.toLocaleString('en-IN')}` : 'Incl. GST'}
                       </div>
                     </td>
 

@@ -3,6 +3,7 @@ import { CheckCircle2 } from 'lucide-react';
 import Modal from '../Modal';
 import { guestCount } from '../../utils/quotationOptions';
 import { needsOptionChoice } from '../../utils/confirmation';
+import { filledTables, needsPriceTableChoice, tableTotal } from '../../utils/priceTables';
 import './confirmation.css';
 
 const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -16,15 +17,20 @@ export const optionTotal = (option, paxDetails) => (Number(option.totalPrice) > 
  */
 export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, busy = false }) => {
   const [choice, setChoice] = useState(null);
+  const [priceChoice, setPriceChoice] = useState(null);
   const options = quotation?.options || [];
   const mustChoose = needsOptionChoice(quotation);
+  const mustChoosePrice = needsPriceTableChoice(quotation);
 
   useEffect(() => {
-    if (isOpen) setChoice(null);
+    if (isOpen) {
+      setChoice(null);
+      setPriceChoice(null);
+    }
   }, [isOpen, quotation?._id]);
 
   if (!quotation) return null;
-  const ready = !mustChoose || choice !== null;
+  const ready = (!mustChoose || choice !== null) && (!mustChoosePrice || priceChoice !== null);
 
   return (
     <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} title="Confirm this booking?" subtitle={`${quotation.quotationNo} · ${quotation.clientName} · ${quotation.destination}`} maxWidth="560px">
@@ -51,6 +57,21 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
           </fieldset>
         )}
 
+        {mustChoosePrice && (
+          <fieldset className="cf-options" style={{ border: 0, padding: 0, margin: '0 0 6px' }}>
+            <legend className="form-label">Which pricing option did the client accept?</legend>
+            {filledTables(quotation).map(({ table, index }) => (
+              <label className={`cf-option${priceChoice === index ? ' is-selected' : ''}`} key={index}>
+                <input type="radio" name="accepted-pricing" checked={priceChoice === index} onChange={() => setPriceChoice(index)} disabled={busy} />
+                <span>
+                  <span className="cf-option-name">{table.name || `Option ${index + 1}`}</span>
+                  <span className="cf-option-meta" style={{ display: 'block' }}>Grand Total {money(tableTotal(table))}</span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+        )}
+
         <p style={{ margin: '4px 0 0', fontWeight: 600 }}>This will:</p>
         <ul className="cf-dialog-list">
           <li>create a booking confirmation: a copy of the quotation as it was sold, with room for travellers, payments and notes</li>
@@ -63,11 +84,11 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
           <button type="button" className="btn btn-outline" onClick={onClose} disabled={busy}>
             Not now
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => onConfirm(mustChoose ? choice : undefined)} disabled={!ready || busy} title={ready ? undefined : 'Choose the option the client accepted first'}>
+          <button type="button" className="btn btn-primary" onClick={() => onConfirm(mustChoose ? choice : undefined, mustChoosePrice ? priceChoice : undefined)} disabled={!ready || busy} title={ready ? undefined : 'Choose what the client accepted first'}>
             <CheckCircle2 size={15} /> {busy ? 'Confirming…' : 'Confirm booking'}
           </button>
         </div>
-        {!ready && <p className="edit-hint" style={{ textAlign: 'right', marginTop: 6 }}>Choose the option the client accepted to continue.</p>}
+        {!ready && <p className="edit-hint" style={{ textAlign: 'right', marginTop: 6 }}>Choose what the client accepted to continue.</p>}
       </div>
     </Modal>
   );

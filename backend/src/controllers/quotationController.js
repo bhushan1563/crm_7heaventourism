@@ -10,6 +10,7 @@ import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotation
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
 import { normalizeQuotationText } from '../utils/quotationText.js';
+import { normalizeQuotationPriceTables } from '../utils/quotationPriceTables.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
 
@@ -39,6 +40,8 @@ const prepareExtras = async (body) => {
   if (!visa.ok) return visa;
   const texts = normalizeQuotationText(body);
   if (!texts.ok) return texts;
+  const priceTables = body.priceTables === undefined ? null : normalizeQuotationPriceTables(body.priceTables);
+  if (priceTables && !priceTables.ok) return priceTables;
 
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
@@ -53,6 +56,7 @@ const prepareExtras = async (body) => {
   if (vehicles.vehicles && body.quotationType === 'Land Service' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
     overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
   }
+  if (priceTables) overrides.priceTables = priceTables.value;
   if (visa.visa) overrides.visa = visa.visa;
   if (visa.visaFees) overrides.visaFees = visa.visaFees;
   // The price of a visa quotation IS its fees (per applicant or for the group): keep the amount that lists and statistics read

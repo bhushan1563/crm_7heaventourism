@@ -19,6 +19,8 @@ const HotelListPage = lazy(() => import('./pages/HotelListPage'));
 const HotelEditorPage = lazy(() => import('./pages/HotelEditorPage'));
 const ItineraryListPage = lazy(() => import('./pages/ItineraryListPage'));
 const ItineraryEditorPage = lazy(() => import('./pages/ItineraryEditorPage'));
+const VisaListPage = lazy(() => import('./pages/VisaListPage'));
+const VisaEditorPage = lazy(() => import('./pages/VisaEditorPage'));
 const ConfirmationListPage = lazy(() => import('./pages/ConfirmationListPage'));
 const ConfirmationEditorPage = lazy(() => import('./pages/ConfirmationEditorPage'));
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
@@ -52,6 +54,9 @@ export function App() {
                     <Route path="/hotels" element={<HotelListPage />} />
                     <Route path="/hotels/new" element={<HotelEditorPage />} />
                     <Route path="/hotels/:id/edit" element={<HotelEditorPage />} />
+                    <Route path="/visas" element={<VisaListPage />} />
+                    <Route path="/visas/new" element={<VisaEditorPage />} />
+                    <Route path="/visas/:id/edit" element={<VisaEditorPage />} />
                     <Route path="/itineraries" element={<ItineraryListPage />} />
                     <Route path="/itineraries/new" element={<ItineraryEditorPage />} />
                     <Route path="/itineraries/:id/edit" element={<ItineraryEditorPage />} />

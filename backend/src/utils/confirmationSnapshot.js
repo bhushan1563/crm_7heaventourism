@@ -1,3 +1,5 @@
+import { tableHasData, tableTotal } from './quotationPriceTables.js';
+
 // Turning a quotation into the frozen copy a confirmation keeps. Pure logic (no database), so it can be tested exhaustively.
 
 // What a confirmation does not carry over: database bookkeeping, the audit fields (the confirmation has its own) and the lock.
@@ -22,36 +24,59 @@ const optionNumber = (value) => {
 /**
  * @param {object} quotation the quotation as a plain object (`doc.toObject()`)
  * @param {unknown} optionIndex which hotel option the client accepted (required when the quotation offers options)
+ * @param {unknown} priceTableIndex which pricing option the client accepted (required when a hotel quotation has several filled in)
  * @returns {{ ok: true, quote: object, optionName: string, totalAmount: number } | { ok: false, message: string }}
- *   `quote` is the copy to keep. When an option was chosen, its hotels replace the quotation's hotels, its price becomes the
- *   price, and the other options are left out: the confirmation shows what was bought, not what was offered.
+ *   `quote` is the copy to keep. A chosen hotel option's hotels replace the quotation's hotels and a chosen pricing option is the
+ *   only one kept; the others are left out: the confirmation shows what was bought, not what was offered. The amount is that of
+ *   the pricing option when there is one, else of the hotel option, else the price of the quotation.
  */
-export const confirmationFromQuotation = (quotation, optionIndex) => {
+export const confirmationFromQuotation = (quotation, optionIndex, priceTableIndex) => {
   const options = Array.isArray(quotation.options) ? quotation.options : [];
   const quote = Object.fromEntries(Object.entries(quotation).filter(([key]) => !DROPPED.includes(key)));
+  let optionName = '';
+  let totalAmount = round2(quotation.pricing?.grandTotal);
 
-  if (options.length === 0) {
-    return { ok: true, quote, optionName: '', totalAmount: round2(quotation.pricing?.grandTotal) };
+  if (options.length > 0) {
+    const index = optionNumber(optionIndex);
+    if (index === null) return { ok: false, message: `This quotation offers ${options.length} hotel options. Please choose the option the client accepted.` };
+    if (index < 0 || index >= options.length) return { ok: false, message: `Please choose one of the ${options.length} hotel options.` };
+
+    const option = options[index];
+    // The total is stored as the browser sent it; a client that sent none still gets the price per person times the guests.
+    const total = Number(option.totalPrice) > 0 ? round2(option.totalPrice) : round2((Number(option.pricePerPerson) || 0) * guestCount(quotation.paxDetails));
+    quote.options = [];
+    quote.packageDetails = { ...(quotation.packageDetails || {}), hotels: option.hotels || [] };
+    quote.pricing = {
+      ...(quotation.pricing || {}),
+      items: [],
+      packageCostPerPerson: 0,
+      airfareCostPerPerson: 0,
+      otherCostPerPerson: 0,
+      totalCostPerPerson: round2(option.pricePerPerson),
+      totalCostNote: `${rs(option.pricePerPerson)} ${option.priceNote || 'Per person'}`,
+      grandTotal: total
+    };
+    optionName = option.name || `Option ${index + 1}`;
+    totalAmount = total;
   }
 
-  const index = optionNumber(optionIndex);
-  if (index === null) return { ok: false, message: `This quotation offers ${options.length} hotel options. Please choose the option the client accepted.` };
-  if (index < 0 || index >= options.length) return { ok: false, message: `Please choose one of the ${options.length} hotel options.` };
+  // A hotel quotation priced with the pricing tables: the option the client accepted is the one kept, and its Grand Total is the amount.
+  const tables = quotation.quotationType === 'Only Hotel' && Array.isArray(quotation.priceTables) ? quotation.priceTables : [];
+  const filledIn = tables.map((table, i) => i).filter((i) => tableHasData(tables[i]));
+  if (filledIn.length > 0) {
+    let chosen = filledIn[0];
+    if (filledIn.length > 1) {
+      const index = optionNumber(priceTableIndex);
+      if (index === null) return { ok: false, message: `This quotation has ${filledIn.length} pricing options. Please choose the one the client accepted.` };
+      if (!filledIn.includes(index)) return { ok: false, message: `Please choose one of the ${filledIn.length} pricing options.` };
+      chosen = index;
+    }
+    const table = tables[chosen];
+    totalAmount = tableTotal(table);
+    quote.priceTables = [table];
+    quote.pricing = { ...(quote.pricing || quotation.pricing || {}), items: [], totalCostNote: rs(totalAmount), grandTotal: totalAmount };
+    optionName = [optionName, table.name].filter(Boolean).join(' · ');
+  }
 
-  const option = options[index];
-  // The total is stored as the browser sent it; a client that sent none still gets the price per person times the guests.
-  const total = Number(option.totalPrice) > 0 ? round2(option.totalPrice) : round2((Number(option.pricePerPerson) || 0) * guestCount(quotation.paxDetails));
-  quote.options = [];
-  quote.packageDetails = { ...(quotation.packageDetails || {}), hotels: option.hotels || [] };
-  quote.pricing = {
-    ...(quotation.pricing || {}),
-    items: [],
-    packageCostPerPerson: 0,
-    airfareCostPerPerson: 0,
-    otherCostPerPerson: 0,
-    totalCostPerPerson: round2(option.pricePerPerson),
-    totalCostNote: `${rs(option.pricePerPerson)} ${option.priceNote || 'Per person'}`,
-    grandTotal: total
-  };
-  return { ok: true, quote, optionName: option.name || `Option ${index + 1}`, totalAmount: total };
+  return { ok: true, quote, optionName, totalAmount };
 };

@@ -32,6 +32,7 @@ These apply to a module until someone saves something for it on the Rights scree
 | `quotations` | everything | read | read | read |
 | `hotels` | everything | create, read, update, edit others | create, read, update, edit others | read |
 | `itineraries` | everything | create, read, update, download, edit others | create, read, update, download, edit others | read |
+| `visas` | everything | create, read, update, edit others | create, read, update, edit others | read |
 | `confirmations` | everything | create, read, update, download, edit others | create, read, update, download, edit others | read |
 | `users` | everything | read | read | read |
 | `rights` | everything | read | read | read |

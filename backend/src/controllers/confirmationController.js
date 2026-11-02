@@ -112,7 +112,7 @@ export const createConfirmation = async (req, res) => {
       return fail(res, `This quotation is ${quotation.status.toLowerCase()}. Change its status on the quotation before confirming it.`);
     }
     // Problems with the chosen option are reported before anything is changed.
-    const early = confirmationFromQuotation(quotation.toObject(), req.body.optionIndex);
+    const early = confirmationFromQuotation(quotation.toObject(), req.body.optionIndex, req.body.priceTableIndex);
     if (!early.ok) return fail(res, early.message);
     const booking = normalizeBookingInput({ travellers: req.body.travellers, notes: req.body.notes, customFields: req.body.customFields });
     if (!booking.ok) return fail(res, booking.message);
@@ -130,7 +130,7 @@ export const createConfirmation = async (req, res) => {
       QuotationModel.updateOne({ _id: claimed._id }, { $set: { status: claimed.status, isLocked: claimed.isLocked, confirmationId: '', confirmationNo: '' } });
 
     try {
-      const snapshot = confirmationFromQuotation(claimed.toObject(), req.body.optionIndex);
+      const snapshot = confirmationFromQuotation(claimed.toObject(), req.body.optionIndex, req.body.priceTableIndex);
       if (!snapshot.ok) {
         await undoClaim();
         return fail(res, snapshot.message);

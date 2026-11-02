@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import UserModel from '../models/User.js';
 import RightModel from '../models/Right.js';
-import { isAdminRole, isValidEmail, pick, MIN_PASSWORD_LENGTH } from '../utils/security.js';
+import { isAdminRole, isValidEmail, pick, passwordProblem } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
 
 const ASSIGNABLE_ROLES = ['Admin', 'Sales', 'Ops', 'Viewer'];
@@ -72,9 +72,8 @@ export const createUser = async (req, res) => {
     if (!isValidEmail(email)) {
       return fail(res, 'Please provide a valid email address.');
     }
-    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
-      return fail(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-    }
+    const weakPassword = passwordProblem(password, { email });
+    if (weakPassword) return fail(res, weakPassword);
     if (typeof firstName !== 'string' || typeof lastName !== 'string') {
       return fail(res, 'First Name and Last Name must be text.');
     }
@@ -172,9 +171,8 @@ export const updateUser = async (req, res) => {
 
     if (!updateData.password) delete updateData.password; // blank = keep the current password
     if (updateData.password !== undefined) {
-      if (typeof updateData.password !== 'string' || updateData.password.length < MIN_PASSWORD_LENGTH) {
-        return fail(res, `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`);
-      }
+      const weakPassword = passwordProblem(updateData.password, { email: updateData.email ?? existing.email });
+      if (weakPassword) return fail(res, weakPassword);
       updateData.password = await bcrypt.hash(updateData.password, 10);
       updateData.passwordChangedAt = new Date(Math.floor(Date.now() / 1000) * 1000); // sign the user out everywhere
     }
@@ -236,5 +234,33 @@ export const deleteUser = async (req, res) => {
     });
   } catch (error) {
     res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to delete user') });
+  }
+};
+
+/**
+ * An Admin (or anyone with the update right on Users) sets a new password for someone else, for example when a person has forgotten
+ * theirs. The person is signed out on every device and must sign in with the new password. Admin accounts can only be reset by an
+ * Admin, and nobody resets their own here (that is "My Profile", which asks for the current password).
+ */
+export const resetUserPassword = async (req, res) => {
+  try {
+    const existing = await UserModel.findOne({ _id: req.params.id, deleted: false });
+    if (!existing) return fail(res, 'User not found.');
+    if (String(existing._id) === String(req.user._id)) return fail(res, 'To change your own password, use My Profile.');
+    const denied = checkTargetAccess(req, existing);
+    if (denied) return fail(res, denied);
+
+    const newPassword = req.body?.newPassword;
+    const weak = passwordProblem(newPassword, { email: existing.email });
+    if (weak) return fail(res, weak);
+    if (await bcrypt.compare(newPassword, existing.password)) return fail(res, 'The new password must be different from the current one.');
+
+    existing.password = newPassword; // hashed by the model's pre-save hook
+    existing.passwordChangedAt = new Date(Math.floor(Date.now() / 1000) * 1000); // ends every session issued before now
+    await existing.save();
+    const name = `${existing.firstName} ${existing.lastName}`.trim() || existing.email;
+    res.json({ success: true, message: `Password changed for ${name}. They were signed out on every device and must sign in with the new password.` });
+  } catch (error) {
+    fail(res, friendlyMessage(error, 'Failed to change the password'));
   }
 };
