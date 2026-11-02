@@ -10,6 +10,10 @@ import ConfirmDialog from './ConfirmDialog';
 const PAGES = [
   ['/guests', 'Sales', 'Guest Inquiries & Leads'],
   ['/quotations', 'Sales', 'Quotations & Itineraries'],
+  ['/confirmations', 'Sales', 'Booking Confirmations'],
+  ['/hotels', 'Sales', 'Hotel List'],
+  ['/visas', 'Sales', 'Visa List'],
+  ['/itineraries', 'Sales', 'Itinerary Library'],
   ['/suppliers', 'Operations', 'Supplier Directory'],
   ['/scanner', 'Operations', 'Mobile Scanner & Card OCR'],
   ['/users', 'Administration', 'User & Staff Management'],

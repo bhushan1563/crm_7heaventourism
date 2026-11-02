@@ -1,4 +1,5 @@
 import { formatDate } from './dateHelper';
+import { toDisplayHtml } from './richText'; // the flight note can be formatted: this escapes plain text and cleans formatted text
 
 // html2canvas and jspdf are large, so they are loaded only when a PDF is generated.
 
@@ -357,7 +358,7 @@ export const printFlightVoucher = (quotation) => {
         ✈️ Flight Details As Per Issued Flight Ticket
       </div>
       <div style="font-size: 13px; color: #334155; line-height: 1.5; max-width: 540px; margin: 0 auto;">
-        ${esc(quotation.flightTicketNote || 'Official airline PNR and confirmed e-tickets will be shared upon booking confirmation and flight ticket issuance.')}
+        ${toDisplayHtml(quotation.flightTicketNote || 'Official airline PNR and confirmed e-tickets will be shared upon booking confirmation and flight ticket issuance.')}
       </div>
       ${quotation.flightTicketUrl ? `
         <div style="margin-top: 14px; font-size: 12px; color: #0284c7; font-weight: 600;">

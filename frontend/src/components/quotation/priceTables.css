@@ -1,0 +1,26 @@
+/* The PRICING tables of a hotel quotation: one grid per option, laid out like the company's sheet. */
+.price-tables { display: flex; flex-direction: column; gap: 16px; }
+.pt-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pt-title { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.06em; }
+.pt-hint { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.pt-card { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface); }
+.pt-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+.pt-name { max-width: 320px; font-weight: 800; }
+.pt-card-tools { display: inline-flex; gap: 8px; }
+.pt-scroll { overflow-x: auto; }
+.pt-grid { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.85rem; }
+.pt-grid th, .pt-grid td { border: 1px solid var(--border-color); padding: 3px 4px; text-align: left; }
+.pt-grid thead th { background: var(--surface-2); font-weight: 800; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); text-align: center; white-space: nowrap; }
+.pt-grid tbody th { background: var(--surface-2); width: 130px; }
+.pt-grid .form-input { height: 34px; padding: 4px 8px; font-size: 0.85rem; }
+.pt-num { text-align: right; min-width: 88px; }
+.pt-pax { min-width: 64px; }
+.pt-calc { text-align: right; font-weight: 700; color: var(--text-primary); background: var(--surface-2); white-space: nowrap; padding-right: 10px; }
+.pt-final { color: var(--primary-text); }
+.pt-remove { width: 40px; text-align: center; border: 0 !important; background: transparent; }
+.pt-remove .btn-icon:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.pt-grid tfoot th, .pt-grid tfoot td { background: var(--primary-tint); font-weight: 800; }
+.pt-grand-label { text-align: right !important; }
+.pt-grand { text-align: right; font-size: 1rem; color: var(--text-primary); white-space: nowrap; padding-right: 10px; }
+.pt-grid tfoot td:last-child { border: 0; background: transparent; }
+.pt-add-row { margin-top: 10px; }

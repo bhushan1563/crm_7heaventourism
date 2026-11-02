@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   getRights,
+  getEffectiveRights,
   getAllRightsMatrix,
   updateRight,
   bulkUpdateUserRights
@@ -17,6 +18,7 @@ router.use(protect);
 // user, a Viewer included, could give themselves full access.
 router.get('/', checkRights('rights', 'canUpdate'), getRights);
 router.get('/matrix', checkRights('rights', 'canUpdate'), getAllRightsMatrix);
+router.get('/effective', checkRights('rights', 'canUpdate'), getEffectiveRights);
 router.post('/', checkRights('rights', 'canUpdate'), updateRight);
 router.post('/bulk', checkRights('rights', 'canUpdate'), bulkUpdateUserRights);
 

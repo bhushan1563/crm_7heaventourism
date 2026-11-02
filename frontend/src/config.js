@@ -66,6 +66,8 @@ export const RIGHTS_MODULES = [
     { value: 'quotations', label: 'Quotation Builder & Documents' },
     { value: 'hotels', label: 'Hotel List' },
     { value: 'itineraries', label: 'Itinerary Library' },
+    { value: 'visas', label: 'Visa List' },
+    { value: 'confirmations', label: 'Booking Confirmations' },
     { value: 'reports', label: 'Reports & Dashboard' },
     { value: 'users', label: 'User Management' },
     { value: 'rights', label: 'Rights & Security' },

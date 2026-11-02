@@ -21,6 +21,12 @@ export const userService = {
     return res.data;
   },
 
+  /** An Admin sets a new password for someone; they are signed out everywhere. */
+  resetPassword: async (id, newPassword) => {
+    const res = await api.post(`/users/${id}/reset-password`, { newPassword });
+    return res.data;
+  },
+
   toggleActive: async (id) => {
     const res = await api.patch(`/users/${id}/toggle-active`);
     return res.data;

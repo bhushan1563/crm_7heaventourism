@@ -58,10 +58,32 @@ The client's text was re-read twice; where it is ambiguous the interpretation is
 - [x] 4.1 "Land Service" quotation type (vehicle only): vehicles with type, seats, AC, quantity and rate (the price is the vehicle table), trip details, vehicle inclusions (formattable), itinerary (including copy from the library), own tabs and print layout; the amount shown in lists follows the vehicle total
 ### Step 5: Visa (R3)
 - [x] 5.1 "Visa" quotation type: the visa (country, type, entry, how issued, validity, stay, processing time, applicants), a documents checklist (starts empty because it depends on the country; one click adds a standard checklist to edit), fees charged per applicant or once for the whole group (the price is the fee table; the amount shown in lists follows its total), visa inclusions, price note, all formattable; own tabs (no itinerary, hotels or flights) and print layout
-### Step 6: Confirmation (R1), when the client's fields arrive
+### Step 6: Confirmation (R1)
+The client's own list of extra fields has not arrived, so this is a first version built to take them later. Decisions:
+- A **Confirmation is its own record**: a frozen copy of the quotation as it was sold (itinerary, hotels, prices, terms) plus the booking information added when converting. If the quotation offered hotel options, the option the client accepted is chosen at conversion and becomes the hotels and price of the confirmation.
+- **Booking information**: travellers (name, age, passport), payment (total, received, balance due date, note; the balance is always calculated), notes (formattable), and an **Additional details** area (label + value pairs) for whatever the client adds to their list; fields can be promoted to fixed ones once the list is known.
+- **Locking**: converting locks the quotation for everyone (including Admin) and sets its status and the guest's status to Confirmed. Cancelling the confirmation (with a reason) unlocks the quotation and restores both statuses. To change the trip itself: cancel, edit the quotation, confirm again (a new confirmation number).
+- Confirmations are cancelled, never deleted; one live confirmation per quotation (enforced by the database, so two people clicking at once cannot create two).
+- [x] 6.1 Model, rights module `confirmations`, API: convert (atomic, with the chosen option), list (search, status, pages), read, update booking information (concurrency check), cancel
+- [x] 6.2 Quotation lock (update, delete, duplicate reset) and guest status follow-up, including "fully paid" moving the guest on; a lock left behind by a request that died half-way is released by itself
+- [x] 6.3 Screens: Confirmations list and editor, "Confirm booking" on the quotation list, locked banner on the quotation
+- [x] 6.4 Confirmation document: booking page followed by the quotation pages, in preview, PDF and print
 ### Step 7: Rights pass (R8), misc (R10)
+- [x] 7.1 Formatting everywhere (R9, completed): the price line and pricing notes, room allocation, flight ticket note, end-of-tour banner, hotel option price notes, vehicle notes, land service and visa price notes can all be formatted (size, bold, colour, highlight) in the editor, are cleaned on the server and print with their formatting. A price line that was written or formatted by hand is no longer overwritten when the price changes. Names, dates, numbers and the quotation title stay plain on purpose (they are used in lists, search and file names)
+- [x] 7.2 Every route audited by a test that reads the real routers: each is signed-in and guarded by the right module and the right action; confirming a booking also needs read access to quotations
+- [x] 7.3 The Download right is honoured everywhere a PDF or print can be made (preview windows, builder Print buttons, booking preview), not only on the list's download button
+- [x] 7.3b The Rights screen shows what people really have (their own rights, else their role's, else the built-in default), not only the rows someone had saved. Before, it drew Quotations, Hotels, Itineraries and Bookings as "off" for people with nothing saved for them, and saving the screen would have taken that access away
+- [x] 7.4 `docs/RIGHTS.md`: what each right means, the built-in defaults per role (generated from the code, checked by a test), the lock rules and the open points
+- [ ] 7.5 R10 (miscellaneous requests): waiting for the client's list; per quotation type visibility (R8 extension) waiting for the client's answer
 
-(Steps 4-7 are expanded into their own checklists when they start.)
+Open for Step 6 once the client sends their list: promote the fields they name from "Additional details" to fixed fields (and decide whether Viewers should see passport numbers: by default every role can read, as for the other modules; an Admin can change that on the Rights screen).
+
+### Step 8: From the client's sheet and the team (added 2026-11-03)
+- [x] 8.1 Hotel quotation PRICING table (R6, the client's sheet): per option (Option 1, Option 2 ... up to 6, each nameable, copyable) rows Adult / Extra bed / CWB / CNB (more rows can be added) with Package, Airfare, Visa and TCS per person, Total, PAX and Final Price (Total x PAX), and a Grand Total. Entered on the Pricing tab, printed as the sheet (an option with nothing entered is not printed), shown in the quotation list as the lowest Grand Total, and confirming a booking asks which option the client accepted. Hotel quotations that already have the older per-person price list keep it, with a button to switch
+- [x] 8.2 Admin can reset anyone's password (Reset password button in User Management: strong password generator, shown once, copy button; the person is signed out everywhere). One password rule for creating, editing and resetting (8 to 72 characters, no outer spaces, not the email). Checked for the team's addresses typed with capitals and stray spaces, deactivation, and what each role can do
+- [x] 8.3 Visa list (sidebar "Visas", like Hotels): saved visas (country, type, entry, how issued, validity, stay, processing time, documents checklist, usual fees, inclusions, price note, internal notes) that can be archived, never duplicated, and used in two ways: "Create quotation" on a visa, or "Choose from the visa list" inside a visa quotation (asks before replacing anything typed). Own rights module (Visa List): Sales and Ops can work on it out of the box, never delete
+
+(Step 7 and 8 are complete; what remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

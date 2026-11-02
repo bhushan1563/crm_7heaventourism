@@ -11,6 +11,8 @@ import {
   FileText,
   Hotel,
   Route,
+  CheckCircle2,
+  Stamp,
   X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -37,7 +39,9 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
       items: [
         { to: '/guests', label: 'Guest List', icon: Users },
         { to: '/quotations', label: 'Quotations', icon: FileText },
+        { to: '/confirmations', label: 'Confirmations', icon: CheckCircle2 },
         { to: '/hotels', label: 'Hotels', icon: Hotel },
+        { to: '/visas', label: 'Visas', icon: Stamp },
         { to: '/itineraries', label: 'Itineraries', icon: Route }
       ]
     },

@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import UserModel from '../models/User.js';
+import { resolveRights } from '../middleware/auth.js';
 import RightModel from '../models/Right.js';
 import { queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
@@ -53,6 +55,35 @@ export const getRights = async (req, res) => {
     });
   } catch (error) {
     res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to fetch rights') });
+  }
+};
+
+/**
+ * What a person (or a whole role) can really do right now: their own rights, else their role's, else the built-in default. This is
+ * the rule the API applies on every request, so the Rights screen can show it (a screen that listed only the stored rows would
+ * draw "off" for everything nobody has saved yet, and saving would then take that access away).
+ */
+export const getEffectiveRights = async (req, res) => {
+  try {
+    const userId = queryString(req.query.userId);
+    const userRole = queryString(req.query.userRole);
+    let subject;
+    let rows;
+    if (userId) {
+      if (!mongoose.isValidObjectId(userId)) return res.status(200).json({ success: false, message: 'Person not found.' });
+      const user = await UserModel.findOne({ _id: userId, deleted: { $ne: true } }).select('role');
+      if (!user) return res.status(200).json({ success: false, message: 'Person not found.' });
+      subject = { _id: String(user._id), role: user.role };
+      rows = await RightModel.find({ $or: [{ userId: String(user._id) }, { userRole: user.role, userId: null }] }).lean();
+    } else if (EDITABLE_ROLES.includes(userRole)) {
+      subject = { _id: '', role: userRole };
+      rows = await RightModel.find({ userRole, userId: null }).lean();
+    } else {
+      return res.status(200).json({ success: false, message: 'Please choose a person, or a role (Sales, Ops or Viewer).' });
+    }
+    res.json({ success: true, data: resolveRights(subject, rows) });
+  } catch (error) {
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to load the rights') });
   }
 };
 

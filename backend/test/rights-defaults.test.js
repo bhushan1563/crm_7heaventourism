@@ -11,7 +11,7 @@ const stored = (over) => ({ userId: null, userRole: null, module: 'hotels', ...O
 
 test('the module list has no duplicates and includes the new modules', () => {
   assert.equal(new Set(RIGHT_MODULES).size, RIGHT_MODULES.length);
-  for (const m of ['guest_list', 'supplier_list', 'quotations', 'hotels', 'itineraries', 'users', 'rights', 'scanner', 'reports']) {
+  for (const m of ['guest_list', 'supplier_list', 'quotations', 'hotels', 'itineraries', 'visas', 'confirmations', 'users', 'rights', 'scanner', 'reports']) {
     assert.ok(RIGHT_MODULES.includes(m), m);
   }
 });
@@ -30,6 +30,14 @@ test('Sales and Ops can work on the hotel list and itineraries out of the box, b
   }
   assert.equal(defaultRightsFor('Sales', 'itineraries').canDownload, true, 'itinerary export');
   assert.equal(defaultRightsFor('Sales', 'hotels').canDownload, false, 'hotel list export stays restricted');
+});
+
+test('Sales and Ops can confirm bookings, edit them and export them out of the box, but never delete', () => {
+  for (const role of ['Sales', 'Ops']) {
+    const r = defaultRightsFor(role, 'confirmations');
+    assert.equal(r.canRead && r.canCreate && r.canUpdate && r.canEditOthers && r.canDownload, true, role);
+    assert.equal(r.canDelete, false, `${role} delete`);
+  }
 });
 
 test('Viewer and every other module keep the old behaviour: read only', () => {

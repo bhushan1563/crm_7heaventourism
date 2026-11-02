@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, CheckCircle2, Copy, Hotel, Plus, Star, Trash2, Undo
 import { HOTEL_STAR_RATINGS, MEAL_PLANS } from '../../config';
 import { OPTION_LIMITS, addOption, duplicateOption, guestCount, moveOption, removeOption, setPrice, setRecommended } from '../../utils/quotationOptions';
 import { blankStay } from '../../utils/hotelStay';
+import FormattedLine from './FormattedLine';
 import './optionsEditor.css';
 
 const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -156,8 +157,8 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
                 <div className="option-total" aria-live="polite">{option.pricePerPerson > 0 ? money(option.totalPrice) : '—'}</div>
               </div>
               <div className="option-note">
-                <label className="form-label" htmlFor={`opt-note-${i}`}>Price note</label>
-                <input id={`opt-note-${i}`} type="text" className="form-input" value={option.priceNote || ''} maxLength={200} placeholder="e.g. Per person on twin sharing, incl. GST" onChange={(e) => patchOption(i, { priceNote: e.target.value })} />
+                <span className="form-label">Price note</span>
+                <FormattedLine value={option.priceNote || ''} maxLength={200} placeholder="e.g. Per person on twin sharing, incl. GST" ariaLabel={`Price note of option ${i + 1}`} onChange={(value) => patchOption(i, { priceNote: value })} />
               </div>
             </div>
           </section>

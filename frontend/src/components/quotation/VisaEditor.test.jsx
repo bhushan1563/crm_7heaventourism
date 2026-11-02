@@ -7,6 +7,9 @@ import { STANDARD_DOCUMENTS, blankFee } from '../../utils/visa';
 
 afterEach(cleanup);
 
+// The real formatting editor has its own tests; here it is a simple stand-in so these tests stay about the screen's own logic.
+vi.mock('../LazyRichTextEditor', () => ({ default: ({ value, onChange, ariaLabel }) => <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} /> }));
+
 // Holds the quotation the way the builder does, and reports every state it reaches.
 const Harness = ({ initial, section, onState }) => {
   const [quotation, setQuotation] = useState(initial);
@@ -113,6 +116,7 @@ describe('VisaEditor: fees & services', () => {
   it('keeps the price note, and the visa inclusions can be added and removed', async () => {
     const seen = vi.fn();
     render(<Harness initial={start()} section="fees" onState={seen} />);
+    await userEvent.click(screen.getByRole('button', { name: /^Price note:/ })); // the price note is a formattable line: press it to edit
     await userEvent.type(screen.getByLabelText('Price note'), 'GST extra');
     expect(seen.mock.lastCall[0].visa.priceNote).toBe('GST extra');
     expect(screen.getByText(/Nothing listed\. Add what the price includes/)).toBeInTheDocument();

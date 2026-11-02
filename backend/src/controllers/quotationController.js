@@ -9,7 +9,10 @@ import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
+import { normalizeQuotationText } from '../utils/quotationText.js';
+import { normalizeQuotationPriceTables } from '../utils/quotationPriceTables.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
+import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
 
 /**
  * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days, the hotel stays and the lists
@@ -35,6 +38,10 @@ const prepareExtras = async (body) => {
   if (!vehicles.ok) return vehicles;
   const visa = normalizeQuotationVisa(body);
   if (!visa.ok) return visa;
+  const texts = normalizeQuotationText(body);
+  if (!texts.ok) return texts;
+  const priceTables = body.priceTables === undefined ? null : normalizeQuotationPriceTables(body.priceTables);
+  if (priceTables && !priceTables.ok) return priceTables;
 
   const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
   const loaded = await loadPhotoSizes(tokens);
@@ -49,6 +56,7 @@ const prepareExtras = async (body) => {
   if (vehicles.vehicles && body.quotationType === 'Land Service' && body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing)) {
     overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
   }
+  if (priceTables) overrides.priceTables = priceTables.value;
   if (visa.visa) overrides.visa = visa.visa;
   if (visa.visaFees) overrides.visaFees = visa.visaFees;
   // The price of a visa quotation IS its fees (per applicant or for the group): keep the amount that lists and statistics read
@@ -58,6 +66,12 @@ const prepareExtras = async (body) => {
   }
   if (options) overrides.options = options.value.map((o) => ({ ...o, hotels: o.hotels.map((s) => ({ ...s, photos: sized(s.photos) })) }));
   if (lists.inclusions) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), inclusions: lists.inclusions };
+  // The texts staff can format (price line and notes, room allocation, flight ticket note, end-of-tour banner). The price line of a
+  // land service or visa is worked out from its vehicles or fees, so that one is never replaced.
+  if (texts.pricing) overrides.pricing = { ...(overrides.pricing || body.pricing), ...(overrides.pricing ? { notes: texts.pricing.notes ?? overrides.pricing.notes } : texts.pricing) };
+  if (texts.roomInfo !== undefined) overrides.packageDetails = { ...(overrides.packageDetails || body.packageDetails), roomInfo: texts.roomInfo };
+  if (texts.flightTicketNote !== undefined) overrides.flightTicketNote = texts.flightTicketNote;
+  if (texts.endOfTourNote !== undefined) overrides.endOfTourNote = texts.endOfTourNote;
   Object.assign(overrides, lists.lists); // the cleaned top-level lists (exclusions, policies, notes)
   return { ok: true, overrides };
 };
@@ -72,7 +86,13 @@ export const findQuotationDocument = async (id) => {
 };
 
 // Fields the server owns: never accepted from the request body when creating or updating a quotation.
-const PROTECTED_QUOTATION_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'deleted', 'createdBy', 'createdByName'];
+const PROTECTED_QUOTATION_FIELDS = ['_id', '__v', 'createdAt', 'updatedAt', 'deleted', 'createdBy', 'createdByName', 'confirmationId', 'confirmationNo'];
+
+/** Why a confirmed quotation cannot be changed, or null. Applies to everyone, Admin included: cancel the confirmation first. */
+const lockedMessage = (quotation, action) =>
+  quotation?.confirmationId
+    ? `This quotation is confirmed as ${quotation.confirmationNo || 'a booking'} and is locked, so it cannot be ${action}. Open the confirmation to add booking details, or cancel the confirmation to change the quotation.`
+    : null;
 
 const buildQuotationFilter = (query = {}) => {
   const filter = {};
@@ -118,7 +138,11 @@ const getNextQuotationNo = async () => {
 export const getQuotations = async (req, res) => {
   try {
     const { status, destination, sales, ops, guestId, search } = req.query;
-    const quotations = await QuotationModel.find(buildQuotationFilter({ status, destination, sales, ops, guestId, search })).sort({ createdAt: -1 });
+    const filter = buildQuotationFilter({ status, destination, sales, ops, guestId, search });
+    let quotations = await QuotationModel.find(filter).sort({ createdAt: -1 });
+    // A quotation left locked by a confirmation that never finished (the server restarted half-way) is released before it is listed.
+    const stale = quotations.filter((q) => isStaleClaim(q));
+    if (stale.length && (await Promise.all(stale.map(releaseStaleClaim))).some(Boolean)) quotations = await QuotationModel.find(filter).sort({ createdAt: -1 });
     res.json({
       success: true,
       count: quotations.length,
@@ -183,6 +207,8 @@ export const updateQuotation = async (req, res) => {
     if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
 
     const existing = await findQuotationDocument(req.params.id);
+    const locked = lockedMessage(existing, 'changed');
+    if (locked) return res.status(200).json({ success: false, message: locked });
     const changes = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
       ...extras.overrides
@@ -205,6 +231,8 @@ export const updateQuotation = async (req, res) => {
 export const deleteQuotation = async (req, res) => {
   try {
     const existing = await findQuotationDocument(req.params.id);
+    const locked = lockedMessage(existing, 'deleted');
+    if (locked) return res.status(200).json({ success: false, message: locked });
     const deleted = existing ? await QuotationModel.findByIdAndUpdate(existing._id, { deleted: true }) : null;
     if (!deleted) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
@@ -241,6 +269,10 @@ export const duplicateQuotation = async (req, res) => {
       quotationNo: nextNo,
       clientName: `${originalObj.clientName} (Copy)`,
       status: 'Draft',
+      // A copy of a confirmed quotation is a new, open quotation: it is not part of that booking.
+      isLocked: false,
+      confirmationId: '',
+      confirmationNo: '',
       createdBy,
       createdByName,
       sales: createdByName,

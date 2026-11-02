@@ -24,6 +24,8 @@ import quotationRoutes from './routes/quotationRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
 import itineraryRoutes from './routes/itineraryRoutes.js';
 import hotelRoutes from './routes/hotelRoutes.js';
+import visaRoutes from './routes/visaRoutes.js';
+import confirmationRoutes from './routes/confirmationRoutes.js';
 import { serveMedia } from './controllers/mediaController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -135,6 +137,8 @@ app.use('/api/scanner', scannerRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/itineraries', itineraryRoutes);
 app.use('/api/hotels', hotelRoutes);
+app.use('/api/visas', visaRoutes);
+app.use('/api/confirmations', confirmationRoutes);
 app.use('/api', apiNotFound);
 
 // Serve the built frontend when it exists (monorepo single-server deployment).

@@ -23,7 +23,9 @@ const fitZoom = () => {
   return available < DOC_WIDTH_PX ? Math.max(0.3, Math.floor((available / DOC_WIDTH_PX) * 10) / 10) : 1;
 };
 
-export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
+// `before` adds pages ahead of the quotation and `documentLabel` names the document (a booking confirmation uses both).
+// `canDownload` is the person's Download right: without it the document can be looked at but not printed or saved as a PDF.
+export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true }) => {
   const { showToast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -36,14 +38,14 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
       setIsGenerating(true);
       setProgressMsg('Initializing PDF document...');
       const cleanDest = (quotation.destination || '7Heaven').replace(/[^a-zA-Z0-9]/g, '_');
-      const filename = `7Heaven_Quotation_${cleanDest}_${quotation.quotationNo || 'Doc'}.pdf`;
+      const filename = `7Heaven_${documentLabel}_${cleanDest}_${quotation.quotationNo || 'Doc'}.pdf`;
 
       // Use hidden full render container ID to render all 3 pages
       await generateQuotationPDF('quotation-modal-full-render', filename, (pct, msg) => {
         setProgressMsg(msg);
       });
 
-      showToast('Quotation PDF generated and downloaded successfully!', 'success');
+      showToast(`${documentLabel} PDF generated and downloaded successfully!`, 'success');
     } catch (err) {
       console.error('PDF generation error:', err);
       showToast('Failed to generate PDF: ' + err.message, 'error');
@@ -62,7 +64,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
       className="qpm-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label={`Quotation preview ${quotation.quotationNo || ''}`}
+      aria-label={`${documentLabel} preview ${quotation.quotationNo || ''}`}
       style={{
         position: 'fixed',
         inset: 0,
@@ -124,7 +126,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
             </div>
             <div>
               <div style={{ fontSize: '1rem', fontWeight: 700, color: '#f8fafc' }}>
-                Quotation Preview: {quotation.quotationNo}
+                {documentLabel} Preview: {quotation.quotationNo}
               </div>
               <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
                 {quotation.destination} • {quotation.clientName}
@@ -135,7 +137,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
           {/* Center Document Badge */}
           <div className="qpm-badge" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.06)', padding: '6px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
             <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#38bdf8' }}>
-              📄 Full Quotation Document
+              📄 Full {documentLabel} Document
             </span>
           </div>
 
@@ -162,7 +164,14 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
               </button>
             </div>
 
+            {!canDownload && (
+              <span className="qpm-no-download" style={{ fontSize: '0.72rem', color: '#94a3b8' }} title="Ask an Admin for the Download right on the Rights screen">
+                Viewing only: you do not have the Download right
+              </span>
+            )}
+
             {/* Print Button */}
+            {canDownload && (
             <button
               onClick={handlePrint}
               className="btn btn-outline btn-sm"
@@ -171,8 +180,10 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
               <Printer size={14} />
               <span>Print</span>
             </button>
+            )}
 
             {/* Download PDF Button */}
+            {canDownload && (
             <button
               onClick={handleDownloadPDF}
               className="btn btn-gold btn-sm"
@@ -190,6 +201,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
                 </>
               )}
             </button>
+            )}
 
             {/* Close Button */}
             <button
@@ -222,6 +234,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
               quotation={quotation}
               pageNumber={null}
               id="quotation-modal-preview"
+              before={before}
             />
           </div>
         </div>
@@ -233,6 +246,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation }) => {
           quotation={quotation}
           pageNumber={null}
           id="quotation-modal-full-render"
+          before={before}
         />
       </div>
     </div>

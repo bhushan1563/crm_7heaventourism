@@ -1,25 +1,5 @@
 import api from './api';
 
-const mapRightsResponse = (payload) => {
-  if (payload?.success && Array.isArray(payload?.data)) {
-    const permissions = {};
-    payload.data.forEach((r) => {
-      if (r.module) {
-        permissions[r.module] = {
-          canCreate: !!r.canCreate,
-          canRead: r.canRead !== undefined ? !!r.canRead : true,
-          canUpdate: !!r.canUpdate,
-          canDelete: !!r.canDelete,
-          canDownload: !!r.canDownload,
-          canEditOthers: !!r.canEditOthers
-        };
-      }
-    });
-    return { success: true, data: permissions };
-  }
-  return payload;
-};
-
 export const rightsService = {
   getRights: async (params = {}) => {
     const res = await api.get('/rights', { params });
@@ -31,15 +11,10 @@ export const rightsService = {
     return res.data;
   },
 
-  getUserRights: async (userId) => {
-    const res = await api.get('/rights', { params: { userId } });
-    return mapRightsResponse(res.data);
-  },
+  // What the person really has (their own rights, else their role's, else the default): never just the rows someone happened to save.
+  getUserRights: async (userId) => (await api.get('/rights/effective', { params: { userId } })).data,
 
-  getRoleRights: async (userRole) => {
-    const res = await api.get('/rights', { params: { userRole } });
-    return mapRightsResponse(res.data);
-  },
+  getRoleRights: async (userRole) => (await api.get('/rights/effective', { params: { userRole } })).data,
 
   updateRight: async (rightData) => {
     const res = await api.post('/rights', rightData);

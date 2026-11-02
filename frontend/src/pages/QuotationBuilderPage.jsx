@@ -35,7 +35,8 @@ import {
   AlertTriangle,
   ShieldAlert,
   BookOpen,
-  Car
+  Car,
+  Lock
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
@@ -66,12 +67,21 @@ import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } fro
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
+import PriceTablesEditor from '../components/quotation/PriceTablesEditor';
+import VisaPicker from '../components/visa/VisaPicker';
+import ConfirmDialog from '../components/ConfirmDialog';
+import visaService from '../services/visaService';
+import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
+import { priceTablesPayload, priceTablesProblem, startPriceTables, usesPriceTables } from '../utils/priceTables';
+import { nextPriceNote } from '../utils/pricingNote';
+import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
 import './quotationHotels.css';
+import '../components/confirmation/confirmation.css';
 
 // The tabs of the builder for a quotation type. A land service has no hotels, flights or separate price tab (its vehicles carry the
 // rates); a visa has no itinerary, hotels or flights either: the visa with its documents, and the fees, take their place.
@@ -171,6 +181,7 @@ export const QuotationBuilderPage = () => {
   const [searchParams] = useSearchParams();
   const guestIdParam = searchParams.get('guestId');
   const hotelIdParam = searchParams.get('hotelId'); // "Create quotation" on a hotel of the hotel list
+  const visaIdParam = searchParams.get('visaId'); // "Create quotation" on a visa of the visa list
 
   const { user, can } = useAuth();
   const { showToast } = useToast();
@@ -185,6 +196,8 @@ export const QuotationBuilderPage = () => {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [visaPickerOpen, setVisaPickerOpen] = useState(false); // choose a visa from the visa list
+  const [pendingVisa, setPendingVisa] = useState(null); // the visa chosen, waiting for the person to agree to replace what is typed
   const [pickerOpen, setPickerOpen] = useState(false); // the "Insert from the itinerary library" dialog
   const [hotelPicker, setHotelPicker] = useState(null); // the "Choose from the hotel list" dialog: { mode: 'new' } or { index }
 
@@ -298,6 +311,20 @@ export const QuotationBuilderPage = () => {
           }
         }
 
+        // Started from a visa of the visa list: a visa quotation with that visa's details, checklist, fees and inclusions already in.
+        if (!isEditMode && visaIdParam) {
+          const vRes = await visaService.get(visaIdParam);
+          if (vRes.success) {
+            setFormData((prev) => {
+              const started = { ...prev, quotationType: 'Visa', ...startVisa(prev) };
+              return { ...started, ...applyVisaItem(started, vRes.data), destination: visaTitle(vRes.data) };
+            });
+            showToast(`A visa quotation for ${vRes.data.country} was started. Add the client and the number of applicants, then check the fees.`, 'success');
+          } else {
+            showToast(vRes.message || 'That visa could not be opened, so the quotation starts empty.', 'error');
+          }
+        }
+
         // Started from a hotel of the hotel list: a hotel quotation with that hotel already chosen.
         if (!isEditMode && hotelIdParam) {
           const hRes = await hotelService.get(hotelIdParam);
@@ -308,7 +335,8 @@ export const QuotationBuilderPage = () => {
               quotationType: draft.quotationType,
               destination: draft.destination,
               duration: draft.duration,
-              packageDetails: { ...prev.packageDetails, hotels: [draft.stay] }
+              packageDetails: { ...prev.packageDetails, hotels: [draft.stay] },
+              ...startPriceTables(prev) // the pricing table of a hotel quotation
             }));
             showToast(`A hotel quotation for ${hRes.data.name} was started. Add the client and the dates, then the prices.`, 'success');
           } else {
@@ -390,7 +418,7 @@ export const QuotationBuilderPage = () => {
       otherCostPerPerson: othItem ? othItem.costPerPerson : (currentPricing.otherCostPerPerson || 0),
       otherCostNote: othItem ? othItem.note : (currentPricing.otherCostNote || `Per person`),
       totalCostPerPerson: totalPerPerson,
-      totalCostNote: `Rs ${totalPerPerson.toLocaleString('en-IN')} Per person (Incl of GST)`,
+      totalCostNote: nextPriceNote(currentPricing.totalCostNote, currentPricing.totalCostPerPerson, totalPerPerson), // follows the price until someone writes their own
       grandTotal: grandTotal
     };
   };
@@ -796,6 +824,10 @@ export const QuotationBuilderPage = () => {
 
   // Save Quotation
   const handleSave = async (downloadAfter = false) => {
+    if (formData.confirmationId) {
+      showToast(`This quotation is confirmed as ${formData.confirmationNo} and is locked. Cancel the booking first if the quotation has to change.`, 'warning');
+      return;
+    }
     if (!formData.clientName.trim()) {
       showToast('Please enter the client name.', 'warning');
       setActiveTab('overview');
@@ -815,6 +847,12 @@ export const QuotationBuilderPage = () => {
       setActiveTab(visaTrouble.tab);
       return;
     }
+    const tablesProblem = priceTablesProblem(formData);
+    if (tablesProblem) {
+      showToast(tablesProblem, 'warning');
+      setActiveTab('pricing');
+      return;
+    }
     const hotelProblem = isVisa(formData) ? null : isLandService(formData) ? landServiceProblem(formData) : formData.options?.length ? optionsProblem(formData) : hotelQuotationProblem(formData);
     if (hotelProblem) {
       showToast(hotelProblem, 'warning');
@@ -825,9 +863,12 @@ export const QuotationBuilderPage = () => {
     try {
       setSaving(true);
       let res;
-      const payload = isVisa(formData)
+      const base = isVisa(formData)
         ? { ...formData, visa: visaPayload(formData.visa), visaFees: feesPayload(formData.visaFees) }
         : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
+      // The pricing tables belong to hotel quotations only; for any other type they are left out of the request.
+      const { priceTables: _tables, ...withoutTables } = base;
+      const payload = formData.quotationType === 'Only Hotel' && (formData.priceTables || []).length ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables) } : withoutTables;
       if (isEditMode) {
         res = await quotationService.updateQuotation(id, payload);
       } else {
@@ -860,6 +901,12 @@ export const QuotationBuilderPage = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // A visa chosen from the visa list fills the details, checklist, fees and inclusions; the client, the applicants and the notes stay.
+  const applyPickedVisa = (visa) => {
+    setFormData((prev) => ({ ...prev, ...applyVisaItem(prev, visa), destination: prev.destination?.trim() ? prev.destination : visaTitle(visa) }));
+    showToast(`The ${visa.country} visa was added to this quotation. Check the fees and the number of applicants.`, 'success');
   };
 
   const currentPricingItems = formData.pricing?.items || DEFAULT_PRICING_ITEMS;
@@ -915,6 +962,8 @@ export const QuotationBuilderPage = () => {
           <button
             onClick={() => printQuotation('quotation-live-render-view')}
             className="btn btn-outline btn-sm"
+            disabled={!can('quotations', 'canDownload')}
+            title={can('quotations', 'canDownload') ? undefined : 'You do not have the Download right, so printing is not available'}
           >
             <Printer size={14} />
             <span>Print Preview</span>
@@ -922,13 +971,28 @@ export const QuotationBuilderPage = () => {
           <button
             onClick={() => handleSave(false)}
             className="btn btn-primary btn-sm"
-            disabled={saving}
+            disabled={saving || Boolean(formData.confirmationId)}
+            title={formData.confirmationId ? 'Confirmed quotations are locked' : undefined}
           >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : formData.confirmationId ? <Lock size={14} /> : <Save size={14} />}
             <span>{isEditMode ? 'Save Changes' : 'Save Quotation'}</span>
           </button>
         </div>
       </div>
+
+      {formData.confirmationId && (
+        <div className="cf-banner" role="status">
+          <Lock size={16} aria-hidden="true" />
+          <span>
+            This quotation is confirmed as <strong>{formData.confirmationNo}</strong> and is locked, so what was sold cannot change. To change it, cancel the booking first; that unlocks the quotation.
+          </span>
+          {can('confirmations', 'canRead') && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/confirmations/${formData.confirmationId}`)}>
+              Open the booking
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Main Grid: Form Builder on Left, Live PDF Preview on Right */}
       <div className="rs-builder-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(440px, 1.25fr) minmax(380px, 1fr)', gap: '24px' }}>
@@ -1015,7 +1079,9 @@ export const QuotationBuilderPage = () => {
                             // A land service starts with one vehicle line and the standard inclusions (nothing typed is replaced).
                             ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
                             // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
-                            ...(opt.value === 'Visa' ? startVisa(prev) : {})
+                            ...(opt.value === 'Visa' ? startVisa(prev) : {}),
+                            // A hotel quotation is priced with the pricing tables (Option 1, Option 2 ...), unless it already has old-style prices.
+                            ...(opt.value === 'Only Hotel' && !(prev.pricing?.items || []).some((item) => Number(item.costPerPerson) > 0) ? startPriceTables(prev) : {})
                           }));
                           // Go back to the first tab when the one being looked at does not exist for the new type.
                           if (!tabsFor({ quotationType: opt.value }).some((t) => t.id === activeTab)) setActiveTab('overview');
@@ -1362,13 +1428,12 @@ export const QuotationBuilderPage = () => {
                   <Sparkles size={15} />
                   <span>End of Tour / Event Conclusion Banner</span>
                 </div>
-                <input
-                  type="text"
-                  className="form-input"
-                  style={{ fontWeight: 600, color: 'var(--fg-0F172A)', background: 'var(--bg-FFFFFF)' }}
+                <FormattedLine
                   value={formData.endOfTourNote || '***End of the Tour***'}
-                  onChange={(e) => setFormData({ ...formData, endOfTourNote: e.target.value })}
                   placeholder="e.g. ***End of the Tour***"
+                  ariaLabel="End of the tour banner"
+                  maxLength={200}
+                  onChange={(value) => setFormData((prev) => ({ ...prev, endOfTourNote: value }))}
                 />
               </div>
             </div>
@@ -1385,6 +1450,12 @@ export const QuotationBuilderPage = () => {
           {/* The two tabs of a visa quotation: the visa with its documents checklist, and the fees */}
           {(activeTab === 'visa' || activeTab === 'visaFees') && isVisa(formData) && (
             <div className="animate-fade-in">
+              {activeTab === 'visa' && can('visas', 'canRead') && (
+                <div className="cf-banner" role="note" style={{ marginBottom: 16 }}>
+                  <span>Saved the visa in the Visa List? Pick it to fill the details, the documents checklist, the usual fees and the inclusions.</span>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setVisaPickerOpen(true)}>Choose from the visa list</button>
+                </div>
+              )}
               <VisaEditor quotation={formData} section={activeTab === 'visa' ? 'details' : 'fees'} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
             </div>
           )}
@@ -1723,15 +1794,12 @@ export const QuotationBuilderPage = () => {
 
                 <div className="form-group" style={{ marginTop: '14px' }}>
                   <label className="form-label">General Room Allocation Info</label>
-                  <input
-                    type="text"
-                    className="form-input"
+                  <FormattedLine
                     value={formData.packageDetails?.roomInfo || ''}
-                    onChange={(e) => setFormData({
-                      ...formData,
-                      packageDetails: { ...formData.packageDetails, roomInfo: e.target.value }
-                    })}
                     placeholder="e.g. 2 Double Rooms + 1 Extra Mattress"
+                    ariaLabel="General room allocation info"
+                    maxLength={300}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, packageDetails: { ...prev.packageDetails, roomInfo: value } }))}
                   />
                 </div>
               </div>
@@ -1794,8 +1862,9 @@ export const QuotationBuilderPage = () => {
                   <button
                     type="button"
                     onClick={() => printFlightVoucher(formData)}
+                    disabled={!can('quotations', 'canDownload')}
                     className="btn btn-secondary btn-sm"
-                    title="Print Flight Voucher"
+                    title={can('quotations', 'canDownload') ? 'Print Flight Voucher' : 'You do not have the Download right, so printing is not available'}
                   >
                     <Printer size={14} />
                     <span>Print Voucher</span>
@@ -1867,12 +1936,13 @@ export const QuotationBuilderPage = () => {
                   <label className="form-label" style={{ fontWeight: 700, color: 'var(--fg-0284C7)' }}>
                     Flight Ticket Statement & Notes to Guest
                   </label>
-                  <textarea
-                    className="form-textarea"
-                    rows={3}
+                  <LazyRichTextEditor
                     value={formData.flightTicketNote || ''}
+                    onChange={(value) => setFormData((prev) => ({ ...prev, flightTicketNote: value }))}
+                    maxLength={500}
+                    minHeight={80}
+                    ariaLabel="Flight ticket statement and notes to guest"
                     placeholder="Flight details will be as per confirmed flight ticket."
-                    onChange={(e) => setFormData({ ...formData, flightTicketNote: e.target.value })}
                   />
                   <div className="form-group" style={{ marginTop: '6px' }}>
                     <label className="form-label">Flight Ticket Document / URL (Optional)</label>
@@ -2046,8 +2116,23 @@ export const QuotationBuilderPage = () => {
           )}
 
           {/* TAB 5: DEDICATED SEPARATE PRICING PAGE / TABS */}
-          {activeTab === 'pricing' && (
+          {activeTab === 'pricing' && usesPriceTables(formData) && (
+            <div className="animate-fade-in">
+              <PriceTablesEditor tables={formData.priceTables} onChange={(priceTables) => setFormData((prev) => ({ ...prev, priceTables }))} />
+            </div>
+          )}
+
+          {activeTab === 'pricing' && !usesPriceTables(formData) && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+              {formData.quotationType === 'Only Hotel' && (
+                <div className="cf-banner" role="note">
+                  <span>This hotel quotation uses the older per-person price list. Hotel quotations can now be priced with the pricing table (Option 1, Option 2: Package, Airfare, Visa, TCS, PAX and Final Price), as on the company sheet.</span>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setFormData((prev) => ({ ...prev, ...startPriceTables(prev) }))}>
+                    Use the pricing table
+                  </button>
+                </div>
+              )}
 
               {/* Header & Add-on Button */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
@@ -2379,7 +2464,7 @@ export const QuotationBuilderPage = () => {
                         ₹{(formData.pricing?.totalCostPerPerson || 0).toLocaleString('en-IN')}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-713F12)', marginTop: '2px' }}>
-                        {formData.pricing?.totalCostNote || 'Rs 0 Per person (Incl of GST)'}
+                        {richToPlainText(formData.pricing?.totalCostNote) || 'Rs 0 Per person (Incl of GST)'}
                       </div>
                     </div>
 
@@ -2399,28 +2484,23 @@ export const QuotationBuilderPage = () => {
                   {/* Total Cost Highlight Note & Payment Terms */}
                   <div className="form-group">
                     <label className="form-label">Total Banner Note (Printed in Document)</label>
-                    <input
-                      type="text"
-                      className="form-input"
+                    <FormattedLine
                       value={formData.pricing?.totalCostNote || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: { ...formData.pricing, totalCostNote: e.target.value }
-                      })}
                       placeholder="e.g. Rs 43,000 Per person (Incl of GST)"
+                      ariaLabel="Total banner note"
+                      maxLength={300}
+                      onChange={(value) => setFormData((prev) => ({ ...prev, pricing: { ...prev.pricing, totalCostNote: value } }))}
                     />
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Payment Terms & Additional Pricing Remarks</label>
-                    <textarea
-                      className="form-textarea"
-                      rows={2}
+                    <LazyRichTextEditor
                       value={formData.pricing?.notes || ''}
-                      onChange={(e) => setFormData({
-                        ...formData,
-                        pricing: { ...formData.pricing, notes: e.target.value }
-                      })}
+                      onChange={(value) => setFormData((prev) => ({ ...prev, pricing: { ...prev.pricing, notes: value } }))}
+                      maxLength={1000}
+                      minHeight={70}
+                      ariaLabel="Payment terms and additional pricing remarks"
                       placeholder="e.g. 50% advance upon confirmation, balance 15 days before travel date."
                     />
                   </div>
@@ -2822,6 +2902,29 @@ export const QuotationBuilderPage = () => {
         {/* RIGHT: Live Interactive Document Preview */}
         <QuotationLivePreview quotation={formData} />
       </div >
+
+      <VisaPicker
+        isOpen={visaPickerOpen}
+        onClose={() => setVisaPickerOpen(false)}
+        onPick={(visa) => {
+          setVisaPickerOpen(false);
+          if (hasVisaContent(formData)) setPendingVisa(visa);
+          else applyPickedVisa(visa);
+        }}
+      />
+      <ConfirmDialog
+        isOpen={Boolean(pendingVisa)}
+        onClose={() => setPendingVisa(null)}
+        onConfirm={() => {
+          applyPickedVisa(pendingVisa);
+          setPendingVisa(null);
+        }}
+        isDanger
+        title="Replace what is on this quotation?"
+        message={`Using the ${pendingVisa?.country || ''} visa replaces the visa details, the documents checklist, the fees and the inclusions you have typed here. The client, the number of applicants and the notes stay.`}
+        confirmText="Replace them"
+        cancelText="Keep what I typed"
+      />
 
       <HotelPicker
         isOpen={Boolean(hotelPicker)}

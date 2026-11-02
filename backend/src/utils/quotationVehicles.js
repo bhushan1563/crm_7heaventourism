@@ -1,4 +1,5 @@
 import { line } from './itineraryInput.js';
+import { richLine } from './quotationText.js';
 
 // The vehicles of a land service quotation (vehicle only, with itinerary and pricing): each has a type, seats, AC or not, a
 // quantity and a rate for the whole trip; the price of the quotation is the sum of quantity x rate. Pure logic (no database),
@@ -47,7 +48,7 @@ export const normalizeQuotationVehicles = (body) => {
       if (!AC_TYPES.includes(acType)) return fail(`Please choose AC or Non-AC for vehicle ${n}.`);
       const rawRate = raw.rate === undefined || raw.rate === null || raw.rate === '' ? 0 : typeof raw.rate === 'number' || typeof raw.rate === 'string' ? Number(raw.rate) : Number.NaN;
       if (!Number.isFinite(rawRate) || rawRate < 0 || rawRate > L.maxRate) return fail(`The rate of vehicle ${n} must be an amount from 0 to ${L.maxRate.toLocaleString('en-IN')}.`);
-      const notes = line(raw.notes, `the notes of vehicle ${n}`, L.notes);
+      const notes = richLine(raw.notes, `the notes of vehicle ${n}`, L.notes); // can be formatted
       if (!notes.ok) return notes;
       vehicles.push({ vehicleType: type.value, seats: seats.value, quantity: quantity.value, acType, rate: round2(rawRate), notes: notes.value });
     }
@@ -60,7 +61,7 @@ export const normalizeQuotationVehicles = (body) => {
     const fields = [['route', 'the route', L.route], ['pickupPoint', 'the pick-up point', L.point], ['dropPoint', 'the drop point', L.point], ['kmPolicy', 'the kilometre policy', L.km], ['priceNote', 'the price note', L.priceNote]];
     const landService = {};
     for (const [key, label, max] of fields) {
-      const r = line(body.landService[key], label, max);
+      const r = key === 'priceNote' ? richLine(body.landService[key], label, max) : line(body.landService[key], label, max); // the price note can be formatted
       if (!r.ok) return r;
       landService[key] = r.value;
     }

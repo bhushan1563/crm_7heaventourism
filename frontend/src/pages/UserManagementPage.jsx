@@ -23,6 +23,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import ExportButton from '../components/ExportButton';
 import { getErrorMessage } from '../services/api';
 import Avatar from '../components/Avatar';
+import ResetPasswordDialog from '../components/user/ResetPasswordDialog';
 
 export const UserManagementPage = () => {
   const { user: currentUser, can } = useAuth();
@@ -38,6 +39,7 @@ export const UserManagementPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteUserItem, setDeleteUserItem] = useState(null);
+  const [resetUserItem, setResetUserItem] = useState(null); // the person whose password is being reset
   const [submitting, setSubmitting] = useState(false);
 
   // Form State
@@ -399,6 +401,17 @@ export const UserManagementPage = () => {
                     {/* Actions */}
                     <td data-label="" style={{ textAlign: 'right' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px' }}>
+                        {can('users', 'canUpdate') && u._id !== currentUser?._id && (u.role !== 'Admin' || currentUser?.role === 'Admin' || currentUser?.role === 'SuperAdmin') && (
+                          <button
+                            onClick={() => setResetUserItem(u)}
+                            className="btn-icon btn-outline btn-sm"
+                            title="Reset password"
+                            aria-label={`Reset password for ${u.email}`}
+                          >
+                            <Key size={13} color="#f59e0b" />
+                          </button>
+                        )}
+
                         {can('users', 'canUpdate') && (
                           <button
                             onClick={() => handleOpenEdit(u)}
@@ -546,6 +559,8 @@ export const UserManagementPage = () => {
           </div>
         </form>
       </Modal>
+
+      <ResetPasswordDialog user={resetUserItem} isOpen={Boolean(resetUserItem)} onClose={() => setResetUserItem(null)} />
 
       {/* Edit User Modal */}
       <Modal
