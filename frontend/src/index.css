@@ -736,3 +736,6 @@ input:focus-visible+.slider {
     scroll-behavior: auto !important;
   }
 }
+
+/* Text only for screen readers. Global, because pages load their own style sheets and a page that did not load the one that used to hold this showed the text. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }

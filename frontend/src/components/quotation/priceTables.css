@@ -1,26 +1,87 @@
-/* The PRICING tables of a hotel quotation: one grid per option, laid out like the company's sheet. */
+/* The PRICING tables of a hotel quotation and of a hotel: one grid per option, laid out like the company's sheet.
+   Each option is a size container, so the layout follows the room the table really has (with the menu open or closed, in a narrow
+   column, on a phone) and not the width of the screen:
+     - room for the whole sheet: one row per kind of traveller, every column visible, nothing to scroll sideways;
+     - less room: every row becomes its own small card with labelled fields, and the worked-out Total and Final Price sit with them. */
 .price-tables { display: flex; flex-direction: column; gap: 16px; }
 .pt-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
 .pt-title { margin: 0; font-size: 0.95rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.06em; }
 .pt-hint { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
-.pt-card { padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface); }
-.pt-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-.pt-name { max-width: 320px; font-weight: 800; }
+.pt-card { container-type: inline-size; container-name: pt; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--surface); }
+.pt-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.pt-name { flex: 1 1 200px; max-width: 320px; font-weight: 800; }
 .pt-card-tools { display: inline-flex; gap: 8px; }
-.pt-scroll { overflow-x: auto; }
-.pt-grid { width: 100%; min-width: 760px; border-collapse: collapse; font-size: 0.85rem; }
-.pt-grid th, .pt-grid td { border: 1px solid var(--border-color); padding: 3px 4px; text-align: left; }
-.pt-grid thead th { background: var(--surface-2); font-weight: 800; font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); text-align: center; white-space: nowrap; }
-.pt-grid tbody th { background: var(--surface-2); width: 130px; }
-.pt-grid .form-input { height: 34px; padding: 4px 8px; font-size: 0.85rem; }
-.pt-num { text-align: right; min-width: 88px; }
-.pt-pax { min-width: 64px; }
-.pt-calc { text-align: right; font-weight: 700; color: var(--text-primary); background: var(--surface-2); white-space: nowrap; padding-right: 10px; }
-.pt-final { color: var(--primary-text); }
-.pt-remove { width: 40px; text-align: center; border: 0 !important; background: transparent; }
+.pt-chip { display: none; }
+.pt-chip::before { content: attr(data-label); font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.pt-chip::after { content: attr(data-total); font-size: 1rem; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
+
+/* ---------- The whole sheet ---------- */
+.pt-grid { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 0.85rem; }
+.pt-col-label { width: 15%; }
+.pt-col-amount { width: 12.5%; }
+.pt-col-total { width: 11%; }
+.pt-col-pax { width: 7%; }
+.pt-col-final { width: 12%; }
+.pt-col-remove { width: 5%; }
+.pt-grid th, .pt-grid td { border: 1px solid var(--border-color); padding: 4px; text-align: left; }
+.pt-grid thead th { background: var(--surface-2); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); text-align: center; white-space: nowrap; padding: 8px 4px; }
+.pt-grid tbody th { background: var(--surface-2); }
+/* The shared form rules make every field 44px high on touch-sized screens; inside the sheet the fields are compact. */
+.pt-grid .form-input { height: 36px; min-height: 36px; padding: 4px 8px; font-size: 0.85rem; border-radius: 6px; box-shadow: none; }
+.pt-num { text-align: right; }
+.pt-grid input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.pt-grid input[type='number']::-webkit-outer-spin-button,
+.pt-grid input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* What is worked out for you is shaded and bold, so it is never mistaken for something to type. */
+.pt-grid td.pt-calc { text-align: right; font-weight: 700; color: var(--text-primary); background: var(--surface-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 4px 10px 4px 4px; }
+.pt-calc:empty::after { content: '–'; font-weight: 400; color: var(--text-muted); }
+.pt-grid td.pt-final { color: var(--primary-text); }
+.pt-remove { text-align: center; border: 0 !important; background: transparent; padding: 4px 0 !important; }
+.pt-remove .btn-icon { min-width: 30px; min-height: 30px; width: 30px; height: 30px; padding: 0; }
 .pt-remove .btn-icon:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .pt-grid tfoot th, .pt-grid tfoot td { background: var(--primary-tint); font-weight: 800; }
 .pt-grand-label { text-align: right !important; }
-.pt-grand { text-align: right; font-size: 1rem; color: var(--text-primary); white-space: nowrap; padding-right: 10px; }
+.pt-grid td.pt-grand { text-align: right; font-size: 1rem; color: var(--text-primary); white-space: nowrap; padding-right: 10px !important; }
 .pt-grid tfoot td:last-child { border: 0; background: transparent; }
 .pt-add-row { margin-top: 10px; }
+
+/* ---------- Less room: a card for every row ---------- */
+@container pt (max-width: 759px) {
+  .pt-chip { display: inline-flex; flex-direction: column; margin-right: auto; line-height: 1.25; }
+  .pt-name { flex-basis: 100%; max-width: none; }
+
+  .pt-grid, .pt-grid colgroup, .pt-grid tbody, .pt-grid tfoot, .pt-grid tr, .pt-grid th, .pt-grid td { display: block; }
+  .pt-grid colgroup, .pt-grid thead { display: none; }
+  .pt-grid th, .pt-grid td { border: 0; padding: 0; background: transparent; text-align: left; }
+
+  .pt-grid tbody tr {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--surface-2);
+  }
+  .pt-grid tbody th { grid-column: 1 / -1; padding-right: 44px; }
+  .pt-grid tbody th .form-input { font-weight: 700; }
+  .pt-remove { position: absolute; top: 12px; right: 12px; width: auto; }
+  .pt-remove .btn-icon { min-width: 40px; min-height: 40px; width: 40px; height: 40px; }
+
+  .pt-grid td[data-label] { grid-column: span 3; min-width: 0; }
+  .pt-grid td.pt-calc, .pt-grid td[data-label='PAX'] { grid-column: span 2; }
+  .pt-grid td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 4px; font-size: 0.68rem; font-weight: 800; line-height: 1.2; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+  .pt-grid .form-input { height: 44px; min-height: 44px; }
+  .pt-grid .form-input.pt-pax { text-align: left; }
+
+  .pt-grid td.pt-calc { font-size: 1rem; line-height: 44px; text-align: left; white-space: nowrap; padding: 0; }
+  .pt-calc:empty::after { line-height: 44px; }
+  .pt-calc:empty { display: block; }
+
+  .pt-grid tfoot tr { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; border-radius: 10px; background: var(--primary-tint); }
+  .pt-grid tfoot th, .pt-grid tfoot td { background: transparent; text-align: left !important; padding: 0 !important; }
+  .pt-grid tfoot td:not(.pt-grand) { display: none; }
+  .pt-grid td.pt-grand { font-size: 1.1rem; }
+}
