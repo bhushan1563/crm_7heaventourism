@@ -34,7 +34,7 @@ export const CancelBookingDialog = ({ confirmation, isOpen, onClose, onConfirm, 
     <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} title="Cancel this booking?" subtitle={`${confirmation.confirmationNo} · ${confirmation.clientName} · ${confirmation.destination}`} maxWidth="540px">
       <div className="cf-dialog">
         {received > 0 && (
-          <div className="itin-alert" role="alert" style={{ marginBottom: 12, borderColor: '#fcd34d', background: '#fffbeb', color: '#78350f' }}>
+          <div className="itin-alert cf-alert-warn" role="alert" style={{ marginBottom: 12 }}>
             <AlertTriangle size={16} aria-hidden="true" />
             <span>{money(received)} has been received for this booking. Cancelling does not change or refund payments; please settle that separately.</span>
           </div>

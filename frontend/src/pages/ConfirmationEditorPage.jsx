@@ -201,7 +201,7 @@ export const ConfirmationEditorPage = () => {
         </div>
       )}
       {serverError && (
-        <div className="itin-alert" role="alert" style={{ borderColor: '#fecaca', background: '#fef2f2', color: '#991b1b' }}>
+        <div className="itin-alert cf-alert-error" role="alert">
           <AlertCircle size={16} aria-hidden="true" />
           <span>{serverError}</span>
           {conflict && (

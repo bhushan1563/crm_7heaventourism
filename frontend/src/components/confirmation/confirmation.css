@@ -54,3 +54,21 @@
   .be-detail .be-remove { margin-top: 0; justify-self: end; }
   .be-pay-grid { grid-template-columns: 1fr; }
 }
+
+/* Alerts, shared by the dialogs and the editor. */
+.cf-alert-warn { border-color: #fcd34d; background: #fffbeb; color: #78350f; }
+.cf-alert-error { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+
+/* Dark theme: the same meanings (owing, clear, over, cancelled) as translucent tints that sit well on a dark page. */
+html[data-theme='dark'] .be-balance { border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.12); color: #fde68a; }
+html[data-theme='dark'] .be-balance.is-clear { border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.1); color: #6ee7b7; }
+html[data-theme='dark'] .be-balance.is-over { border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.12); color: #fca5a5; }
+html[data-theme='dark'] .cf-banner { border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.1); color: #6ee7b7; }
+html[data-theme='dark'] .cf-banner.is-cancelled { border-color: rgba(248, 113, 113, 0.4); background: rgba(248, 113, 113, 0.1); color: #fca5a5; }
+html[data-theme='dark'] .cf-badge.is-confirmed { color: #6ee7b7; background: rgba(52, 211, 153, 0.16); }
+html[data-theme='dark'] .cf-badge.is-cancelled { color: #fca5a5; background: rgba(248, 113, 113, 0.16); }
+html[data-theme='dark'] .cf-owing { color: #fcd34d; }
+html[data-theme='dark'] .cf-clear { color: #6ee7b7; }
+html[data-theme='dark'] .cf-alert-warn { border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.1); color: #fde68a; }
+html[data-theme='dark'] .cf-alert-error { border-color: rgba(248, 113, 113, 0.45); background: rgba(248, 113, 113, 0.1); color: #fca5a5; }
+html[data-theme='dark'] .cf-option.is-selected { background: rgba(14, 165, 233, 0.14); }

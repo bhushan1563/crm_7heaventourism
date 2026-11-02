@@ -64,13 +64,15 @@ The client's own list of extra fields has not arrived, so this is a first versio
 - **Booking information**: travellers (name, age, passport), payment (total, received, balance due date, note; the balance is always calculated), notes (formattable), and an **Additional details** area (label + value pairs) for whatever the client adds to their list; fields can be promoted to fixed ones once the list is known.
 - **Locking**: converting locks the quotation for everyone (including Admin) and sets its status and the guest's status to Confirmed. Cancelling the confirmation (with a reason) unlocks the quotation and restores both statuses. To change the trip itself: cancel, edit the quotation, confirm again (a new confirmation number).
 - Confirmations are cancelled, never deleted; one live confirmation per quotation (enforced by the database, so two people clicking at once cannot create two).
-- [ ] 6.1 Model, rights module `confirmations`, API: convert (atomic, with the chosen option), list (search, status, pages), read, update booking information (concurrency check), cancel
-- [ ] 6.2 Quotation lock (update, delete, duplicate reset) and guest status follow-up, including "fully paid" moving the guest on
-- [ ] 6.3 Screens: Confirmations list and editor, "Confirm booking" on the quotation list, locked banner on the quotation
-- [ ] 6.4 Confirmation document: booking page followed by the quotation pages, in preview, PDF and print
+- [x] 6.1 Model, rights module `confirmations`, API: convert (atomic, with the chosen option), list (search, status, pages), read, update booking information (concurrency check), cancel
+- [x] 6.2 Quotation lock (update, delete, duplicate reset) and guest status follow-up, including "fully paid" moving the guest on; a lock left behind by a request that died half-way is released by itself
+- [x] 6.3 Screens: Confirmations list and editor, "Confirm booking" on the quotation list, locked banner on the quotation
+- [x] 6.4 Confirmation document: booking page followed by the quotation pages, in preview, PDF and print
 ### Step 7: Rights pass (R8), misc (R10)
 
-(Steps 4-7 are expanded into their own checklists when they start.)
+Open for Step 6 once the client sends their list: promote the fields they name from "Additional details" to fixed fields (and decide whether Viewers should see passport numbers: by default every role can read, as for the other modules; an Admin can change that on the Rights screen).
+
+(Step 7 is expanded into its own checklist when it starts.)
 
 ## 4. Definition of done (every step)
 

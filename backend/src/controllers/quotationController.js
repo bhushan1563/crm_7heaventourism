@@ -10,6 +10,7 @@ import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotation
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
+import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
 
 /**
  * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days, the hotel stays and the lists
@@ -124,7 +125,11 @@ const getNextQuotationNo = async () => {
 export const getQuotations = async (req, res) => {
   try {
     const { status, destination, sales, ops, guestId, search } = req.query;
-    const quotations = await QuotationModel.find(buildQuotationFilter({ status, destination, sales, ops, guestId, search })).sort({ createdAt: -1 });
+    const filter = buildQuotationFilter({ status, destination, sales, ops, guestId, search });
+    let quotations = await QuotationModel.find(filter).sort({ createdAt: -1 });
+    // A quotation left locked by a confirmation that never finished (the server restarted half-way) is released before it is listed.
+    const stale = quotations.filter((q) => isStaleClaim(q));
+    if (stale.length && (await Promise.all(stale.map(releaseStaleClaim))).some(Boolean)) quotations = await QuotationModel.find(filter).sort({ createdAt: -1 });
     res.json({
       success: true,
       count: quotations.length,

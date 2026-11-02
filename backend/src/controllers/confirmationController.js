@@ -8,6 +8,7 @@ import { confirmationFromQuotation } from '../utils/confirmationSnapshot.js';
 import { balanceOf, isFullyPaid, normalizeBookingInput, normalizeCancelReason } from '../utils/confirmationInput.js';
 import { escapeRegex, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { CLAIM_MARK, releaseStaleClaim } from '../services/confirmationClaims.js';
 
 const fail = (res, message) => res.status(200).json({ success: false, message });
 const fullName = (user) => `${user.firstName} ${user.lastName}`.trim();
@@ -102,7 +103,9 @@ export const getConfirmationById = async (req, res) => {
 /** Turns a quotation into a booking confirmation: a frozen copy plus the booking information, with the quotation locked. */
 export const createConfirmation = async (req, res) => {
   try {
-    const quotation = await findQuotationToConfirm(req);
+    let quotation = await findQuotationToConfirm(req);
+    if (!quotation) return fail(res, 'Quotation not found. It may have been deleted.');
+    if (await releaseStaleClaim(quotation)) quotation = await findQuotationToConfirm(req); // a claim left behind by a request that died half-way
     if (!quotation) return fail(res, 'Quotation not found. It may have been deleted.');
     if (quotation.confirmationId) return fail(res, `This quotation is already confirmed as ${quotation.confirmationNo || 'a booking'}. Open that confirmation instead.`);
     if (QUOTATION_STATUSES_THAT_CANNOT_BE_CONFIRMED.includes(quotation.status)) {
@@ -118,7 +121,7 @@ export const createConfirmation = async (req, res) => {
     // (status, lock) comes back with the claim, so the copy is of exactly what was claimed and a failure can be undone.
     const claimed = await QuotationModel.findOneAndUpdate(
       { _id: quotation._id, deleted: false, confirmationId: { $in: ['', null] } },
-      { $set: { status: 'Confirmed', isLocked: true, confirmationId: 'pending' } },
+      { $set: { status: 'Confirmed', isLocked: true, confirmationId: CLAIM_MARK } },
       { new: false }
     );
     if (!claimed) return fail(res, 'This quotation was just confirmed by someone else. Please reload the list.');

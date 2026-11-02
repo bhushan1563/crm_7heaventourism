@@ -334,3 +334,44 @@ test('without a token nothing is reachable', async () => {
     assert.equal((await conf(path, { method })).status, 401, `${method} ${path}`);
   }
 });
+
+// A request that dies between claiming the quotation and creating the confirmation (a restart at the wrong moment) must not leave the
+// quotation locked for ever.
+const strandedClaim = async (q, minutesAgo) =>
+  QuotationModel.updateOne({ _id: q._id }, { $set: { status: 'Confirmed', isLocked: true, confirmationId: 'pending', updatedAt: new Date(Date.now() - minutesAgo * 60 * 1000) } }, { timestamps: false });
+
+test('a claim left behind is released after a couple of minutes, when the quotations are listed', async () => {
+  const q = await makeQuotation({ status: 'Sent' });
+  await strandedClaim(q, 10);
+  const listed = (await quote('', { token: admin.token })).body.data.find((x) => x._id === q._id);
+  assert.deepEqual([listed.confirmationId, listed.isLocked, listed.status], ['', false, 'Sent']);
+  assert.equal((await quote(`/${q._id}`, asAdmin({ destination: 'EDITABLE AGAIN' }, 'PUT'))).body.success, true);
+  assert.equal((await confirm(q)).success, true, 'and it can be confirmed properly');
+});
+
+test('a claim made a moment ago is left alone: that confirmation is probably still being created', async () => {
+  const q = await makeQuotation({ status: 'Sent' });
+  await strandedClaim(q, 0);
+  const listed = (await quote('', { token: admin.token })).body.data.find((x) => x._id === q._id);
+  assert.equal(listed.confirmationId, 'pending');
+  const again = await confirm(q);
+  assert.equal(again.success, false);
+  assert.match(again.message, /already confirmed/);
+  assert.equal((await QuotationModel.findById(q._id)).confirmationId, 'pending');
+});
+
+test('a left-behind claim is also released when someone tries to confirm that quotation', async () => {
+  const q = await makeQuotation({ status: 'Sent' });
+  await strandedClaim(q, 10);
+  const ok = await confirm(q);
+  assert.equal(ok.success, true, ok.message);
+  assert.equal((await QuotationModel.findById(q._id)).confirmationId, ok.data._id);
+});
+
+test('a left-behind claim whose confirmation was in fact created is linked to it, not unlocked', async () => {
+  const q = await makeQuotation({ status: 'Sent' });
+  const c = (await confirm(q)).data;
+  await QuotationModel.updateOne({ _id: q._id }, { $set: { confirmationId: 'pending', confirmationNo: '', updatedAt: new Date(Date.now() - 10 * 60 * 1000) } }, { timestamps: false });
+  const listed = (await quote('', { token: admin.token })).body.data.find((x) => x._id === q._id);
+  assert.deepEqual([listed.confirmationId, listed.confirmationNo, listed.isLocked], [c._id, c.confirmationNo, true]);
+});
