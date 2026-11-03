@@ -184,6 +184,26 @@ test('update: partial changes, audit trail follows the editor, name changes are 
   assert.equal((await create(sales.token, { name: 'Edit Me', city: 'Surat' })).success, true, 'the old name is free again after a rename');
 });
 
+test('the hotel form no longer sends room types or meal plans: a hotel that has them keeps them, and a new one starts with none', async () => {
+  const older = await create(sales.token, { name: 'Older Inn', city: 'Pune', roomTypes: [{ name: 'Deluxe', details: 'King bed' }, { name: 'Suite' }], mealPlans: ['CP (Breakfast Only)', 'MAP (Breakfast & Dinner)'] });
+  assert.equal(older.success, true, older.message);
+  // exactly the keys the form sends now (frontend/src/utils/hotel.js toPayload), plus the version it loaded
+  const formSends = { name: 'Older Inn', city: 'Pune', country: 'India', area: '', address: '', starRating: '4 star', description: '<p>Quiet</p>', photos: [], contactPerson: '', phone: '+91 20 1234 5678', email: '', website: '', checkInTime: '14:00', checkOutTime: '11:00', amenities: ['Pool'], cancellationPolicy: '', notes: '', tags: [], status: 'Active', updatedAt: older.data.updatedAt };
+  const saved = await api(`/${older.data._id}`, { method: 'PUT', token: sales.token, json: formSends });
+  assert.equal(saved.body.success, true, saved.body.message);
+  assert.equal(saved.body.data.phone, '+91 20 1234 5678');
+  assert.deepEqual(saved.body.data.roomTypes.map((r) => [r.name, r.details]), [['Deluxe', 'King bed'], ['Suite', '']], 'room types kept');
+  assert.deepEqual(saved.body.data.mealPlans, ['CP (Breakfast Only)', 'MAP (Breakfast & Dinner)'], 'meal plans kept');
+  const again = await api(`/${older.data._id}`, { token: sales.token });
+  assert.equal(again.body.data.roomTypes.length, 2, 'still there when the hotel is read again');
+
+  const { updatedAt, ...forCreate } = formSends;
+  const fresh = await api('', { method: 'POST', token: sales.token, json: { ...forCreate, name: 'Brand New Inn' } });
+  assert.equal(fresh.body.success, true, fresh.body.message);
+  assert.deepEqual(fresh.body.data.roomTypes, []);
+  assert.deepEqual(fresh.body.data.mealPlans, []);
+});
+
 test('update: a second editor who saves with an old version is told, and nothing is overwritten', async () => {
   const made = await create(sales.token, { name: 'Conflict Inn', city: 'Nagpur' });
   const id = made.data._id;

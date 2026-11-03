@@ -43,8 +43,7 @@ describe('HotelListPage', () => {
     expect(within(second).getByText('Heritage / Palace')).toBeInTheDocument();
     expect(within(first).getByText('Centre, Ubud, Indonesia')).toBeInTheDocument();
     expect(within(second).getByText('Ubud, Indonesia')).toBeInTheDocument();
-    expect(screen.getByText('3 room types')).toBeInTheDocument();
-    expect(screen.getByText('1 room type')).toBeInTheDocument();
+    expect(screen.queryByText(/room type/)).toBeNull(); // rooms are no longer kept on a hotel, so no count (the server may still send one)
     expect(screen.getByText('4 photos')).toBeInTheDocument();
     expect(screen.getByText('No photo yet')).toBeInTheDocument();
     expect(screen.getAllByText(/Updated 30-10-2026 by Asha Rao/)).toHaveLength(2);

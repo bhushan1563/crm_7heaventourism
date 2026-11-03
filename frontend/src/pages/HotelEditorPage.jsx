@@ -9,17 +9,15 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import PageLoader from '../components/PageLoader';
 import PhotoGallery from '../components/PhotoGallery';
 import LazyRichTextEditor from '../components/LazyRichTextEditor';
-import RoomTypesEditor from '../components/hotel/RoomTypesEditor';
 import TagInput from '../components/itinerary/TagInput';
-import { AMENITY_RULES, AMENITY_SUGGESTIONS, HOTEL_LIMITS, HOTEL_TAG_RULES, MEAL_PLAN_CHOICES, STAR_OPTIONS, emptyHotel, firstErrorKey, toPayload, validateHotel } from '../utils/hotel';
+import { AMENITY_RULES, AMENITY_SUGGESTIONS, HOTEL_LIMITS, HOTEL_TAG_RULES, STAR_OPTIONS, emptyHotel, firstErrorKey, toPayload, validateHotel } from '../utils/hotel';
 import { addTag } from '../utils/itinerary';
 import './itineraries.css';
 import './hotels.css';
 
 const toForm = (data) => ({
   ...emptyHotel(),
-  ...Object.fromEntries(Object.keys(emptyHotel()).map((key) => [key, data[key] ?? emptyHotel()[key]])),
-  roomTypes: (data.roomTypes || []).map((r) => ({ name: r.name || '', details: r.details || '' }))
+  ...Object.fromEntries(Object.keys(emptyHotel()).map((key) => [key, data[key] ?? emptyHotel()[key]]))
 });
 
 export const HotelEditorPage = () => {
@@ -87,7 +85,7 @@ export const HotelEditorPage = () => {
 
   const set = (patch) => {
     setForm((f) => ({ ...f, ...patch }));
-    const cleared = Object.keys(patch).flatMap((k) => (k === 'roomTypes' ? Object.keys(errors).filter((e) => e.startsWith('room-')) : errors[k] ? [k] : []));
+    const cleared = Object.keys(patch).filter((k) => errors[k]);
     if (cleared.length) setErrors((e) => Object.fromEntries(Object.entries(e).filter(([k]) => !cleared.includes(k))));
   };
 
@@ -97,8 +95,8 @@ export const HotelEditorPage = () => {
     const count = Object.keys(found).length;
     if (count) {
       showToast(count === 1 ? 'Please fix the highlighted field before saving.' : `Please fix the ${count} highlighted fields before saving.`, 'warning');
-      const key = firstErrorKey(found, form);
-      if (key) document.getElementById(key.startsWith('room-') ? key : `field-${key}`)?.focus();
+      const key = firstErrorKey(found);
+      if (key) document.getElementById(`field-${key}`)?.focus();
       return;
     }
 
@@ -194,7 +192,6 @@ export const HotelEditorPage = () => {
       {fieldError(key)}
     </div>
   );
-  const togglePlan = (plan) => set({ mealPlans: form.mealPlans.includes(plan) ? form.mealPlans.filter((p) => p !== plan) : [...form.mealPlans, plan] });
   const addAmenity = (name) => set({ amenities: addTag(form.amenities, name, AMENITY_RULES).tags });
 
   return (
@@ -311,23 +308,6 @@ export const HotelEditorPage = () => {
             ))}
           </div>
         )}
-      </section>
-
-      <section className="glass-panel edit-section" aria-labelledby="sec-rooms">
-        <h3 id="sec-rooms">Rooms and meals</h3>
-        <p className="edit-hint">Rates are entered in each quotation, because they change; here you only keep what the hotel offers.</p>
-        <RoomTypesEditor rooms={form.roomTypes} onChange={(roomTypes) => set({ roomTypes })} errors={errors} disabled={readOnly} />
-        <div>
-          <span className="form-label">Meal plans offered</span>
-          <div className="choice-grid" role="group" aria-label="Meal plans offered">
-            {MEAL_PLAN_CHOICES.map((plan) => (
-              <label className="choice" key={plan.value}>
-                <input type="checkbox" checked={form.mealPlans.includes(plan.value)} disabled={readOnly} onChange={() => togglePlan(plan.value)} />
-                <span>{plan.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
       </section>
 
       <section className="glass-panel edit-section" aria-labelledby="sec-policy">

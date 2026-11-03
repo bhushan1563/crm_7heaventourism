@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, BedDouble, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react';
+import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hotelService from '../services/hotelService';
@@ -237,7 +237,6 @@ export const HotelListPage = () => {
                     <MapPin size={13} aria-hidden="true" /> {[item.area, item.city, item.country].filter(Boolean).join(', ')}
                   </p>
                   <p className="itin-meta">
-                    <span><BedDouble size={13} aria-hidden="true" /> {item.roomTypeCount} {item.roomTypeCount === 1 ? 'room type' : 'room types'}</span>
                     <span><Images size={13} aria-hidden="true" /> {item.photoCount} {item.photoCount === 1 ? 'photo' : 'photos'}</span>
                     {item.phone && <span><Phone size={13} aria-hidden="true" /> {item.phone}</span>}
                   </p>

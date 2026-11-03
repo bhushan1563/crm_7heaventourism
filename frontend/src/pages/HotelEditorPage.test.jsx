@@ -120,10 +120,6 @@ describe('adding a hotel', () => {
     await userEvent.type(screen.getByLabelText('Add a tag'), 'Beach{enter}');
     await userEvent.type(screen.getByLabelText('Add an amenity'), 'Rooftop Bar{enter}');
     await userEvent.click(screen.getByRole('button', { name: '+ Free WiFi' }));
-    await userEvent.click(screen.getByRole('button', { name: /add a room type/i }));
-    await userEvent.type(screen.getByLabelText('Name of room type 1'), 'Deluxe Room');
-    await userEvent.type(screen.getByLabelText('Details of room type 1'), 'King bed');
-    await userEvent.click(screen.getByRole('checkbox', { name: /MAP \(Breakfast & Dinner\)/ }));
     await userEvent.type(screen.getByLabelText('Cancellation policy'), 'Free until 7 days before');
     await userEvent.click(screen.getByRole('button', { name: 'add photo' }));
 
@@ -135,8 +131,6 @@ describe('adding a hotel', () => {
       starRating: '4 star',
       tags: ['beach'],
       amenities: ['Rooftop Bar', 'Free WiFi'],
-      roomTypes: [{ name: 'Deluxe Room', details: 'King bed' }],
-      mealPlans: ['MAP (Breakfast & Dinner)'],
       cancellationPolicy: 'Free until 7 days before',
       photos: [{ token: 'N'.repeat(24), caption: '' }],
       checkInTime: '14:00',
@@ -172,18 +166,21 @@ describe('adding a hotel', () => {
     expect(nameField()).toHaveValue('Ocean Pearl');
   });
 
-  it('manages room types: adds, flags a repeated name, removes', async () => {
+  it('has no Rooms and meals section: room types and meal plans are not asked for, and a new hotel is saved without them', async () => {
+    hotelService.create.mockResolvedValue({ success: true, data: stored() });
     open();
+    expect(screen.queryByRole('heading', { name: 'Rooms and meals' })).toBeNull();
+    expect(screen.queryByText(/Rates are entered in each quotation/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /add a room type/i })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Meal plans offered' })).toBeNull();
+    expect(screen.queryByRole('checkbox')).toBeNull();
     await userEvent.type(nameField(), 'Ocean Pearl');
     await userEvent.type(cityField(), 'Goa');
-    await userEvent.click(screen.getByRole('button', { name: /add a room type/i }));
-    await userEvent.type(screen.getByLabelText('Name of room type 1'), 'Suite{enter}'); // Enter adds the next one
-    await userEvent.type(screen.getByLabelText('Name of room type 2'), 'suite');
     await userEvent.click(screen.getByRole('button', { name: /add hotel/i }));
-    expect(await screen.findByText('"suite" is listed twice. Please keep it once.')).toBeInTheDocument();
-    expect(hotelService.create).not.toHaveBeenCalled();
-    await userEvent.click(screen.getByRole('button', { name: 'Remove room type 2' }));
-    expect(screen.queryByLabelText('Name of room type 2')).toBeNull();
+    await waitFor(() => expect(hotelService.create).toHaveBeenCalledTimes(1));
+    const sent = hotelService.create.mock.calls[0][0];
+    expect(sent).not.toHaveProperty('roomTypes');
+    expect(sent).not.toHaveProperty('mealPlans');
   });
 
   it('stops suggesting an amenity that is already there', async () => {
@@ -202,8 +199,6 @@ describe('editing a hotel', () => {
     expect(await screen.findByRole('heading', { name: 'The Ubud Retreat' })).toBeInTheDocument();
     expect(await screen.findByText('All changes saved')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
-    expect(screen.getByLabelText('Name of room type 1')).toHaveValue('Deluxe');
-    expect(screen.getByRole('checkbox', { name: /CP \(Breakfast Only\)/ })).toBeChecked();
 
     const phone = screen.getByLabelText('Phone');
     await userEvent.clear(phone);
@@ -213,6 +208,24 @@ describe('editing a hotel', () => {
     await waitFor(() => expect(hotelService.update).toHaveBeenCalledWith('abc123', expect.objectContaining({ phone: '+62 361 999', updatedAt: '2026-10-30T10:00:00.000Z' })));
     expect(h.showToast).toHaveBeenCalledWith('Hotel saved.', 'success');
     expect(await screen.findByText('All changes saved')).toBeInTheDocument();
+  });
+
+  it('leaves the room types and meal plans of an older hotel alone: not shown, and not sent, so the server keeps them', async () => {
+    hotelService.get.mockResolvedValue({ success: true, data: stored() }); // stored() has a Deluxe room and the CP meal plan
+    hotelService.update.mockResolvedValue({ success: true, data: stored({ phone: '+62 361 999' }) });
+    open('/hotels/abc123/edit');
+    await screen.findByRole('heading', { name: 'The Ubud Retreat' });
+    expect(screen.queryByDisplayValue('Deluxe')).toBeNull();
+    expect(screen.queryByText('Deluxe')).toBeNull();
+    const phone = screen.getByLabelText('Phone');
+    await userEvent.clear(phone);
+    await userEvent.type(phone, '+62 361 999');
+    await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => expect(hotelService.update).toHaveBeenCalledTimes(1));
+    const sent = hotelService.update.mock.calls[0][1];
+    expect(sent).not.toHaveProperty('roomTypes');
+    expect(sent).not.toHaveProperty('mealPlans');
+    expect(sent.phone).toBe('+62 361 999');
   });
 
   it('tells the user when someone else saved first, and offers the latest version after confirming', async () => {
