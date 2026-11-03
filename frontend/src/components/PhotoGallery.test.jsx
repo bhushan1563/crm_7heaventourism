@@ -130,3 +130,36 @@ describe('PhotoGallery', () => {
     expect(within(dialog).getByAltText('Pool').getAttribute('src')).toBe('/media/b');
   });
 });
+
+describe('PhotoGallery: uploads that finish almost together', () => {
+  // A parent that shows a new list a little after it was handed over (a busy screen). While it catches up, another upload finishes.
+  // The gallery must keep building on the newest list it made, never on an older one the parent shows back to it, or a photo is lost.
+  const SlowParent = ({ onSeen }) => {
+    const [photos, setPhotos] = useState([]);
+    const lag = { 'tok-a.jpg': 5, 'tok-b.jpg': 60, 'tok-c.jpg': 40 };
+    return (
+      <PhotoGallery
+        photos={photos}
+        purpose="hotel"
+        onChange={(next) => {
+          onSeen?.(next);
+          setTimeout(() => setPhotos(next), lag[next[next.length - 1].token] ?? 0);
+        }}
+      />
+    );
+  };
+
+  it('keeps every photo when the parent is slow to show the new list and another upload finishes in between', async () => {
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    uploadPhoto.mockImplementation(async (file) => {
+      await wait(file.name === 'a.jpg' ? 0 : file.name === 'b.jpg' ? 1 : 30);
+      return photo(`tok-${file.name}`);
+    });
+    const seen = vi.fn();
+    const { container } = render(<SlowParent onSeen={seen} />);
+    await userEvent.upload(container.querySelector('input[type=file]'), [jpeg('a.jpg'), jpeg('b.jpg'), jpeg('c.jpg')]);
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(3), { timeout: 3000 });
+    expect(seen.mock.calls.at(-1)[0].map((p) => p.token)).toEqual(['tok-a.jpg', 'tok-b.jpg', 'tok-c.jpg']);
+    expect(screen.getAllByRole('img').map((i) => i.getAttribute('src'))).toEqual(['/media/tok-a.jpg/thumb', '/media/tok-b.jpg/thumb', '/media/tok-c.jpg/thumb']);
+  });
+});
