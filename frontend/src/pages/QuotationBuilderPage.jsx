@@ -63,7 +63,7 @@ import HotelPicker from '../components/hotel/HotelPicker';
 import TagInput from '../components/itinerary/TagInput';
 import FormattedLine from '../components/quotation/FormattedLine';
 import OptionsEditor from '../components/quotation/OptionsEditor';
-import { hotelsOfFirstOption, optionsProblem, repriceOptions, startOptions } from '../utils/quotationOptions';
+import { hotelsOfFirstOption, optionsProblem, repriceOptions, startHotelOptions, startOptions } from '../utils/quotationOptions';
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
@@ -73,7 +73,7 @@ import SaveVisaToList from '../components/visa/SaveVisaToList';
 import ConfirmDialog from '../components/ConfirmDialog';
 import visaService from '../services/visaService';
 import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
-import { hasPriceData, priceTablesPayload, priceTablesProblem, startPriceTables, tablesFromHotel, usesPriceTables } from '../utils/priceTables';
+import { priceTablesPayload, priceTablesProblem, usesPriceTables } from '../utils/priceTables';
 import { nextPriceNote } from '../utils/pricingNote';
 import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
@@ -199,6 +199,7 @@ export const QuotationBuilderPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [visaPickerOpen, setVisaPickerOpen] = useState(false); // choose a visa from the visa list
+  const [askUsualList, setAskUsualList] = useState(false); // "go back to the usual price list?" for a quotation priced with the pricing table
   const [pendingVisa, setPendingVisa] = useState(null); // the visa chosen, waiting for the person to agree to replace what is typed
   const [pickerOpen, setPickerOpen] = useState(false); // the "Insert from the itinerary library" dialog
   const [hotelPicker, setHotelPicker] = useState(null); // the "Choose from the hotel list" dialog: { mode: 'new' } or { index }
@@ -337,16 +338,12 @@ export const QuotationBuilderPage = () => {
           const hRes = await hotelService.get(hotelIdParam);
           if (hRes.success) {
             const draft = quotationFromHotel(hRes.data);
-            setFormData((prev) => ({
-              ...prev,
-              quotationType: draft.quotationType,
-              destination: draft.destination,
-              duration: draft.duration,
-              packageDetails: { ...prev.packageDetails, hotels: [draft.stay] },
-              // The pricing table of a hotel quotation: the hotel's own prices when it has any, else Option 1 and Option 2 to fill in.
-              ...(draft.priceTables ? { priceTables: draft.priceTables } : startPriceTables(prev))
-            }));
-            showToast(`A hotel quotation for ${hRes.data.name} was started. Add the client and the dates, then the prices.`, 'success');
+            setFormData((prev) => {
+              const withHotel = { ...prev, packageDetails: { ...prev.packageDetails, hotels: [draft.stay] } };
+              // The hotel is the first hotel of Option 1; Option 2 is ready for the other choice (for example the 4 star hotels).
+              return { ...withHotel, quotationType: draft.quotationType, destination: draft.destination, duration: draft.duration, ...startHotelOptions(withHotel) };
+            });
+            showToast(`A hotel quotation for ${hRes.data.name} was started. It is the first hotel of Option 1; add the client and the dates, more hotels, and the prices.`, 'success');
           } else {
             showToast(hRes.message || 'That hotel could not be opened, so the quotation starts empty.', 'error');
           }
@@ -563,9 +560,7 @@ export const QuotationBuilderPage = () => {
     const target = hotelPicker;
     setFormData((prev) => {
       const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
-      // A hotel quotation that has no prices yet takes the hotel's own (what is already typed is never replaced).
-      const hotelPrices = prev.quotationType === 'Only Hotel' && !hasPriceData(prev.priceTables) ? tablesFromHotel(hotel) : null;
-      const title = { ...(retitle ? { destination: hotelTitle(hotel) } : {}), ...(hotelPrices ? { priceTables: hotelPrices } : {}) };
+      const title = retitle ? { destination: hotelTitle(hotel) } : {};
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
         const options = (prev.options || []).map((option, i) => {
@@ -878,7 +873,8 @@ export const QuotationBuilderPage = () => {
         : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
       // The pricing tables belong to hotel quotations only; for any other type they are left out of the request.
       const { priceTables: _tables, ...withoutTables } = base;
-      const payload = formData.quotationType === 'Only Hotel' && (formData.priceTables || []).length ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables) } : withoutTables;
+      // A hotel quotation always says whether it has pricing tables: an empty list is how one that went back to the usual price list clears them.
+      const payload = formData.quotationType === 'Only Hotel' ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables || []) } : withoutTables;
       if (isEditMode) {
         res = await quotationService.updateQuotation(id, payload);
       } else {
@@ -1092,8 +1088,8 @@ export const QuotationBuilderPage = () => {
                             ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
                             // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
                             ...(opt.value === 'Visa' ? startVisa(prev) : {}),
-                            // A hotel quotation is priced with the pricing tables (Option 1, Option 2 ...), unless it already has old-style prices.
-                            ...(opt.value === 'Only Hotel' && !(prev.pricing?.items || []).some((item) => Number(item.costPerPerson) > 0) ? startPriceTables(prev) : {})
+                            // A hotel quotation starts with two options (Option 1, Option 2), each able to take several hotels and with its own price.
+                            ...(opt.value === 'Only Hotel' ? startHotelOptions(prev) : {})
                           }));
                           // Go back to the first tab when the one being looked at does not exist for the new type.
                           if (!tabsFor({ quotationType: opt.value }).some((t) => t.id === activeTab)) setActiveTab('overview');
@@ -2129,8 +2125,38 @@ export const QuotationBuilderPage = () => {
           )}
 
           {/* TAB 5: DEDICATED SEPARATE PRICING PAGE / TABS */}
+          {/* A quotation that was already priced with the pricing table keeps it, with a way back to the usual price list. */}
           {activeTab === 'pricing' && usesPriceTables(formData) && (
-            <div className="animate-fade-in">
+            <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="cf-banner" role="note">
+                <span>
+                  {askUsualList
+                    ? 'Remove the pricing table and the amounts typed in it, and use the usual price list instead?'
+                    : 'This quotation was priced with the pricing table. The usual per-person price list is the same for hotel and package quotations, with the totals counted for you.'}
+                </span>
+                {askUsualList ? (
+                  <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-danger btn-sm"
+                      onClick={() => {
+                        setAskUsualList(false);
+                        setFormData((prev) => ({ ...prev, priceTables: [] }));
+                        showToast('The pricing table was removed. This quotation now uses the usual price list.', 'info');
+                      }}
+                    >
+                      Yes, use the usual list
+                    </button>
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setAskUsualList(false)}>
+                      No, keep the table
+                    </button>
+                  </span>
+                ) : (
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setAskUsualList(true)}>
+                    Use the usual price list
+                  </button>
+                )}
+              </div>
               <PriceTablesEditor tables={formData.priceTables} onChange={(priceTables) => setFormData((prev) => ({ ...prev, priceTables }))} />
             </div>
           )}
@@ -2138,11 +2164,11 @@ export const QuotationBuilderPage = () => {
           {activeTab === 'pricing' && !usesPriceTables(formData) && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
-              {formData.quotationType === 'Only Hotel' && (
+              {(formData.options || []).length > 0 && (
                 <div className="cf-banner" role="note">
-                  <span>This hotel quotation uses the older per-person price list. Hotel quotations can now be priced with the pricing table (Option 1, Option 2: Package, Airfare, Visa, TCS, PAX and Final Price), as on the company sheet.</span>
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setFormData((prev) => ({ ...prev, ...startPriceTables(prev) }))}>
-                    Use the pricing table
+                  <span>This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.</span>
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveTab('package')}>
+                    Go to the hotel options
                   </button>
                 </div>
               )}

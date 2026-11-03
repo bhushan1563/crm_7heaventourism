@@ -2,6 +2,8 @@
 // bed, CWB, CNB) with Package, Airfare, Visa and TCS per person, their Total, PAX (the number of persons) and the Final Price
 // (Total x PAX), and a Grand Total under the option. Only the typed amounts and PAX are stored; every Total, Final Price and Grand
 // Total is worked out from them. Pure functions (no network, no React) so every rule can be tested; the server repeats the checks.
+// New hotel quotations are priced with the usual per-person price list and their hotel options; these tables are kept for the
+// quotations that were already priced with them (they still print and can be edited, or switched back to the usual list).
 
 export const PRICE_TABLE_LIMITS = { tables: 6, rows: 10, name: 60, label: 40, maxAmount: 1_000_000_000, maxPax: 999 };
 export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS']];
@@ -16,9 +18,6 @@ const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 export const blankRow = (label = '') => ({ label, package: '', airfare: '', visa: '', tcs: '', pax: '' });
 export const blankTable = (name) => ({ name, rows: DEFAULT_ROW_LABELS.map(blankRow) });
 
-/** What a new hotel quotation starts with: Option 1 and Option 2, as on the client's sheet (an empty option is never printed). */
-export const startPriceTables = (quotation = {}) => ({ priceTables: (quotation.priceTables || []).length ? quotation.priceTables : [blankTable('Option 1'), blankTable('Option 2')] });
-
 export const rowTotal = (row) => round2(AMOUNT_COLUMNS.reduce((sum, [key]) => sum + (Number(row?.[key]) || 0), 0));
 export const rowFinal = (row) => round2(rowTotal(row) * (Number(row?.pax) || 0));
 export const tableTotal = (table) => round2((table?.rows || []).reduce((sum, row) => sum + rowFinal(row), 0));
@@ -31,19 +30,6 @@ export const filledTables = (quotation) => (quotation?.priceTables || []).map((t
 export const lowestTotal = (quotation) => {
   const totals = filledTables(quotation).map(({ table }) => tableTotal(table)).filter((t) => t > 0);
   return totals.length ? Math.min(...totals) : 0;
-};
-
-/** True when any option of these tables has something entered. */
-export const hasPriceData = (tables) => (tables || []).some(tableHasData);
-
-/**
- * The pricing tables of a hotel of the hotel list, as a hotel quotation starts with them: a copy of all of them (names included) when
- * the hotel has any prices entered, else null (the quotation then starts with the usual empty Option 1 and Option 2).
- */
-export const tablesFromHotel = (hotel) => {
-  const tables = hotel?.priceTables || [];
-  if (!hasPriceData(tables)) return null;
-  return tables.map((table) => ({ name: table.name || '', rows: (table.rows || []).map((row) => ({ ...row })) }));
 };
 
 /** What a quotation list shows for a hotel quotation priced with the tables: the lowest Grand Total, and what that means, or null. */

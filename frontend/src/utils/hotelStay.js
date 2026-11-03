@@ -2,7 +2,6 @@
 // The stay gets a COPY of what the hotel showed at that moment: editing the hotel later never changes a quotation that was
 // already made, and the stay can be adjusted freely.
 import { formatDuration } from './itinerary';
-import { tablesFromHotel } from './priceTables';
 
 export const STAY_LIMITS = { photos: 6, amenities: 40, roomOptions: 30 };
 
@@ -62,8 +61,7 @@ export const quotationFromHotel = (hotel) => ({
   quotationType: 'Only Hotel',
   destination: hotelTitle(hotel),
   duration: formatDuration(1),
-  stay: stayFromHotel(hotel),
-  priceTables: tablesFromHotel(hotel) // the hotel's own prices when it has any (else null: the usual empty options)
+  stay: stayFromHotel(hotel)
 });
 
 /** The titles a quotation has before anything was chosen (so choosing the first hotel may replace them). */

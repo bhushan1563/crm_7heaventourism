@@ -1,7 +1,6 @@
 // Shared logic for the hotel screens: the empty form, the checks that run before saving (the server repeats them) and the
 // choices offered. No React in here, so it is easy to test. The limits match the server's (backend/src/utils/hotelInput.js).
 import { MEAL_PLANS } from '../config';
-import { priceTablesPayload, priceTablesProblem, startPriceTables } from './priceTables';
 
 export const HOTEL_LIMITS = {
   name: 150,
@@ -50,7 +49,6 @@ export const AMENITY_SUGGESTIONS = ['Swimming pool', 'Free WiFi', 'Spa', 'Restau
 export const emptyRoomType = () => ({ name: '', details: '' });
 
 export const emptyHotel = () => ({
-  priceTables: startPriceTables().priceTables, // Option 1 and Option 2, to be named and filled in
   name: '',
   city: '',
   country: '',
@@ -92,7 +90,6 @@ export const toPayload = (form) => ({
   checkOutTime: form.checkOutTime,
   amenities: form.amenities,
   roomTypes: form.roomTypes.map(({ name, details }) => ({ name, details: details || '' })),
-  priceTables: priceTablesPayload(form.priceTables),
   mealPlans: form.mealPlans,
   cancellationPolicy: form.cancellationPolicy,
   notes: form.notes,
@@ -140,9 +137,6 @@ export const validateHotel = (form) => {
   if (!TIME.test(form.checkInTime)) errors.checkInTime = 'The check-in time must be a time like 14:00.';
   if (!TIME.test(form.checkOutTime)) errors.checkOutTime = 'The check-out time must be a time like 11:00.';
 
-  const pricing = priceTablesProblem({ quotationType: 'Only Hotel', priceTables: form.priceTables });
-  if (pricing) errors.priceTables = pricing;
-
   const seen = new Set();
   form.roomTypes.forEach((room, index) => {
     const roomName = room.name.trim();
@@ -159,6 +153,5 @@ export const validateHotel = (form) => {
 export const firstErrorKey = (errors, form) => {
   for (const key of ['name', 'city', 'phone', 'email', 'website', 'checkInTime', 'checkOutTime']) if (errors[key]) return key;
   const room = form.roomTypes.findIndex((_, i) => errors[`room-${i}`]);
-  if (room >= 0) return `room-${room}`;
-  return errors.priceTables ? 'priceTables' : null;
+  return room >= 0 ? `room-${room}` : null;
 };

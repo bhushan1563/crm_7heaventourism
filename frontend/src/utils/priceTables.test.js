@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { blankTable, cellText, filledTables, lowestTotal, priceTablesPayload, priceTablesProblem, rowFinal, rowTotal, startPriceTables, tableHasData, tableTotal, usesPriceTables } from './priceTables';
+import { blankTable, cellText, filledTables, lowestTotal, priceTablesPayload, priceTablesProblem, rowFinal, rowTotal, tableHasData, tableTotal, usesPriceTables } from './priceTables';
 
 const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
 const hotel = (tables) => ({ quotationType: 'Only Hotel', priceTables: tables });
@@ -28,12 +28,9 @@ describe('the arithmetic', () => {
 });
 
 describe('starting', () => {
-  it('a new hotel quotation starts with Option 1 and Option 2, each with Adult, Extra bed, CWB and CNB, and never replaces what is there', () => {
-    const start = startPriceTables({});
-    expect(start.priceTables.map((t) => t.name)).toEqual(['Option 1', 'Option 2']);
-    expect(start.priceTables[0].rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
-    const mine = [{ name: 'Mine', rows: [row('Adult')] }];
-    expect(startPriceTables({ priceTables: mine }).priceTables).toBe(mine);
+  it('a blank option has the rows of the company sheet: Adult, Extra bed, CWB and CNB', () => {
+    expect(blankTable('Option 1').rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
+    expect(blankTable('Mine').name).toBe('Mine');
   });
   it('only a hotel quotation with tables uses them', () => {
     expect(usesPriceTables(hotel([blankTable('Option 1')]))).toBe(true);
@@ -87,33 +84,5 @@ describe('property', () => {
       }),
       { numRuns: 300 }
     );
-  });
-});
-
-describe('the prices of a hotel of the list', () => {
-  const hotelWith = (tables) => ({ priceTables: tables });
-  it('says whether any option has something entered', async () => {
-    const { hasPriceData } = await import('./priceTables');
-    expect(hasPriceData([blankTable('Option 1'), blankTable('Option 2')])).toBe(false);
-    expect(hasPriceData([blankTable('Option 1'), { name: 'Suite', rows: [row('Adult')] }])).toBe(true);
-    expect(hasPriceData(undefined)).toBe(false);
-  });
-  it('gives a hotel quotation a copy of the hotel\'s prices, names included, and never the hotel\'s own objects', async () => {
-    const { tablesFromHotel } = await import('./priceTables');
-    const hotel = hotelWith([{ name: 'Deluxe room', rows: [row('Adult')] }, { name: 'Suite', rows: [row('Adult', { package: 50000 })] }]);
-    const copy = tablesFromHotel(hotel);
-    expect(copy.map((t) => t.name)).toEqual(['Deluxe room', 'Suite']);
-    expect(copy[1].rows[0].package).toBe(50000);
-    copy[0].rows[0].package = 1;
-    copy[0].name = 'changed';
-    expect(hotel.priceTables[0].rows[0].package).toBe(30000);
-    expect(hotel.priceTables[0].name).toBe('Deluxe room');
-  });
-  it('gives nothing when the hotel has no prices entered, so the quotation starts with the usual empty options', async () => {
-    const { tablesFromHotel } = await import('./priceTables');
-    expect(tablesFromHotel(hotelWith([blankTable('Option 1')]))).toBeNull();
-    expect(tablesFromHotel(hotelWith([]))).toBeNull();
-    expect(tablesFromHotel({})).toBeNull();
-    expect(tablesFromHotel(undefined)).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PriceTablesEditor from './PriceTablesEditor';
-import { blankTable, startPriceTables } from '../../utils/priceTables';
+import { blankTable } from '../../utils/priceTables';
 
 afterEach(cleanup);
 
@@ -22,7 +22,7 @@ const Harness = ({ initial, onState }) => {
     />
   );
 };
-const start = () => startPriceTables({}).priceTables;
+const start = () => [blankTable('Option 1'), blankTable('Option 2')];
 const field = (title, row, option = 'Option 1') => screen.getByLabelText(`${title} of ${row} in ${option}`);
 
 describe('PriceTablesEditor', () => {

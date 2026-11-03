@@ -79,3 +79,13 @@ export const optionsProblem = (quotation) => {
   }
   return null;
 };
+
+/**
+ * What a new hotel quotation starts with: two options (Option 1, Option 2), the usual way to show a 3 star and a 4 star choice side
+ * by side, each able to take several hotels and each with its own price. The hotels the quotation already has become Option 1.
+ * A quotation that already has options is left exactly as it is.
+ */
+export const startHotelOptions = (quotation) =>
+  (quotation?.options || []).length
+    ? {}
+    : { options: repriceOptions(startOptions(quotation?.packageDetails?.hotels || []), quotation?.paxDetails), packageDetails: { ...(quotation?.packageDetails || {}), hotels: [] } };

@@ -113,3 +113,48 @@ describe('property', () => {
     );
   });
 });
+
+describe('startHotelOptions: a new hotel quotation starts with two options', () => {
+  it('gives Option 1 and Option 2, each with room for several hotels and its own price', async () => {
+    const { startHotelOptions } = await import('./quotationOptions');
+    const patch = startHotelOptions({ paxDetails: '2 Adults', packageDetails: { hotels: [], roomInfo: 'keep me' } });
+    expect(patch.options.map((o) => o.name)).toEqual(['Option 1', 'Option 2']);
+    expect(patch.options.every((o) => Array.isArray(o.hotels) && o.pricePerPerson === 0 && o.totalPrice === 0)).toBe(true);
+    expect(patch.packageDetails).toEqual({ hotels: [], roomInfo: 'keep me' });
+  });
+
+  it('puts the hotels the quotation already has into Option 1, and never lists them twice', async () => {
+    const { startHotelOptions } = await import('./quotationOptions');
+    const stays = [{ hotelName: 'Taj', hotelId: 'h1' }, { hotelName: 'Oberoi', hotelId: 'h2' }];
+    const patch = startHotelOptions({ packageDetails: { hotels: stays } });
+    expect(patch.options[0].hotels.map((h) => h.hotelName)).toEqual(['Taj', 'Oberoi']);
+    expect(patch.options[1].hotels).toEqual([]);
+    expect(patch.packageDetails.hotels).toEqual([]);
+    expect(patch.options[0].hotels[0]).not.toBe(stays[0]); // copies, not the same objects
+  });
+
+  it('leaves a quotation that already has options exactly as it is', async () => {
+    const { startHotelOptions } = await import('./quotationOptions');
+    expect(startHotelOptions({ options: [{ name: 'Mine', hotels: [] }, { name: 'Also mine', hotels: [] }], packageDetails: { hotels: [] } })).toEqual({});
+  });
+
+  it('copes with a quotation that has nothing at all', async () => {
+    const { startHotelOptions } = await import('./quotationOptions');
+    for (const bare of [undefined, null, {}, { packageDetails: null }]) {
+      const patch = startHotelOptions(bare);
+      expect(patch.options).toHaveLength(2);
+      expect(patch.packageDetails.hotels).toEqual([]);
+    }
+  });
+
+  it('what it starts with can be saved once the hotels and prices are in, and says what is missing before that', async () => {
+    const { startHotelOptions, optionsProblem, setPrice } = await import('./quotationOptions');
+    const start = { quotationType: 'Only Hotel', ...startHotelOptions({ paxDetails: '2 Adults' }) };
+    expect(optionsProblem(start)).toMatch(/Option 1 has no hotel yet/);
+    const filled = { ...start, options: start.options.map((o) => ({ ...o, hotels: [{ hotelId: 'h1', hotelName: 'Taj' }] })) };
+    expect(optionsProblem(filled)).toMatch(/enter the price per person of Option 1/);
+    const priced = { ...filled, options: setPrice(setPrice(filled.options, 0, 20000, '2 Adults'), 1, 30000, '2 Adults') };
+    expect(optionsProblem(priced)).toBeNull();
+    expect(priced.options.map((o) => o.totalPrice)).toEqual([40000, 60000]); // counted from the guests
+  });
+});

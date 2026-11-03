@@ -1,6 +1,5 @@
 import { line, normalizePhotos } from './itineraryInput.js';
 import { sanitizeRich } from './richText.js';
-import { normalizeQuotationPriceTables } from './quotationPriceTables.js';
 
 // Turns what the browser sent for a hotel into what may be stored, or says in plain language what is wrong.
 // Pure logic (no database), so it can be tested exhaustively. Photos are only checked for shape here; the controller
@@ -157,13 +156,6 @@ export const normalizeHotelInput = (body, { partial = false } = {}) => {
     const value = body[key] === undefined || body[key] === null || body[key] === '' ? fallback : body[key];
     if (typeof value !== 'string' || !TIME.test(value)) return fail(`The ${label} must be a time like 14:00.`);
     data[key] = value;
-  }
-
-  // The pricing tables: only when sent (a hotel saved without them simply has none yet).
-  if (has('priceTables')) {
-    const r = normalizeQuotationPriceTables(body.priceTables);
-    if (!r.ok) return r;
-    data.priceTables = r.value;
   }
 
   if (wanted('description')) {
