@@ -2,7 +2,7 @@
 // Pure functions (no network, no React) so every rule can be tested. A quotation with no options is one offer, as before.
 import { nightsBetween } from './hotelStay';
 import { hotelTotal, optionTotal, optionUsesRates } from './hotelRates';
-import { startRates } from './rateTable';
+import { usesPriceTables } from './priceTables';
 
 export const OPTION_LIMITS = { options: 6, hotelsPerOption: 10 };
 
@@ -74,13 +74,15 @@ export const cheapestIndex = (options) => {
 
 /**
  * What stops a quotation with options from being saved, in plain words, or null. A hotel quotation ("Only Hotel") must use
- * hotels from the hotel list, in every option.
+ * hotels from the hotel list, in every option. When the pricing tables carry the prices (a hotel or a package quotation made with them),
+ * the options only choose hotels, so no price is asked for here.
  */
 export const optionsProblem = (quotation) => {
   const options = quotation.options || [];
   if (!options.length) return null;
   if (options.length < 2) return 'To offer hotel options, add at least two. Or go back to a single offer.';
   const fromList = (quotation.quotationType || 'Package') === 'Only Hotel';
+  const byTables = usesPriceTables(quotation);
   for (const [i, option] of options.entries()) {
     const label = `Option ${i + 1}${option.name && option.name !== `Option ${i + 1}` ? ` (${option.name})` : ''}`;
     if (!option.hotels?.length) return `${label} has no hotel yet. Choose one from the hotel list, or remove the option.`;
@@ -90,6 +92,7 @@ export const optionsProblem = (quotation) => {
     }
     const backwards = option.hotels.findIndex((s) => s.checkInDate && s.checkOutDate && !nightsBetween(s.checkInDate, s.checkOutDate));
     if (backwards >= 0) return `${label}, hotel ${backwards + 1}: the check-out date must be after the check-in date.`;
+    if (byTables) continue;
     if (optionUsesRates(option)) {
       // Priced by the tables: every hotel needs its room rate, or the Grand Total would leave a hotel out.
       for (const [k, stay] of option.hotels.entries()) {
@@ -104,14 +107,13 @@ export const optionsProblem = (quotation) => {
 
 /**
  * What a new hotel quotation starts with: two options (Option 1, Option 2), the usual way to show a 3 star and a 4 star choice side
- * by side, each able to take several hotels and each with its own price. The hotels the quotation already has become Option 1.
- * A quotation that already has options is left exactly as it is.
+ * by side, each able to take several hotels. The hotels the quotation already has become Option 1. The prices are not here: they are
+ * in the pricing tables (see priceTables.js), one per option. A quotation that already has options is left exactly as it is.
  */
 export const startHotelOptions = (quotation) =>
   (quotation?.options || []).length
     ? {}
     : {
-        // each hotel starts with its room rate row, the first row of the client's table
-        options: repriceOptions(startOptions((quotation?.packageDetails?.hotels || []).map((s) => ({ ...s, rates: s.rates?.length ? s.rates : startRates() }))), quotation?.paxDetails),
+        options: repriceOptions(startOptions((quotation?.packageDetails?.hotels || []).map((s) => ({ ...s }))), quotation?.paxDetails),
         packageDetails: { ...(quotation?.packageDetails || {}), hotels: [] }
       };

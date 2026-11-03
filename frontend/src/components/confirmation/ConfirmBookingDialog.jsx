@@ -4,7 +4,7 @@ import Modal from '../Modal';
 import { guestCount } from '../../utils/quotationOptions';
 import { optionTotal as optionTotalOfTables, optionUsesRates } from '../../utils/hotelRates';
 import { needsOptionChoice } from '../../utils/confirmation';
-import { filledTables, needsPriceTableChoice, tableTotal } from '../../utils/priceTables';
+import { filledTables, needsPriceTableChoice, tableTotal, usesPriceTables } from '../../utils/priceTables';
 import './confirmation.css';
 
 const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -22,6 +22,14 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
   const options = quotation?.options || [];
   const mustChoose = needsOptionChoice(quotation);
   const mustChoosePrice = needsPriceTableChoice(quotation);
+  // When the pricing tables carry the prices, the hotel options carry none, and Option 1 of the pricing goes with the first hotel option, Option 2
+  // with the second ...: one question is enough, and each hotel option shows the Grand Total of its pricing option.
+  const filled = filledTables(quotation);
+  const pricingOf = (i) => filled.find(({ index }) => index === i)?.table;
+  const joined =
+    mustChoose && mustChoosePrice && usesPriceTables(quotation) &&
+    options.every((o, i) => !(Number(o.pricePerPerson) > 0) && !optionUsesRates(o) && pricingOf(i)) &&
+    filled.every(({ index }) => index < options.length);
 
   useEffect(() => {
     if (isOpen) {
@@ -31,7 +39,7 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
   }, [isOpen, quotation?._id]);
 
   if (!quotation) return null;
-  const ready = (!mustChoose || choice !== null) && (!mustChoosePrice || priceChoice !== null);
+  const ready = (!mustChoose || choice !== null) && (!mustChoosePrice || joined || priceChoice !== null);
 
   return (
     <Modal isOpen={isOpen} onClose={busy ? () => {} : onClose} title="Confirm this booking?" subtitle={`${quotation.quotationNo} · ${quotation.clientName} · ${quotation.destination}`} maxWidth="560px">
@@ -45,7 +53,13 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
                 <span>
                   <span className="cf-option-name">{o.name || `Option ${i + 1}`}</span>
                   <span className="cf-option-meta" style={{ display: 'block' }}>
-                    {optionUsesRates(o) ? `Grand Total ${money(optionTotalOfTables(o))}` : `${money(o.pricePerPerson)} per person · ${money(optionTotal(o, quotation.paxDetails))} in all`}
+                    {joined
+                      ? `Grand Total ${money(tableTotal(pricingOf(i), quotation))}`
+                      : optionUsesRates(o)
+                        ? `Grand Total ${money(optionTotalOfTables(o))}`
+                        : usesPriceTables(quotation) && !(Number(o.pricePerPerson) > 0)
+                          ? null // the price is in the pricing options below
+                          : `${money(o.pricePerPerson)} per person · ${money(optionTotal(o, quotation.paxDetails))} in all`}
                   </span>
                   {(o.hotels || []).length > 0 && (
                     <span className="cf-option-meta" style={{ display: 'block' }}>
@@ -58,15 +72,15 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
           </fieldset>
         )}
 
-        {mustChoosePrice && (
+        {mustChoosePrice && !joined && (
           <fieldset className="cf-options" style={{ border: 0, padding: 0, margin: '0 0 6px' }}>
             <legend className="form-label">Which pricing option did the client accept?</legend>
-            {filledTables(quotation).map(({ table, index }) => (
+            {filled.map(({ table, index }) => (
               <label className={`cf-option${priceChoice === index ? ' is-selected' : ''}`} key={index}>
                 <input type="radio" name="accepted-pricing" checked={priceChoice === index} onChange={() => setPriceChoice(index)} disabled={busy} />
                 <span>
                   <span className="cf-option-name">{table.name || `Option ${index + 1}`}</span>
-                  <span className="cf-option-meta" style={{ display: 'block' }}>Grand Total {money(tableTotal(table))}</span>
+                  <span className="cf-option-meta" style={{ display: 'block' }}>Grand Total {money(tableTotal(table, quotation))}</span>
                 </span>
               </label>
             ))}
@@ -85,7 +99,7 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
           <button type="button" className="btn btn-outline" onClick={onClose} disabled={busy}>
             Not now
           </button>
-          <button type="button" className="btn btn-primary" onClick={() => onConfirm(mustChoose ? choice : undefined, mustChoosePrice ? priceChoice : undefined)} disabled={!ready || busy} title={ready ? undefined : 'Choose what the client accepted first'}>
+          <button type="button" className="btn btn-primary" onClick={() => onConfirm(mustChoose ? choice : undefined, mustChoosePrice ? (joined ? choice : priceChoice) : undefined)} disabled={!ready || busy} title={ready ? undefined : 'Choose what the client accepted first'}>
             <CheckCircle2 size={15} /> {busy ? 'Confirming…' : 'Confirm booking'}
           </button>
         </div>

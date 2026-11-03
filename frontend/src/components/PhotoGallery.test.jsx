@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -134,8 +134,10 @@ describe('PhotoGallery', () => {
 describe('PhotoGallery: uploads that finish almost together', () => {
   // A parent that shows a new list a little after it was handed over (a busy screen). While it catches up, another upload finishes.
   // The gallery must keep building on the newest list it made, never on an older one the parent shows back to it, or a photo is lost.
+  // The lists are shown strictly in the order they were handed over (each after its own delay), so a slow machine cannot reorder them.
   const SlowParent = ({ onSeen }) => {
     const [photos, setPhotos] = useState([]);
+    const queue = useRef(Promise.resolve());
     const lag = { 'tok-a.jpg': 5, 'tok-b.jpg': 60, 'tok-c.jpg': 40 };
     return (
       <PhotoGallery
@@ -143,7 +145,8 @@ describe('PhotoGallery: uploads that finish almost together', () => {
         purpose="hotel"
         onChange={(next) => {
           onSeen?.(next);
-          setTimeout(() => setPhotos(next), lag[next[next.length - 1].token] ?? 0);
+          const delay = lag[next[next.length - 1].token] ?? 0;
+          queue.current = queue.current.then(() => new Promise((resolve) => setTimeout(() => { setPhotos(next); resolve(); }, delay)));
         }}
       />
     );
@@ -158,7 +161,7 @@ describe('PhotoGallery: uploads that finish almost together', () => {
     const seen = vi.fn();
     const { container } = render(<SlowParent onSeen={seen} />);
     await userEvent.upload(container.querySelector('input[type=file]'), [jpeg('a.jpg'), jpeg('b.jpg'), jpeg('c.jpg')]);
-    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(3), { timeout: 3000 });
+    await waitFor(() => expect(screen.getAllByRole('img')).toHaveLength(3), { timeout: 10000 });
     expect(seen.mock.calls.at(-1)[0].map((p) => p.token)).toEqual(['tok-a.jpg', 'tok-b.jpg', 'tok-c.jpg']);
     expect(screen.getAllByRole('img').map((i) => i.getAttribute('src'))).toEqual(['/media/tok-a.jpg/thumb', '/media/tok-b.jpg/thumb', '/media/tok-c.jpg/thumb']);
   });

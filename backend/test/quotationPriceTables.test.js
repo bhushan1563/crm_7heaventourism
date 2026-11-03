@@ -52,7 +52,7 @@ test('an option with nothing entered is empty, one with any amount or any PAX is
 
 test('what is typed is tidied: blanks become 0, amounts are rounded to the paisa, labels and names are cleaned, an empty name becomes "Option n"', () => {
   const tables = ok([{ name: '  ', rows: [{ label: '  Extra   bed ', package: '25000.456', airfare: '', visa: null, tcs: undefined, pax: '2' }] }, { name: ' Taj  option ', rows: [] }]);
-  assert.deepEqual(tables[0], { name: 'Option 1', rows: [{ label: 'Extra bed', package: 25000.46, airfare: 0, visa: 0, tcs: 0, pax: 2 }] });
+  assert.deepEqual(tables[0], { name: 'Option 1', layout: 'sheet', rows: [{ label: 'Extra bed', package: 25000.46, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }); // a table without a layout is a sheet
   assert.equal(tables[1].name, 'Taj option');
   assert.deepEqual(ok([]), []);
 });
@@ -134,7 +134,6 @@ test('an option that was left empty is not offered, and a single filled-in optio
 test('hotel options and pricing options are chosen separately, and the pricing option decides the amount', () => {
   const q = hotelQuotation({ options: [{ name: 'Hotel A', hotels: [{ hotelName: 'A' }], pricePerPerson: 10, totalPrice: 20 }, { name: 'Hotel B', hotels: [{ hotelName: 'B' }], pricePerPerson: 15, totalPrice: 30 }] });
   assert.match(confirmationFromQuotation(q, undefined, 0).message, /offers 2 hotel options/);
-  assert.match(confirmationFromQuotation(q, 1, undefined).message, /2 pricing options/);
   const r = confirmationFromQuotation(q, 1, 1);
   assert.equal(r.ok, true, r.message);
   assert.equal(r.optionName, 'Hotel B · Option 2');
@@ -142,8 +141,25 @@ test('hotel options and pricing options are chosen separately, and the pricing o
   assert.deepEqual(r.quote.packageDetails.hotels.map((h) => h.hotelName), ['B']);
 });
 
-test('pricing tables on any other kind of quotation are ignored', () => {
-  const r = confirmationFromQuotation(hotelQuotation({ quotationType: 'Package' }), undefined, undefined);
-  assert.equal(r.ok, true);
-  assert.equal(r.totalAmount, 1, 'the price of the quotation, as before');
+test('the pricing option that goes with the hotel option is taken when none is named: Option 2 of the pricing is for the second hotel option', () => {
+  const q = hotelQuotation({ options: [{ name: '3 Star', hotels: [{ hotelName: 'A' }], pricePerPerson: 0, totalPrice: 0 }, { name: '4 Star', hotels: [{ hotelName: 'B' }], pricePerPerson: 0, totalPrice: 0 }] });
+  const first = confirmationFromQuotation(q, 0, undefined);
+  assert.equal(first.ok, true, first.message);
+  assert.equal(first.totalAmount, 180500);
+  assert.equal(first.optionName, '3 Star · Option 1');
+  const second = confirmationFromQuotation(q, 1, undefined);
+  assert.equal(second.totalAmount, 111000);
+  assert.deepEqual(second.quote.priceTables.map((t) => t.name), ['Option 2']);
+  assert.equal(confirmationFromQuotation(q, 1, 0).totalAmount, 180500, 'a pricing option named on purpose wins over the one in the same place');
+  // the same name on both sides is said once
+  const same = hotelQuotation({ options: [{ name: 'Option 1', hotels: [{ hotelName: 'A' }], pricePerPerson: 0, totalPrice: 0 }, { name: 'Option 2', hotels: [{ hotelName: 'B' }], pricePerPerson: 0, totalPrice: 0 }] });
+  assert.equal(confirmationFromQuotation(same, 1, undefined).optionName, 'Option 2');
+});
+
+test('pricing tables on a land service or a visa quotation are ignored: they have their own pricing', () => {
+  for (const quotationType of ['Land Service', 'Visa', 'Events / Corporate']) {
+    const r = confirmationFromQuotation(hotelQuotation({ quotationType }), undefined, undefined);
+    assert.equal(r.ok, true);
+    assert.equal(r.totalAmount, 1, `${quotationType}: the price of the quotation, as before`);
+  }
 });

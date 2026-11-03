@@ -77,7 +77,7 @@ import SaveVisaToList from '../components/visa/SaveVisaToList';
 import ConfirmDialog from '../components/ConfirmDialog';
 import visaService from '../services/visaService';
 import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
-import { priceTablesPayload, priceTablesProblem, usesPriceTables } from '../utils/priceTables';
+import { layoutOf, priceTablesPayload, priceTablesProblem, startPricingFor, startPriceTables, tablesOf, usesPriceTables, withTables } from '../utils/priceTables';
 import { nextPriceNote } from '../utils/pricingNote';
 import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
@@ -165,6 +165,7 @@ export const QuotationBuilderPage = () => {
   const [saving, setSaving] = useState(false);
   const [visaPickerOpen, setVisaPickerOpen] = useState(false); // choose a visa from the visa list
   const [askUsualList, setAskUsualList] = useState(false); // "go back to the usual price list?" for a quotation priced with the pricing table
+  const [askTables, setAskTables] = useState(false); // "use the pricing table?" for a hotel or package quotation that still has the per-person list
   const [pendingVisa, setPendingVisa] = useState(null); // the visa chosen, waiting for the person to agree to replace what is typed
   const [pickerOpen, setPickerOpen] = useState(false); // the "Insert from the itinerary library" dialog
   const [hotelPicker, setHotelPicker] = useState(null); // the "Choose from the hotel list" dialog: { mode: 'new' } or { index }
@@ -176,6 +177,7 @@ export const QuotationBuilderPage = () => {
   const [formData, setFormData] = useState({
     quotationNo: '',
     quotationType: 'Package', // 'Only Hotel' | 'Package' | 'Events / Corporate'
+    priceTables: startPriceTables({ quotationType: 'Package' }), // a new package (and hotel) quotation is priced with the pricing tables
     guestId: '',
     clientName: '',
     clientEmail: '',
@@ -324,7 +326,8 @@ export const QuotationBuilderPage = () => {
             setFormData((prev) => {
               const withHotel = { ...prev, packageDetails: { ...prev.packageDetails, hotels: [draft.stay] } };
               // The hotel is the first hotel of Option 1; Option 2 is ready for the other choice (for example the 4 star hotels).
-              return { ...withHotel, quotationType: draft.quotationType, destination: draft.destination, duration: draft.duration, ...startHotelOptions(withHotel) };
+              const next = { ...withHotel, quotationType: draft.quotationType, destination: draft.destination, duration: draft.duration, ...startHotelOptions(withHotel) };
+              return { ...next, ...startPricingFor(next, draft.quotationType) }; // and its pricing sheet, named after the hotel options
             });
             showToast(`A hotel quotation for ${hRes.data.name} was started. It is the first hotel of Option 1; add the client and the dates, more hotels, and the prices.`, 'success');
           } else {
@@ -546,8 +549,9 @@ export const QuotationBuilderPage = () => {
       const title = retitle ? { destination: hotelDestination(hotel) } : {};
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
-        // In a hotel quotation every hotel carries its rate table, so the room rate row is ready as soon as the hotel is chosen.
-        const withRates = (stay) => (prev.quotationType === 'Only Hotel' && !stay.rates?.length ? { ...stay, rates: startRates() } : stay);
+        // A hotel quotation made before the pricing tables came back carries a rate table for every hotel, so the room rate row is
+        // ready as soon as the hotel is chosen. With the pricing tables the prices are on the Pricing tab and the hotel has no table.
+        const withRates = (stay) => (prev.quotationType === 'Only Hotel' && !usesPriceTables(prev) && !stay.rates?.length ? { ...stay, rates: startRates() } : stay);
         const options = (prev.options || []).map((option, i) => {
           if (i !== target.option) return option;
           const hotels = [...option.hotels];
@@ -579,6 +583,18 @@ export const QuotationBuilderPage = () => {
   const handleSingleOffer = () => {
     setFormData((prev) => ({ ...prev, options: [], packageDetails: { ...prev.packageDetails, hotels: hotelsOfFirstOption(prev.options) } }));
     showToast('Back to a single offer. The hotels of the first option were kept.', 'info');
+  };
+
+  // A quotation that has the per-person price list takes the pricing tables (Option 1 and Option 2, named after its hotel options). The
+  // prices typed under its hotel options (a price per person, a hotel's rate table) are taken out, so there is one place for the price.
+  const switchToPricingTables = () => {
+    setAskTables(false);
+    setFormData((prev) => {
+      const options = (prev.options || []).map((option) => ({ ...option, pricePerPerson: 0, totalPrice: 0, hotels: option.hotels.map((hotel) => ({ ...hotel, rates: [] })) }));
+      const next = { ...prev, options };
+      return { ...next, ...startPricingFor(next, prev.quotationType) };
+    });
+    showToast('The pricing table is on. Fill in each option; the hotels of each option are on the Hotel Details tab.', 'info');
   };
 
   const handleRemoveHotel = (index) => {
@@ -856,10 +872,10 @@ export const QuotationBuilderPage = () => {
       const base = isVisa(formData)
         ? { ...formData, visa: visaPayload(formData.visa), visaFees: feesPayload(formData.visaFees) }
         : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
-      // The pricing tables belong to hotel quotations only; for any other type they are left out of the request.
+      // The pricing tables belong to hotel and package quotations only; for any other type they are left out of the request.
       const { priceTables: _tables, ...withoutTables } = base;
-      // A hotel quotation always says whether it has pricing tables: an empty list is how one that went back to the usual price list clears them.
-      const payload = formData.quotationType === 'Only Hotel' ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables || []) } : withoutTables;
+      // A hotel or package quotation always says whether it has pricing tables: an empty list is how one that went back to the usual price list clears them.
+      const payload = layoutOf(formData) ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables || []) } : withoutTables;
       if (isEditMode) {
         res = await quotationService.updateQuotation(id, payload);
       } else {
@@ -1065,17 +1081,21 @@ export const QuotationBuilderPage = () => {
                         key={opt.value}
                         type="button"
                         onClick={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            quotationType: opt.value,
-                            destination: prev.destination || (opt.value === 'Only Hotel' ? 'LUXURY HOTEL BOOKING' : ''),
-                            // A land service starts with one vehicle line and the standard inclusions (nothing typed is replaced).
-                            ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
-                            // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
-                            ...(opt.value === 'Visa' ? startVisa(prev) : {}),
-                            // A hotel quotation starts with two options (Option 1, Option 2), each able to take several hotels and with its own price.
-                            ...(opt.value === 'Only Hotel' ? startHotelOptions(prev) : {})
-                          }));
+                          setFormData(prev => {
+                            const next = {
+                              ...prev,
+                              quotationType: opt.value,
+                              destination: prev.destination || (opt.value === 'Only Hotel' ? 'LUXURY HOTEL BOOKING' : ''),
+                              // A land service starts with one vehicle line and the standard inclusions (nothing typed is replaced).
+                              ...(opt.value === 'Land Service' ? startLandService(prev) : {}),
+                              // A visa starts with a visa fee and a service charge to fill in; the documents checklist starts empty.
+                              ...(opt.value === 'Visa' ? startVisa(prev) : {}),
+                              // A hotel quotation starts with two options (Option 1, Option 2), each able to take several hotels.
+                              ...(opt.value === 'Only Hotel' ? startHotelOptions(prev) : {})
+                            };
+                            // A hotel (the sheet) or a package (per room per night) starts with its pricing tables: Option 1 and Option 2.
+                            return { ...next, ...startPricingFor(next, opt.value) };
+                          });
                           // Go back to the first tab when the one being looked at does not exist for the new type.
                           if (!tabsFor({ quotationType: opt.value }).some((t) => t.id === activeTab)) setActiveTab('overview');
                           showToast(`Quotation format switched to ${opt.value}`, 'info');
@@ -1463,6 +1483,7 @@ export const QuotationBuilderPage = () => {
                   onChange={(options) => setFormData((prev) => ({ ...prev, options }))}
                   paxDetails={formData.paxDetails}
                   quotationType={formData.quotationType}
+                  pricedByTables={usesPriceTables(formData)}
                   canUseList={can('hotels', 'canRead')}
                   onChooseHotel={(option, hotel) => setHotelPicker({ option, hotel })}
                   onSingle={handleSingleOffer}
@@ -2117,7 +2138,9 @@ export const QuotationBuilderPage = () => {
                 <span>
                   {askUsualList
                     ? 'Remove the pricing table and the amounts typed in it, and use the usual price list instead?'
-                    : 'This quotation was priced with the pricing table. The usual per-person price list is the same for hotel and package quotations, with the totals counted for you.'}
+                    : formData.quotationType === 'Only Hotel'
+                      ? 'This hotel quotation is priced with the pricing sheet: one table for each option (for example the 3 star and the 4 star hotels you chose on the Hotel Details tab), with Package, Airfare, Visa and TCS for each kind of traveller. The totals are counted for you.'
+                      : 'This package is priced per room per night: one table for each option (for example a 3 star and a 4 star package), with the nights, the rooms and the total counted for you. Your trip\'s nights are used unless you type them.'}
                 </span>
                 {askUsualList ? (
                   <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2142,12 +2165,39 @@ export const QuotationBuilderPage = () => {
                   </button>
                 )}
               </div>
-              <PriceTablesEditor tables={formData.priceTables} onChange={(priceTables) => setFormData((prev) => ({ ...prev, priceTables }))} />
+              <PriceTablesEditor tables={tablesOf(formData)} quotation={formData} onChange={(mine) => setFormData((prev) => ({ ...prev, priceTables: withTables(prev, mine) }))} />
             </div>
           )}
 
           {activeTab === 'pricing' && !usesPriceTables(formData) && (
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+
+              {/* A hotel or package quotation made before the pricing tables came back keeps its per-person price list, with a way to the tables. */}
+              {layoutOf(formData) && (
+                <div className="cf-banner" role="note">
+                  <span>
+                    {askTables
+                      ? 'Use the pricing table instead? The per-person prices typed here, and the prices typed under the hotel options, are removed.'
+                      : formData.quotationType === 'Only Hotel'
+                        ? 'This hotel quotation uses the per-person price list. The pricing sheet (Option 1 and Option 2, with Package, Airfare, Visa and TCS for each kind of traveller) is the usual way to price a hotel quotation.'
+                        : 'This package uses the per-person price list. The pricing table (per room per night, with the nights, the rooms and the total counted for you) is the usual way to price a package.'}
+                  </span>
+                  {askTables ? (
+                    <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button type="button" className="btn btn-danger btn-sm" onClick={switchToPricingTables}>
+                        Yes, use the pricing table
+                      </button>
+                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setAskTables(false)}>
+                        No, keep the list
+                      </button>
+                    </span>
+                  ) : (
+                    <button type="button" className="btn btn-outline btn-sm" onClick={() => setAskTables(true)}>
+                      Use the pricing table
+                    </button>
+                  )}
+                </div>
+              )}
 
               {(formData.options || []).length > 0 && (
                 <div className="cf-banner" role="note">

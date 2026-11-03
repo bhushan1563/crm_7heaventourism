@@ -103,6 +103,7 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  min-height: 100dvh; /* the visible height on a phone; 100vh also counts the area behind the address bar */
   overflow-x: hidden;
   line-height: 1.5;
   font-feature-settings: 'cv11', 'ss01';

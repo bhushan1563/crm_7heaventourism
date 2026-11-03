@@ -1,4 +1,5 @@
-import { tableHasData, tableTotal } from './quotationPriceTables.js';
+import { LAYOUT_OF_TYPE, tableHasData, tableTotal } from './quotationPriceTables.js';
+import { roomDefaults } from './roomTables.js';
 import { optionTotal, optionUsesRates } from './hotelRates.js';
 
 // Turning a quotation into the frozen copy a confirmation keeps. Pure logic (no database), so it can be tested exhaustively.
@@ -63,22 +64,28 @@ export const confirmationFromQuotation = (quotation, optionIndex, priceTableInde
     totalAmount = total;
   }
 
-  // A hotel quotation priced with the pricing tables: the option the client accepted is the one kept, and its Grand Total is the amount.
-  const tables = quotation.quotationType === 'Only Hotel' && Array.isArray(quotation.priceTables) ? quotation.priceTables : [];
-  const filledIn = tables.map((table, i) => i).filter((i) => tableHasData(tables[i]));
+  // A hotel or package quotation priced with the pricing tables: the option the client accepted is the one kept, and its Grand Total is the amount.
+  // Only a table laid out the way this kind of quotation is priced counts (a hotel: the sheet; a package: the rooms).
+  const layout = LAYOUT_OF_TYPE[quotation.quotationType];
+  const tables = layout && Array.isArray(quotation.priceTables) ? quotation.priceTables : [];
+  const filledIn = tables.map((table, i) => i).filter((i) => (tables[i].layout || 'sheet') === layout && tableHasData(tables[i]));
   if (filledIn.length > 0) {
     let chosen = filledIn[0];
     if (filledIn.length > 1) {
-      const index = optionNumber(priceTableIndex);
+      // The pricing options go with the hotel options in order (Option 1 of the pricing is the first hotel option), so when the client
+      // accepted a hotel option and no pricing option was named, the one in the same place is the one accepted.
+      const named = optionNumber(priceTableIndex);
+      const byPlace = options.length > 0 && filledIn.includes(optionNumber(optionIndex)) ? optionNumber(optionIndex) : null;
+      const index = named !== null ? named : byPlace;
       if (index === null) return { ok: false, message: `This quotation has ${filledIn.length} pricing options. Please choose the one the client accepted.` };
       if (!filledIn.includes(index)) return { ok: false, message: `Please choose one of the ${filledIn.length} pricing options.` };
       chosen = index;
     }
     const table = tables[chosen];
-    totalAmount = tableTotal(table);
+    totalAmount = tableTotal(table, roomDefaults(quotation));
     quote.priceTables = [table];
     quote.pricing = { ...(quote.pricing || quotation.pricing || {}), items: [], totalCostNote: rs(totalAmount), grandTotal: totalAmount };
-    optionName = [optionName, table.name].filter(Boolean).join(' · ');
+    optionName = [...new Set([optionName, table.name].filter(Boolean))].join(' · '); // not "Option 1 · Option 1"
   }
 
   return { ok: true, quote, optionName, totalAmount };

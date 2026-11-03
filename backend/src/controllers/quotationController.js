@@ -10,7 +10,8 @@ import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotation
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
 import { normalizeQuotationText } from '../utils/quotationText.js';
-import { normalizeQuotationPriceTables } from '../utils/quotationPriceTables.js';
+import { LAYOUT_OF_TYPE, normalizeQuotationPriceTables, tableHasData, tableTotal } from '../utils/quotationPriceTables.js';
+import { roomDefaults } from '../utils/roomTables.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
 
@@ -57,6 +58,19 @@ const prepareExtras = async (body) => {
     overrides.pricing = { ...body.pricing, grandTotal: vehicles.total, totalCostPerPerson: 0, totalCostNote: `Rs ${vehicles.total.toLocaleString('en-IN')} total` };
   }
   if (priceTables) overrides.priceTables = priceTables.value;
+  // A hotel or package quotation priced with the pricing tables is "from" its lowest Grand Total: keep the amount that lists and
+  // statistics read (pricing.grandTotal) equal to it. A "rooms" row that follows the trip needs the duration; without it nothing is changed.
+  if (priceTables && LAYOUT_OF_TYPE[body.quotationType]) {
+    const defaults = roomDefaults(body);
+    const counted = priceTables.value.filter((table) => table.layout === LAYOUT_OF_TYPE[body.quotationType]); // only tables laid out the way this kind is priced
+    const totals = counted.filter(tableHasData).map((table) => tableTotal(table, defaults)).filter((total) => total > 0);
+    const followsTrip = counted.some((table) => table.layout === 'rooms' && table.rows.some((row) => row.nights === null));
+    if (totals.length && !(followsTrip && !defaults.nights)) {
+      const lowest = Math.min(...totals);
+      const base = body.pricing && typeof body.pricing === 'object' && !Array.isArray(body.pricing) ? body.pricing : {};
+      overrides.pricing = { ...base, grandTotal: lowest, totalCostPerPerson: 0, totalCostNote: `${totals.length > 1 ? 'From ' : ''}Rs ${lowest.toLocaleString('en-IN')}` };
+    }
+  }
   if (visa.visa) overrides.visa = visa.visa;
   if (visa.visaFees) overrides.visaFees = visa.visaFees;
   // The price of a visa quotation IS its fees (per applicant or for the group): keep the amount that lists and statistics read

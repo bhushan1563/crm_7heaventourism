@@ -63,7 +63,7 @@ describe('priceTablesProblem', () => {
 
 describe('priceTablesPayload', () => {
   it('sends numbers as numbers, tidies the names and gives an empty name its default', () => {
-    expect(priceTablesPayload([{ name: ' ', rows: [{ label: ' Adult ', package: '1000', airfare: '', visa: undefined, tcs: '5.5', pax: '2' }] }])).toEqual([{ name: 'Option 1', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 5.5, pax: 2 }] }]);
+    expect(priceTablesPayload([{ name: ' ', rows: [{ label: ' Adult ', package: '1000', airfare: '', visa: undefined, tcs: '5.5', pax: '2' }] }])).toEqual([{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 5.5, pax: 2 }] }]);
     expect(priceTablesPayload(undefined)).toEqual([]);
   });
 });
