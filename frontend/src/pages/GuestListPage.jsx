@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   Clock,
   Send,
-  DollarSign,
   Plane,
   RefreshCw,
   MessageSquare,

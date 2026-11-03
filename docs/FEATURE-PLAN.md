@@ -128,19 +128,20 @@ Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No
 - [x] 14.4 The server checks the table (kind, label, rate, nights, rooms, limits) in plain words, naming the hotel and the row; the browser and the server use the same file for the figures (a test keeps the two copies identical and a property test compares them)
 
 ### Step 15: Booking confirmation: what the client asked to add once a quotation turns into a confirmation (hotel and package)
-- [ ] 15.1 Remove the vehicle notes
-- [ ] 15.2 Hotel confirmation number below the hotel name
-- [ ] 15.3 Hotel contact number after the address
-- [ ] 15.4 Check In and Check Out time after the dates: "Check In: 07 Mar 2026, Time: __, Check Out: 10 Mar 2026, Time: __"
-- [ ] 15.5 In the header of the confirmation: "Confirmation Details" below the destination name
+- [x] 15.1 The vehicle notes ("Points to be Noted (Vehicle Note)") are left out of a confirmation (the quotation behind it keeps them)
+- [x] 15.2 Hotel confirmation number below the hotel name: entered on the booking page, in a new "Hotels" section with one block for each hotel of the booking (hotel confirmation number, hotel contact number, check-in time, check-out time), saved with the booking (`hotelBookings`, checked in plain words by the server); printed only when entered
+- [x] 15.3 Hotel contact number after the address (it starts from the hotel list's number and can be changed for this booking)
+- [x] 15.4 Check In and Check Out time after the dates: "Check In: 07 Mar 2026, Time: 14:00" and "Check Out: 10 Mar 2026, Time: 11:00" (the times start from the hotel list's usual times); "Time: ____" is printed to write in when no time is known; the separate "Timings" line is not printed on a confirmation
+- [x] 15.5 "Confirmation Details" below the destination name: a heading on the booking page (with the confirmation number added to the details) and a line "Confirmation Details: 7H-CF-… • Confirmed on …" under the destination on the pages of the quotation copy ("CANCELLED" is added for a cancelled booking)
+- [x] 15.6 All of this is the same for hotel and package confirmations; a quotation (before it is confirmed) prints exactly as it did
 
 ### Step 16: Master editor for Notes and Policy
 - [ ] 16.1 One place where an Admin changes the standard Notes and Policy text that quotations print (so it is not edited quotation by quotation)
 
 ### Step 17: Rupee symbol
-- [ ] 17.1 The dollar sign icons (Dashboard card, quotation list card, the "5. Pricing" tab) become the rupee sign
+- [x] 17.1 Every dollar sign in the interface is now a rupee: the icons on the Dashboard card ("Confirmed & Paid"), the quotation list card and the "5. Pricing" tab (the guest list's unused dollar icon import was removed). Amounts are written "Rs 1,00,000" (Indian grouping) everywhere; the whole source is searched for dollar icons, "$" amounts, USD and US number formats, and a test keeps it that way
 
-(Step 7, 8, 9, 10, 11 and 12 are complete; Steps 13 to 17 are in progress; what else remains is waiting on the client, see above.)
+(Step 7 to 15 and 17 are complete; Step 16 is in progress; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

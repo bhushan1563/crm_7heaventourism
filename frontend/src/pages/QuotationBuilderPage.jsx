@@ -12,7 +12,7 @@ import {
   Plane,
   Building2,
   FileText,
-  DollarSign,
+  IndianRupee,
   Calendar,
   Users,
   CheckCircle2,
@@ -109,7 +109,7 @@ const tabsFor = (quotation) => {
     { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
     { id: 'package', label: '3. Hotel Details', icon: Building2 },
     { id: 'flights', label: '4. Flights', icon: Plane },
-    { id: 'pricing', label: '5. Pricing', icon: DollarSign },
+    { id: 'pricing', label: '5. Pricing', icon: IndianRupee },
     { id: 'notes', label: '6. Notes & Terms', icon: FileText }
   ];
 };

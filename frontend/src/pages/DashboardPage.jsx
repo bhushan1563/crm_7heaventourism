@@ -4,7 +4,7 @@ import {
   Users,
   Building2,
   Clock,
-  DollarSign,
+  IndianRupee,
   ScanLine,
   ArrowRight,
   MapPin
@@ -123,7 +123,7 @@ export const DashboardPage = () => {
           title="Confirmed & Paid"
           value={guestStats?.confirmedAndPaid || 0}
           subtitle="Ready for operations execution"
-          icon={DollarSign}
+          icon={IndianRupee}
           color="#12B76A"
         />
 
