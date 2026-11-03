@@ -49,8 +49,12 @@ export const PhotoGallery = ({
   const focused = useRef(false);
   const pasteHandler = useRef(null);
 
+  // The lists this gallery handed to its parent itself. When the parent shows one of them back, it is already what `latest` holds or is
+  // older than it: copying it over `latest` would throw away a photo that finished uploading in the meantime (two uploads that finish
+  // together would lose one, silently). Only a list that came from somewhere else (the record was loaded or reset) replaces `latest`.
+  const ownLists = useRef(new WeakSet());
   useEffect(() => {
-    latest.current = photos;
+    if (!ownLists.current.has(photos)) latest.current = photos;
   }, [photos]);
   pendingRef.current = pending;
 
@@ -69,6 +73,7 @@ export const PhotoGallery = ({
   const commit = useCallback(
     (next) => {
       latest.current = next; // keep the newest list even if another upload finishes before the parent re-renders
+      ownLists.current.add(next);
       onChange(next);
     },
     [onChange]
@@ -264,7 +269,12 @@ export const PhotoGallery = ({
         </label>
       </div>
       {help && <p className="photo-help">{help}</p>}
-      {canAdd && <p className="photo-help">You can also paste: copy a picture on Google or any web page (right-click it, then "Copy image"), point at this box and press Ctrl+V.</p>}
+      {canAdd && (
+        <p className="photo-help">
+          <span className="photo-hint-keys">You can also paste: copy a picture on Google or any web page (right-click it, then "Copy image"), point at this box and press Ctrl+V.</span>
+          <span className="photo-hint-touch">You can also paste: copy a picture on Google or any web page (touch and hold it, then "Copy image"), then tap "Paste a picture".</span>
+        </p>
+      )}
 
       <div
         className={`photo-grid${dragging ? ' is-dragging' : ''}`}
@@ -308,7 +318,7 @@ export const PhotoGallery = ({
                 className="form-input photo-caption"
                 value={photo.caption || ''}
                 maxLength={120}
-                placeholder="Caption (optional)"
+                placeholder="Add a caption"
                 aria-label={`Caption for photo ${index + 1}`}
                 disabled={disabled}
                 onChange={(e) => setCaption(index, e.target.value)}

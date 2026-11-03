@@ -7,9 +7,9 @@ import { loadImage } from './image';
 
 export const MAX_PASTED_SOURCES = 10;
 
-export const NOTHING_PASTED = 'There is no picture in what you copied. Copy a picture first (on a web page, right-click it and choose "Copy image"), then paste again.';
-export const SITE_BLOCKED = 'We could not copy that picture from its website (some sites do not allow it). Right-click the picture, choose "Copy image", and paste again. Or save it to your computer and use "Add photos".';
-export const CLIPBOARD_BLOCKED = 'Your browser did not let us look at what you copied. Click here once, then press Ctrl+V to paste it.';
+export const NOTHING_PASTED = 'There is no picture in what you copied. Copy a picture first (on a web page, right-click it, or touch and hold it on a phone, then choose "Copy image"), then paste again.';
+export const SITE_BLOCKED = 'We could not copy that picture from its website (some sites do not allow it). Copy the picture itself (right-click it, or touch and hold it on a phone, then choose "Copy image") and paste again. Or save it and use "Add photos".';
+export const CLIPBOARD_BLOCKED = 'Your browser did not let us look at what you copied. Please allow "paste" when your browser asks, and try again. (On a computer you can also click inside the photo box once and press Ctrl+V.)';
 
 const EXTENSIONS = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif', 'image/bmp': 'bmp', 'image/avif': 'avif', 'image/tiff': 'tif', 'image/svg+xml': 'svg' };
 const isImageType = (type) => /^image\//i.test(String(type || ''));

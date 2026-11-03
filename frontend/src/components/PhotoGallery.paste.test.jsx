@@ -232,6 +232,12 @@ describe('the Paste tile', () => {
     expect(screen.getByText(/point at this box and press Ctrl\+V/)).toBeInTheDocument();
   });
 
+  it('has a tip for a computer (Ctrl+V) and one for a phone (tap the tile): the style sheet shows the one that fits the screen', () => {
+    const { container } = render(<Harness />);
+    expect(container.querySelector('.photo-hint-keys')).toHaveTextContent(/right-click it.*press Ctrl\+V/);
+    expect(container.querySelector('.photo-hint-touch')).toHaveTextContent(/touch and hold it.*tap "Paste a picture"/);
+  });
+
   it('adds the picture the browser finds on the clipboard', async () => {
     clipboardWith([item({ 'image/png': new Blob([new Uint8Array([1, 2, 3])], { type: 'image/png' }) })]);
     render(<Harness />);

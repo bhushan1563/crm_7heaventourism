@@ -150,6 +150,9 @@ Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No
 - [x] 18.3 Also taken: a picture copied together with its web page, a copied picture address (even without ".jpg" at the end, fetched when the site allows it, with a "Getting the picture…" tile), and a picture dragged from a web page onto the box. Other kinds of picture (GIF, AVIF, BMP) are converted to PNG
 - [x] 18.4 Plain words when it cannot work: no picture in what was copied, a site that does not allow copying (what to do instead), a link that is not a picture, the gallery full. Ordinary text is never taken: pasting words, or text into a caption box, behaves as before. A page with several galleries (the days of an itinerary) pastes only into the one the pointer or keyboard is on
 
+- [x] 18.5 Phone layout (from the user's phone screenshot): the "Paste a picture" tile stuck out past the dashed box. The two-column grid now lets its columns shrink, the tiles wrap their text, the message icon sits on its first line, and the caption hint is shorter. Checked in a real browser at 390, 360 and 320 px (touch, dark) with and without photos, and on the computer layout. A phone has no Ctrl+V, so it shows "touch and hold it, then Copy image, then tap Paste a picture", and the messages no longer say "right-click" or "Ctrl+V" only
+- [x] 18.6 Found while checking on the phone and fixed: two or three uploads that finish almost together could silently lose one photo (a stale copy of the list overwrote a newer one). The gallery now keeps building on the newest list it made. A test reproduces the loss (2 of 3 photos) on the old behaviour
+
 (Steps 7 to 18 are complete; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
