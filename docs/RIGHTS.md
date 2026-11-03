@@ -17,6 +17,8 @@ Two rules sit on top of the rights:
 
 - **Confirmed bookings are locked.** A record that is Confirmed can only be changed by the people assigned to it (creator, sales, ops) and by an Admin, even for someone who has *edit others*.
 - **A confirmed quotation is locked for everyone**, Admin included, until its booking is cancelled.
+- **Booking confirmations** can be sent to the client (WhatsApp or e-mail) by people with the *download* right on confirmations; the window keeps a typed phone number or address on the booking only where the person may change that booking.
+- **The sender number** of a person (the number their messages to clients carry) is set on the Rights & Security screen and needs the *update* right on rights, so an Admin by default. A person cannot set their own.
 - **Visa quotations** are listed under *Visas > Client visas* for anyone who can read quotations. Opening one to change it follows the quotation rules above; the share window offers to keep a phone number or e-mail address on the quotation only where the person may change that quotation. *Save to the Visa List* needs the *create* right on visas.
 
 An **Admin** always has every right in every module. A right saved for one person beats a right saved for their role, which beats the built-in default below. The Rights screen shows this combined result for the person or role you select (the same rule the API applies on every request), so what you see there is what they can really do.

@@ -1,0 +1,24 @@
+/* The quotation list: the same seven places for the action icons in every row (an icon that a row does not have leaves its place empty,
+   so a confirmed or locked row lines up with the others), columns that fit a laptop screen, and one line per cell so rows are even.
+   The quotation number and the status are never cut; a long name is cut with "…" and shown in full when the mouse rests on it. */
+.ql-actions { display: grid; grid-template-columns: repeat(7, 26px); gap: 2px; justify-content: center; align-items: center; }
+.ql-slot { display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; }
+
+@media (min-width: 1024px) {
+  .luxury-table.ql-table { table-layout: fixed; min-width: 1040px; }
+  .ql-table .ql-col-no { width: 13.8%; }
+  .ql-table .ql-col-client { width: 11.2%; }
+  .ql-table .ql-col-dest { width: 12%; }
+  .ql-table .ql-col-date { width: 9.4%; }
+  .ql-table .ql-col-price { width: 10%; }
+  .ql-table .ql-col-team { width: 12%; }
+  .ql-table .ql-col-status { width: 10.4%; }
+  .ql-table .ql-col-actions { width: 216px; } /* 7 places of 26px with 2px between, and the cell's own padding */
+  .ql-table th, .ql-table td { overflow: hidden; text-overflow: ellipsis; }
+  .ql-table tbody td > div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
+/* On tablets and phones the rows stack or scroll, and the icons start at the left. */
+@media (max-width: 1023.98px) {
+  .ql-actions { justify-content: start; }
+}

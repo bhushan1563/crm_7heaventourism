@@ -4,6 +4,7 @@ import { resolveRights } from '../middleware/auth.js';
 import RightModel from '../models/Right.js';
 import { queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { normalizeSenderNumber } from '../utils/senderNumber.js';
 import { RIGHT_MODULES as MODULES, allRights, defaultRightsFor } from '../config/rights.js';
 
 const EDITABLE_ROLES = ['Sales', 'Ops', 'Viewer'];
@@ -256,5 +257,32 @@ export const bulkUpdateUserRights = async (req, res) => {
     });
   } catch (error) {
     res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to bulk update rights') });
+  }
+};
+
+/**
+ * Sets (or clears) the sender number of one person: the number their messages to clients carry. It is part of Rights & Security, so it
+ * needs the same right as changing rights (an Admin always has it). A number that cannot be right is refused in plain words.
+ */
+export const setSenderNumber = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    if (!mongoose.isValidObjectId(userId)) return res.status(200).json({ success: false, message: 'That person could not be found.' });
+    // Removing the number is done by sending it empty; a request that does not mention it at all must never remove it.
+    if (!req.body || Array.isArray(req.body) || !Object.prototype.hasOwnProperty.call(req.body, 'senderNumber')) {
+      return res.status(200).json({ success: false, message: 'Please send the sender number (send it empty to remove it).' });
+    }
+    const number = normalizeSenderNumber(req.body.senderNumber);
+    if (!number.ok) return res.status(200).json({ success: false, message: number.message });
+    const user = await UserModel.findOneAndUpdate({ _id: userId, deleted: false }, { senderNumber: number.value }, { new: true }).select('firstName lastName senderNumber');
+    if (!user) return res.status(200).json({ success: false, message: 'That person could not be found.' });
+    const name = `${user.firstName} ${user.lastName}`.trim();
+    res.json({
+      success: true,
+      message: number.value ? `The sender number of ${name} is now ${number.value}.` : `The sender number of ${name} was removed. Their messages will carry the company number.`,
+      data: { _id: user._id, senderNumber: user.senderNumber }
+    });
+  } catch (error) {
+    res.status(200).json({ success: false, message: friendlyMessage(error, 'Failed to save the sender number') });
   }
 };

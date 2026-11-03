@@ -11,7 +11,8 @@ import {
   Eye,
   PlusCircle,
   Trash2,
-  UserCheck
+  UserCheck,
+  Phone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -19,6 +20,7 @@ import rightsService from '../services/rightsService';
 import userService from '../services/userService';
 import { USER_ROLES, RIGHTS_MODULES } from '../config';
 import { getErrorMessage } from '../services/api';
+import { whatsappNumber } from '../utils/shareContact';
 
 const emptyPermissions = () => {
   const permissions = {};
@@ -55,10 +57,19 @@ export const RightsPage = () => {
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [senderInput, setSenderInput] = useState(''); // the sender number of the selected person, as typed
+  const [senderError, setSenderError] = useState('');
+  const [savingSender, setSavingSender] = useState(false);
 
   useEffect(() => {
     fetchUsers();
   }, []);
+
+  // The box shows the saved sender number of whoever is selected.
+  useEffect(() => {
+    setSenderInput(selectedUser?.senderNumber || '');
+    setSenderError('');
+  }, [selectedUser?._id, selectedUser?.senderNumber]);
 
   const fetchUsers = async () => {
     try {
@@ -184,6 +195,37 @@ export const RightsPage = () => {
     }
   };
 
+  // The sender number is what the messages this person sends to clients carry. Checked here in plain words, and again by the server.
+  const handleSaveSenderNumber = async () => {
+    if (!selectedUser) return;
+    const typed = senderInput.trim();
+    if (typed) {
+      const checked = whatsappNumber(typed);
+      if (!checked.ok) {
+        setSenderError(checked.message);
+        return;
+      }
+    }
+    try {
+      setSavingSender(true);
+      setSenderError('');
+      const res = await rightsService.setSenderNumber(selectedUser._id, typed);
+      if (res.success) {
+        const saved = res.data?.senderNumber || '';
+        setUsers((list) => list.map((u) => (u._id === selectedUser._id ? { ...u, senderNumber: saved } : u)));
+        setSelectedUser((u) => ({ ...u, senderNumber: saved }));
+        setSenderInput(saved); // the box shows the number as it was stored, even when it is the one that was already there
+        showToast(res.message || 'The sender number was saved.', 'success');
+      } else {
+        setSenderError(res.message || 'The sender number could not be saved.');
+      }
+    } catch (err) {
+      setSenderError(getErrorMessage(err, 'The sender number could not be saved. Please try again.'));
+    } finally {
+      setSavingSender(false);
+    }
+  };
+
   if (currentUser?.role !== 'Admin' && currentUser?.role !== 'SuperAdmin') {
     return (
       <div className="glass-panel" style={{ padding: '60px 30px', textAlign: 'center', margin: '40px auto', maxWidth: '520px' }}>
@@ -265,10 +307,11 @@ export const RightsPage = () => {
           {scope === 'user' ? (
             <>
               <div>
-                <label className="form-label" style={{ marginBottom: '4px' }}>
+                <label className="form-label" htmlFor="rights-user" style={{ marginBottom: '4px' }}>
                   User Reference (Select Member)
                 </label>
                 <select
+                  id="rights-user"
                   className="form-select"
                   style={{ minWidth: 'min(280px, 100%)' }}
                   value={selectedUserId}
@@ -311,10 +354,11 @@ export const RightsPage = () => {
             </>
           ) : (
             <div>
-              <label className="form-label" style={{ marginBottom: '4px' }}>
+              <label className="form-label" htmlFor="rights-role" style={{ marginBottom: '4px' }}>
                 Role
               </label>
               <select
+                id="rights-role"
                 className="form-select"
                 style={{ minWidth: 'min(220px, 100%)' }}
                 value={selectedRole}
@@ -328,6 +372,43 @@ export const RightsPage = () => {
           )}
         </div>
       </div>
+
+      {/* Sender number: the number the messages this person sends to clients carry */}
+      {scope === 'user' && selectedUser && (
+        <div className="glass-panel" style={{ padding: '16px 24px', display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '16px' }}>
+          <div style={{ flex: '1 1 300px', minWidth: 0 }}>
+            <label className="form-label" htmlFor="sender-number" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Phone size={14} aria-hidden="true" /> Sender number of {selectedUser.firstName} {selectedUser.lastName}
+            </label>
+            <input
+              id="sender-number"
+              type="tel"
+              inputMode="tel"
+              autoComplete="off"
+              className="form-input"
+              placeholder="e.g. 98765 43210 or +971 50 123 4567"
+              value={senderInput}
+              maxLength={40}
+              aria-invalid={Boolean(senderError)}
+              aria-describedby={senderError ? 'sender-number-error' : 'sender-number-hint'}
+              onChange={(e) => {
+                setSenderInput(e.target.value);
+                setSenderError('');
+              }}
+            />
+            {senderError ? (
+              <p className="field-error" id="sender-number-error" role="alert">{senderError}</p>
+            ) : (
+              <p className="edit-hint" id="sender-number-hint" style={{ margin: '6px 0 0' }}>
+                The number this person&apos;s messages to clients carry (it closes the message in the Send windows). WhatsApp itself sends from the account signed in on their device. Leave it empty to use the company number.
+              </p>
+            )}
+          </div>
+          <button type="button" className="btn btn-primary" style={{ marginTop: '22px' }} onClick={handleSaveSenderNumber} disabled={savingSender || senderInput.trim() === (selectedUser.senderNumber || '')}>
+            <Save size={15} /> <span>{savingSender ? 'Saving...' : 'Save sender number'}</span>
+          </button>
+        </div>
+      )}
 
       {/* Security Info Callout */}
       <div

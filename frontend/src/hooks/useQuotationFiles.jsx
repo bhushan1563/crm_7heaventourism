@@ -12,6 +12,9 @@ const sayable = (message) => Object.assign(new Error(message), { userMessage: me
  * Put `host` somewhere in the page: it is where the quotation is drawn (off screen) while its PDF is made, and it is empty the rest
  * of the time. `pdf(quotation, { save })` resolves with `{ filename, blob }` (or just downloads it when `save` is true); `docx(quotation)`
  * resolves with `{ filename, blob }` (visa quotations only). Only one file is made at a time.
+ *
+ * A booking confirmation is the quotation as it was sold with the booking page in front: `pdf(quotation, { before, filename })` draws
+ * those pages first (`before` is the same function the preview window gives the document) and names the file as asked.
  */
 export const useQuotationFiles = () => {
   const hostId = `qf-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
@@ -29,11 +32,11 @@ export const useQuotationFiles = () => {
   }, [pending]);
 
   const pdf = useCallback(
-    (quotation, { save = false, onProgress = null } = {}) =>
+    (quotation, { save = false, onProgress = null, before = null, filename: asked = '' } = {}) =>
       new Promise((resolve, reject) => {
         if (busy.current) return reject(sayable('Another file is being prepared. Please wait a moment and try again.'));
         busy.current = true;
-        const filename = shareFileName(quotation, 'pdf');
+        const filename = asked || shareFileName(quotation, 'pdf');
         start.current = async () => {
           try {
             await new Promise((r) => setTimeout(r, 150)); // let the page finish drawing
@@ -46,7 +49,7 @@ export const useQuotationFiles = () => {
             setPending(null);
           }
         };
-        setPending(quotation);
+        setPending({ quotation, before });
       }),
     [hostId]
   );
@@ -59,7 +62,7 @@ export const useQuotationFiles = () => {
 
   const host = pending ? (
     <div aria-hidden="true" style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '794px' }}>
-      <QuotationDocumentView quotation={pending} pageNumber={null} id={hostId} />
+      <QuotationDocumentView quotation={pending.quotation} pageNumber={null} id={hostId} before={pending.before} />
     </div>
   ) : null;
 

@@ -99,7 +99,13 @@ Already there and not touched: the client name, duration / nights, pax breakdown
 - [x] 10.3 Pricing tab: the usual per-person price list (Package Price, Airfare, Other, Add On, totals counted for the guests) is the same for hotel and package quotations. The sheet-style pricing tables are no longer offered for new quotations; a quotation already priced with them keeps them (they still print) with a button to go back to the usual list
 - [ ] 10.4 Open: does the user want the client's sheet layout (Adult / Extra bed / CWB / CNB) back inside each option later? Not built, not asked for now
 
-(Step 7, 8, 9 and 10 are complete; what remains is waiting on the client, see above.)
+### Step 11: Send booking confirmations, sender number, tidy quotation list (added 2026-11-04, from the user's message with three screenshots)
+- [x] 11.1 Send a booking confirmation to the client from the Confirmations list (button on every confirmed row) and from the booking's own page ("Send to client"): the same window as for visa quotations, as a PDF (the booking page followed by the quotation as it was sold). WhatsApp asks for the number if the booking has none, shows the message to change, then opens the chat for that number with the message ready; e-mail the same with an address and a subject. A typed number or address is kept on the booking (where the person may change it; saving carries the version seen, so it never overwrites a colleague's save). Honest limit as before: the chat or mail cannot carry the file, so it is saved first and the window says to attach it
+- [x] 11.2 Sender number: an Admin sets, per person, the number their messages to clients carry, in Rights & Security (one box for the chosen person; refused numbers are explained). It closes the message in the Send windows (the company number when the person has none) and the window shows it. Needs the right to change rights (an Admin always has it); a person cannot set their own through the profile. WhatsApp itself still sends from the account signed in on the device
+- [x] 11.3 Quotation list alignment: the action icons keep seven fixed places (a confirmed or locked row used to sit 15px off the others), the columns fit a laptop (1366px) without sideways scrolling, the quotation number and the status are never cut, rows are one even height, long names show in full on hover. The Confirmations and Client visas lists keep their buttons on one line too
+- [ ] 11.4 Open: Word file of a booking confirmation (only PDF today); sending the file itself automatically (needs a mail service and the WhatsApp Business API)
+
+(Step 7, 8, 9, 10 and 11 are complete; what remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

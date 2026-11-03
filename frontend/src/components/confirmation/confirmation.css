@@ -34,6 +34,10 @@
 .cf-no { font-weight: 800; color: var(--primary-text); white-space: nowrap; }
 .cf-sub { margin-top: 2px; font-size: 0.74rem; color: var(--text-muted); }
 .cf-actions { display: flex; align-items: center; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+/* In a table on a laptop screen the buttons of a row stay on one line, so every row is the same height and the buttons line up. */
+@media (min-width: 1024px) {
+  .cf-actions { flex-wrap: nowrap; }
+}
 
 /* The "Confirm booking" and "Cancel booking" dialogs. */
 .cf-dialog-list { margin: 8px 0 0; padding-left: 18px; color: var(--text-secondary); font-size: 0.86rem; }

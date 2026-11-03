@@ -211,3 +211,29 @@ test('copying never changes the quotation it was made from', () => {
 test('a quotation without options ignores an option number', () => {
   assert.equal(confirmationFromQuotation(quotation(), 3).ok, true);
 });
+
+test('the client\'s phone and e-mail can be kept on the booking: tidied, checked in plain words, and emptied to clear', () => {
+  assert.deepEqual(ok({ clientPhone: '  +91 98765 43210 ', clientEmail: ' Meera@Example.com ' }), { clientPhone: '+91 98765 43210', clientEmail: 'Meera@Example.com' });
+  assert.deepEqual(ok({ clientPhone: '', clientEmail: '' }), { clientPhone: '', clientEmail: '' });
+  assert.deepEqual(ok({}), {}, 'not mentioned: not touched');
+  assert.match(bad({ clientPhone: 'call me' }), /phone number can only have digits/);
+  assert.match(bad({ clientPhone: '12' }), /phone number can only have digits/);
+  assert.match(bad({ clientPhone: '9'.repeat(40) }), /phone number/);
+  assert.match(bad({ clientEmail: 'meera@' }), /e-mail address does not look right/);
+  assert.match(bad({ clientEmail: 'a@example.com, b@example.com' }), /e-mail address does not look right/);
+  assert.match(bad({ clientEmail: 'a@example.com\nBcc: x@example.com' }), /e-mail address does not look right/);
+  assert.match(bad({ clientPhone: { $ne: '' } }), /must be text|phone number/);
+});
+
+test('property: whatever is sent as the client\'s contact, it is either refused with a message or stored tidy and safe', () => {
+  fc.assert(
+    fc.property(fc.string({ maxLength: 60 }), fc.string({ maxLength: 60 }), (phone, email) => {
+      const r = normalizeBookingInput({ clientPhone: phone, clientEmail: email });
+      if (r.ok) {
+        assert.match(r.data.clientPhone, /^(\+?[0-9][0-9 ().-]{4,28})?$/);
+        assert.match(r.data.clientEmail, /^([^\s@,;]+@[^\s@,;.]+(\.[^\s@,;.]+)+)?$/);
+      } else assert.ok(r.message.length > 8);
+    }),
+    { numRuns: 300 }
+  );
+});

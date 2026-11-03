@@ -40,6 +40,7 @@ import { generateQuotationPDF } from '../utils/quotationPdfGenerator';
 import { formatDate } from '../utils/dateHelper';
 import { QUOTATION_STATUS_TABS } from '../config';
 import { getErrorMessage } from '../services/api';
+import './quotationList.css';
 
 const STATUS_TABS = QUOTATION_STATUS_TABS;
 
@@ -439,17 +440,27 @@ export const QuotationListPage = () => {
 
       {/* Quotations List Table */}
       <div className="table-container animate-fade-in" style={{ width: '100%' }}>
-        <table className="luxury-table table-stack" style={{ width: '100%' }}>
+        <table className="luxury-table table-stack ql-table" style={{ width: '100%' }}>
+          <colgroup>
+            <col className="ql-col-no" />
+            <col className="ql-col-client" />
+            <col className="ql-col-dest" />
+            <col className="ql-col-date" />
+            <col className="ql-col-price" />
+            <col className="ql-col-team" />
+            <col className="ql-col-status" />
+            <col className="ql-col-actions" />
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ width: '13%' }}>Quotation #</th>
-              <th style={{ width: '15%' }}>Client & Pax</th>
-              <th style={{ width: '15%' }}>Destination & Duration</th>
-              <th style={{ width: '11%' }}>Travel Date</th>
-              <th style={{ width: '12%' }}>Pricing</th>
-              <th style={{ width: '13%' }}>Assigned Team</th>
-              <th style={{ width: '9%' }}>Status</th>
-              <th style={{ textAlign: 'center', width: '12%', minWidth: '165px' }}>PDF & Actions</th>
+              <th>Quotation #</th>
+              <th>Client & Pax</th>
+              <th>Destination & Duration</th>
+              <th>Travel Date</th>
+              <th>Pricing</th>
+              <th>Assigned Team</th>
+              <th>Status</th>
+              <th style={{ textAlign: 'center' }}>PDF & Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -484,7 +495,7 @@ export const QuotationListPage = () => {
                       <div style={{ fontWeight: 700, color: 'var(--fg-0284C7)', fontSize: '0.825rem', whiteSpace: 'nowrap' }}>
                         {q.quotationNo}
                       </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', flexWrap: 'nowrap', minWidth: 0 }}>
                         <span
                           style={{
                             fontSize: '0.65rem',
@@ -499,7 +510,7 @@ export const QuotationListPage = () => {
                         >
                           {q.quotationType || 'Package'}
                         </span>
-                        <span style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap' }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
                           {new Date(q.createdAt).toLocaleDateString()}
                         </span>
                       </div>
@@ -507,7 +518,7 @@ export const QuotationListPage = () => {
 
                     {/* Client & Pax */}
                     <td data-label="Client">
-                      <div style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div title={q.clientName} style={{ fontWeight: 700, color: 'var(--fg-0F172A)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.clientName}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-64748B)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px', whiteSpace: 'nowrap' }}>
@@ -517,7 +528,7 @@ export const QuotationListPage = () => {
 
                     {/* Destination & Duration */}
                     <td data-label="Destination">
-                      <div style={{ fontWeight: 700, color: 'var(--fg-00A6F4)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div title={q.destination} style={{ fontWeight: 700, color: 'var(--fg-00A6F4)', fontSize: '0.825rem', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {q.destination}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: 'var(--fg-64748B)', marginTop: '2px', whiteSpace: 'nowrap' }}>
@@ -546,10 +557,10 @@ export const QuotationListPage = () => {
 
                     {/* Assigned Team */}
                     <td data-label="Team">
-                      <div style={{ fontSize: '0.75rem', color: 'var(--fg-0F172A)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div title={`Sales: ${q.sales || 'Unassigned'}`} style={{ fontSize: '0.75rem', color: 'var(--fg-0F172A)', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <span style={{ color: 'var(--fg-64748B)' }}>Sales:</span> {q.sales || 'Unassigned'}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      <div title={`Ops: ${q.ops || 'Unassigned'}`} style={{ fontSize: '0.7rem', color: 'var(--fg-64748B)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         <span style={{ color: 'var(--fg-64748B)' }}>Ops:</span> {q.ops || 'Unassigned'}
                       </div>
                     </td>
@@ -561,8 +572,9 @@ export const QuotationListPage = () => {
 
                     {/* Actions */}
                     <td data-label="">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px', flexWrap: 'nowrap' }}>
+                      <div className="ql-actions">
                         {/* 1. Follow-up Button */}
+                        <span className="ql-slot">
                         {canModify && (
                           <button
                             onClick={() => setFollowUpItem(q)}
@@ -574,7 +586,9 @@ export const QuotationListPage = () => {
                           </button>
                         )}
 
+                        </span>
                         {/* 2. Preview PDF Modal */}
+                        <span className="ql-slot">
                         <button
                           onClick={() => {
                             setPreviewQuotation(q);
@@ -587,7 +601,9 @@ export const QuotationListPage = () => {
                           <Eye size={13} />
                         </button>
 
+                        </span>
                         {/* 3. Direct PDF Download */}
+                        <span className="ql-slot">
                         {hasDownloadRight && (
                           <button
                             onClick={() => handleDirectDownload(q)}
@@ -600,7 +616,9 @@ export const QuotationListPage = () => {
                           </button>
                         )}
 
+                        </span>
                         {/* 4. Duplicate Quotation */}
+                        <span className="ql-slot">
                         {hasCreateRight && (
                           <button
                             onClick={() => handleDuplicate(q._id)}
@@ -612,7 +630,9 @@ export const QuotationListPage = () => {
                           </button>
                         )}
 
+                        </span>
                         {/* 4b. Confirm the booking (the client accepted), or open the booking it already became */}
+                        <span className="ql-slot">
                         {q.confirmationId ? (
                           can('confirmations', 'canRead') && (
                             <button
@@ -639,7 +659,9 @@ export const QuotationListPage = () => {
                           )
                         )}
 
+                        </span>
                         {/* 5. Edit Quotation */}
+                        <span className="ql-slot">
                         {q.confirmationId ? (
                           <span title={`Confirmed as ${q.confirmationNo}: locked. Cancel the booking to change it.`} style={{ padding: '4px', color: 'var(--fg-059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
                             <Lock size={13} />
@@ -659,7 +681,9 @@ export const QuotationListPage = () => {
                           </span>
                         )}
 
+                        </span>
                         {/* 6. Delete Quotation */}
+                        <span className="ql-slot">
                         {can('quotations', 'canDelete') && canModify && !q.confirmationId && (
                           <button
                             onClick={() => setDeleteItem(q)}
@@ -670,6 +694,7 @@ export const QuotationListPage = () => {
                             <Trash2 size={13} />
                           </button>
                         )}
+                        </span>
                       </div>
                     </td>
                   </tr>
