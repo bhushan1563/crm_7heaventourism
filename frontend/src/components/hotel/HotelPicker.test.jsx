@@ -24,12 +24,13 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('HotelPicker', () => {
-  it('lists the saved hotels with rating, place, rooms and photos', async () => {
+  it('lists the saved hotels with rating, place and photos, and no room count', async () => {
     hotelService.list.mockResolvedValue(listOf([row('a'), row('b', { roomTypeCount: 1, photoCount: 1, starRating: 'Heritage / Palace', area: 'Centre' })]));
     open();
     expect(await screen.findByText('Hotel a')).toBeTruthy();
-    expect(screen.getByText(/5 Star Luxury · Ubud, Indonesia · 3 room types · 4 photos/)).toBeTruthy();
-    expect(screen.getByText(/Heritage \/ Palace · Centre, Ubud, Indonesia · 1 room type · 1 photo$/)).toBeTruthy();
+    expect(screen.getByText(/5 Star Luxury · Ubud, Indonesia · 4 photos$/)).toBeTruthy();
+    expect(screen.getByText(/Heritage \/ Palace · Centre, Ubud, Indonesia · 1 photo$/)).toBeTruthy();
+    expect(screen.queryByText(/room type/)).toBeNull();
     expect(hotelService.list).toHaveBeenCalledWith(expect.objectContaining({ status: 'Active', sort: 'name', limit: 8 }));
   });
 
@@ -103,7 +104,8 @@ describe('HotelPicker', () => {
     await userEvent.selectOptions(screen.getByLabelText('Rating'), '4 star');
     await userEvent.click(screen.getByRole('button', { name: /Add to the list and use it/ }));
     await waitFor(() => expect(onClose).toHaveBeenCalled());
-    expect(hotelService.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ocean Pearl', city: 'Goa', starRating: '4 star', photos: [], roomTypes: [] }));
+    expect(hotelService.create).toHaveBeenCalledWith(expect.objectContaining({ name: 'Ocean Pearl', city: 'Goa', starRating: '4 star', photos: [] }));
+    expect(hotelService.create.mock.calls[0][0]).not.toHaveProperty('roomTypes');
     expect(onPick).toHaveBeenCalledWith(expect.objectContaining({ _id: 'new1' }));
   });
 

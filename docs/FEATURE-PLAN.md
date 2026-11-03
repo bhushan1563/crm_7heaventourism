@@ -94,7 +94,7 @@ Already there and not touched: the client name, duration / nights, pax breakdown
 - [ ] 9.6 Waiting on the client: bulk import of visa documents (they said they would give PDFs or CSV); the same send/download from a saved visa without a client
 
 ### Step 10: Hotel quotations: options and the usual price list (added 2026-11-04, from the user's message with three screenshots)
-- [x] 10.1 The Hotels page has no Pricing section any more (rates change, so they are entered in each quotation; Rooms and meals stays)
+- [x] 10.1 The Hotels page has no Pricing section any more (rates change, so they are entered in each quotation; Rooms and meals stayed then and was removed in step 12)
 - [x] 10.2 A new hotel quotation starts with Option 1 and Option 2 (the 3 star and the 4 star choice shown side by side in one quotation). Each option takes several hotels from the hotel list (for example two 3 star and three 4 star), has its own name and its own price per person, and its total is counted from the guests. "Create quotation" on a hotel puts that hotel first in Option 1. "Back to a single offer" is still there for a one-hotel quotation
 - [x] 10.3 Pricing tab: the usual per-person price list (Package Price, Airfare, Other, Add On, totals counted for the guests) is the same for hotel and package quotations. The sheet-style pricing tables are no longer offered for new quotations; a quotation already priced with them keeps them (they still print) with a button to go back to the usual list
 - [ ] 10.4 Open: does the user want the client's sheet layout (Adult / Extra bed / CWB / CNB) back inside each option later? Not built, not asked for now
@@ -105,7 +105,13 @@ Already there and not touched: the client name, duration / nights, pax breakdown
 - [x] 11.3 Quotation list alignment: the action icons keep seven fixed places (a confirmed or locked row used to sit 15px off the others), the columns fit a laptop (1366px) without sideways scrolling, the quotation number and the status are never cut, rows are one even height, long names show in full on hover. The Confirmations and Client visas lists keep their buttons on one line too
 - [ ] 11.4 Open: Word file of a booking confirmation (only PDF today); sending the file itself automatically (needs a mail service and the WhatsApp Business API)
 
-(Step 7, 8, 9, 10 and 11 are complete; what remains is waiting on the client, see above.)
+### Step 12: Hotel form without "Rooms and meals" (added 2026-11-04, from the user's message with one screenshot)
+- [x] 12.1 The "Rooms and meals" section (room types, "Add a room type", "Meal plans offered") is gone from the Add / Edit hotel form. The form no longer sends `roomTypes` or `mealPlans`; the server leaves what a request does not mention as it was, so a hotel that already has them keeps them (checked on a real database and in a browser), and a new hotel simply starts with none. Rooms are typed in each quotation.
+- [x] 12.2 A hotel that already has saved rooms and meal plans still offers them when it is picked into a quotation (room suggestions, first room and meal plan filled in); a hotel without them is used just the same, with the room typed by hand
+- [x] 12.3 The "N room types" count is removed from the hotel cards and from the hotel picker (it would say "0 room types" on every new hotel). The server still sends the count; nothing shows it
+- [ ] 12.4 Not done on purpose: the stored `roomTypes` / `mealPlans` fields and the server rules for them stay, so nothing already saved is lost and the mobile app keeps working. They can be removed later with a data clean-up once the user is sure they are not wanted
+
+(Step 7, 8, 9, 10, 11 and 12 are complete; what remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

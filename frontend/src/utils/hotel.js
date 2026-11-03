@@ -1,7 +1,7 @@
 // Shared logic for the hotel screens: the empty form, the checks that run before saving (the server repeats them) and the
 // choices offered. No React in here, so it is easy to test. The limits match the server's (backend/src/utils/hotelInput.js).
-import { MEAL_PLANS } from '../config';
-
+// Room types and meal plans are no longer entered on the hotel form. The form does not send them, so a hotel that already has
+// them keeps them (the server leaves what a request does not mention as it was) and a stay taken from it still offers them.
 export const HOTEL_LIMITS = {
   name: 150,
   city: 100,
@@ -15,9 +15,6 @@ export const HOTEL_LIMITS = {
   website: 200,
   amenities: 40,
   amenityLength: 40,
-  roomTypes: 30,
-  roomName: 80,
-  roomDetails: 200,
   policy: 1500,
   notes: 1500,
   tags: 10,
@@ -36,8 +33,6 @@ export const STAR_OPTIONS = [
 ];
 export const starLabel = (value) => STAR_OPTIONS.find((s) => s.value === value)?.label || value || 'Not rated';
 
-export const MEAL_PLAN_CHOICES = MEAL_PLANS;
-
 /** Rules for the amenity tag box (kept as typed, up to 40 of them). */
 export const AMENITY_RULES = { max: HOTEL_LIMITS.amenities, maxLength: HOTEL_LIMITS.amenityLength, lower: false, noun: 'amenity', plural: 'amenities', owner: 'A hotel' };
 /** Rules for the tag box (lower case, up to 10). */
@@ -45,8 +40,6 @@ export const HOTEL_TAG_RULES = { max: HOTEL_LIMITS.tags, maxLength: HOTEL_LIMITS
 
 /** One-click suggestions for the amenity box. */
 export const AMENITY_SUGGESTIONS = ['Swimming pool', 'Free WiFi', 'Spa', 'Restaurant', 'Bar', 'Gym', 'Airport transfer', 'Parking', 'Beach access', 'Room service', 'Kids club', 'Air conditioning'];
-
-export const emptyRoomType = () => ({ name: '', details: '' });
 
 export const emptyHotel = () => ({
   name: '',
@@ -64,8 +57,6 @@ export const emptyHotel = () => ({
   checkInTime: '14:00',
   checkOutTime: '11:00',
   amenities: [],
-  roomTypes: [],
-  mealPlans: [],
   cancellationPolicy: '',
   notes: '',
   tags: [],
@@ -89,8 +80,6 @@ export const toPayload = (form) => ({
   checkInTime: form.checkInTime,
   checkOutTime: form.checkOutTime,
   amenities: form.amenities,
-  roomTypes: form.roomTypes.map(({ name, details }) => ({ name, details: details || '' })),
-  mealPlans: form.mealPlans,
   cancellationPolicy: form.cancellationPolicy,
   notes: form.notes,
   tags: form.tags,
@@ -115,7 +104,7 @@ export const cleanWebsite = (raw) => {
 
 /**
  * Problems found before saving, keyed so the screen can show each one next to its field.
- * Keys: name, city, phone, email, website, checkInTime, checkOutTime, `room-<index>` for a room type.
+ * Keys: name, city, phone, email, website, checkInTime, checkOutTime.
  */
 export const validateHotel = (form) => {
   const L = HOTEL_LIMITS;
@@ -136,22 +125,11 @@ export const validateHotel = (form) => {
 
   if (!TIME.test(form.checkInTime)) errors.checkInTime = 'The check-in time must be a time like 14:00.';
   if (!TIME.test(form.checkOutTime)) errors.checkOutTime = 'The check-out time must be a time like 11:00.';
-
-  const seen = new Set();
-  form.roomTypes.forEach((room, index) => {
-    const roomName = room.name.trim();
-    if (!roomName) errors[`room-${index}`] = `Please enter a name for room type ${index + 1}, or remove it.`;
-    else if (roomName.length > L.roomName) errors[`room-${index}`] = `The name of room type ${index + 1} is too long (the limit is ${L.roomName} characters).`;
-    else if (seen.has(roomName.toLowerCase())) errors[`room-${index}`] = `"${roomName}" is listed twice. Please keep it once.`;
-    else if ((room.details || '').length > L.roomDetails) errors[`room-${index}`] = `The details of room type ${index + 1} are too long (the limit is ${L.roomDetails} characters).`;
-    seen.add(roomName.toLowerCase());
-  });
   return errors;
 };
 
-/** Which field to show first when several things are wrong: the key, and the element id to focus. */
-export const firstErrorKey = (errors, form) => {
+/** Which field to show first when several things are wrong. */
+export const firstErrorKey = (errors) => {
   for (const key of ['name', 'city', 'phone', 'email', 'website', 'checkInTime', 'checkOutTime']) if (errors[key]) return key;
-  const room = form.roomTypes.findIndex((_, i) => errors[`room-${i}`]);
-  return room >= 0 ? `room-${room}` : null;
+  return null;
 };

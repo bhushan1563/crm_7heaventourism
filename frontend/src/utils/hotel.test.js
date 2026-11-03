@@ -29,20 +29,11 @@ describe('validateHotel', () => {
     expect(validateHotel(filled({ checkOutTime: '25:00' })).checkOutTime).toMatch(/like 11:00/);
   });
 
-  it('checks each room type and says which one', () => {
-    const errors = validateHotel(filled({ roomTypes: [{ name: 'Suite', details: '' }, { name: '  ', details: '' }, { name: 'suite', details: '' }, { name: 'Villa', details: 'x'.repeat(201) }] }));
-    expect(errors['room-0']).toBeUndefined();
-    expect(errors['room-1']).toBe('Please enter a name for room type 2, or remove it.');
-    expect(errors['room-2']).toBe('"suite" is listed twice. Please keep it once.');
-    expect(errors['room-3']).toMatch(/details of room type 4 are too long/);
-  });
-
   it('picks the first problem to show, in reading order', () => {
-    const form = filled({ name: '', phone: 'x', roomTypes: [{ name: '', details: '' }] });
-    expect(firstErrorKey(validateHotel(form), form)).toBe('name');
-    const onlyRoom = filled({ roomTypes: [{ name: '', details: '' }] });
-    expect(firstErrorKey(validateHotel(onlyRoom), onlyRoom)).toBe('room-0');
-    expect(firstErrorKey({}, filled())).toBeNull();
+    expect(firstErrorKey(validateHotel(filled({ name: '', phone: 'x' })))).toBe('name');
+    expect(firstErrorKey(validateHotel(filled({ phone: 'x', checkOutTime: '' })))).toBe('phone');
+    expect(firstErrorKey(validateHotel(filled({ checkOutTime: '' })))).toBe('checkOutTime');
+    expect(firstErrorKey({})).toBeNull();
   });
 });
 
@@ -57,10 +48,17 @@ describe('cleanWebsite', () => {
 
 describe('toPayload', () => {
   it('sends only what the server stores (photos as token and caption)', () => {
-    const payload = toPayload(filled({ photos: [{ token: 'T'.repeat(24), width: 5, height: 5, caption: undefined }], roomTypes: [{ name: 'Suite' }] }));
+    const payload = toPayload(filled({ photos: [{ token: 'T'.repeat(24), width: 5, height: 5, caption: undefined }] }));
     expect(payload.photos).toEqual([{ token: 'T'.repeat(24), caption: '' }]);
-    expect(payload.roomTypes).toEqual([{ name: 'Suite', details: '' }]);
     expect(Object.keys(payload).sort()).toEqual(Object.keys(emptyHotel()).sort());
+  });
+
+  it('never carries room types or meal plans: they are not on the form, so a hotel that has them keeps them on the server', () => {
+    const payload = toPayload({ ...filled(), roomTypes: [{ name: 'Suite' }], mealPlans: ['CP (Breakfast Only)'] });
+    expect(payload).not.toHaveProperty('roomTypes');
+    expect(payload).not.toHaveProperty('mealPlans');
+    expect(emptyHotel()).not.toHaveProperty('roomTypes');
+    expect(emptyHotel()).not.toHaveProperty('mealPlans');
   });
 });
 
@@ -78,9 +76,8 @@ describe('ratings and amenity rules', () => {
 describe('property', () => {
   it('validateHotel never throws, and a form with no errors always has a name and a city', () => {
     const text = fc.oneof(fc.string({ maxLength: 30 }), fc.constantFrom('', '   ', '14:00', 'a@b.co', 'www.x.com', '+91 1234 5678', 'x'.repeat(200)));
-    const room = fc.record({ name: fc.string({ maxLength: 20 }), details: fc.string({ maxLength: 20 }) });
     fc.assert(
-      fc.property(fc.record({ name: text, city: text, phone: text, email: text, website: text, checkInTime: text, checkOutTime: text, roomTypes: fc.array(room, { maxLength: 4 }) }), (over) => {
+      fc.property(fc.record({ name: text, city: text, phone: text, email: text, website: text, checkInTime: text, checkOutTime: text }), (over) => {
         const form = { ...emptyHotel(), ...over };
         const errors = validateHotel(form);
         if (Object.keys(errors).length === 0) {
@@ -88,6 +85,10 @@ describe('property', () => {
           expect(form.city.trim().length).toBeGreaterThan(0);
         }
         expect(Object.values(errors).every((m) => typeof m === 'string' && m.length > 5)).toBe(true);
+        // there is always a field to point at when something is wrong, and it is one of the problems found
+        const first = firstErrorKey(errors);
+        if (Object.keys(errors).length === 0) expect(first).toBeNull();
+        else expect(Object.keys(errors)).toContain(first);
       }),
       { numRuns: 400 }
     );

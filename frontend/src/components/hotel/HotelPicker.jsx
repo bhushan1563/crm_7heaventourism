@@ -138,7 +138,7 @@ export const HotelPicker = ({ isOpen, onClose, onPick, canAdd = false }) => {
                   <span className="picker-text">
                     <strong>{row.name}</strong>
                     <small>
-                      {starLabel(row.starRating)} · {[row.area, row.city, row.country].filter(Boolean).join(', ')} · {row.roomTypeCount} {row.roomTypeCount === 1 ? 'room type' : 'room types'} · {row.photoCount} {row.photoCount === 1 ? 'photo' : 'photos'}
+                      {starLabel(row.starRating)} · {[row.area, row.city, row.country].filter(Boolean).join(', ')} · {row.photoCount} {row.photoCount === 1 ? 'photo' : 'photos'}
                     </small>
                   </span>
                 </label>
