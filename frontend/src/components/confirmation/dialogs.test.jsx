@@ -34,6 +34,15 @@ describe('ConfirmBookingDialog', () => {
     expect(screen.queryByText(/mark the guest/)).toBeNull();
   });
 
+  it('shows the Grand Total of an option priced by its rate tables, not a price per person', () => {
+    const stay = (name, rate) => ({ hotelName: name, nights: '3 Nights', noOfRooms: '2 Rooms', rates: [{ kind: 'room', label: '2 Adults', rate, nights: null, rooms: null }] });
+    const q = quotation({ quotationType: 'Only Hotel', options: [{ name: '3 Star', pricePerPerson: 1, totalPrice: 1, hotels: [stay('Hotel A', 5000), stay('Hotel B', 4000)] }, { name: '4 Star', pricePerPerson: 0, totalPrice: 0, hotels: [{ hotelName: 'Hotel Old' }] }] });
+    render(<ConfirmBookingDialog quotation={q} isOpen onClose={() => {}} onConfirm={() => {}} />);
+    expect(screen.getByText('Grand Total Rs 54,000')).toBeInTheDocument(); // counted from the tables (30,000 + 24,000), whatever total was stored
+    expect(screen.queryByText(/Rs 1 per person/)).toBeNull();
+    expect(screen.getByText(/Rs 0 per person/)).toBeInTheDocument(); // an option with no tables is shown as before
+  });
+
   it('needs the accepted option when there are several, and shows what each costs', async () => {
     const onConfirm = vi.fn();
     render(<ConfirmBookingDialog quotation={withOptions()} isOpen onClose={() => {}} onConfirm={onConfirm} />);

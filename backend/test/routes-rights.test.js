@@ -19,7 +19,8 @@ const ROUTERS = {
   itineraries: () => import('../src/routes/itineraryRoutes.js'),
   hotels: () => import('../src/routes/hotelRoutes.js'),
   visas: () => import('../src/routes/visaRoutes.js'),
-  confirmations: () => import('../src/routes/confirmationRoutes.js')
+  confirmations: () => import('../src/routes/confirmationRoutes.js'),
+  masterText: () => import('../src/routes/masterTextRoutes.js')
 };
 
 // Routes without a rights tag, and why that is right.
@@ -114,4 +115,12 @@ test('nothing can be deleted by a right other than "delete", and bookings cannot
   const rows = await routesOf();
   assert.deepEqual(rows.filter((r) => r.method === 'DELETE' && r.rights.some((x) => x.action !== 'canDelete')).map((r) => r.key), []);
   assert.deepEqual(rows.filter((r) => r.router === 'confirmations' && r.method === 'DELETE').map((r) => r.key), [], 'bookings are cancelled, never deleted');
+});
+
+test('the standard notes and policies: anyone who can read quotations reads them, only people who may change rights change them', async () => {
+  const rows = await routesOf();
+  const needs = (key) => rows.find((r) => r.key === key)?.rights.map((r) => `${r.moduleName}.${r.action}`);
+  assert.deepEqual(needs('masterText GET /'), ['quotations.canRead']);
+  assert.deepEqual(needs('masterText PUT /'), ['rights.canUpdate']);
+  assert.deepEqual(needs('masterText POST /reset'), ['rights.canUpdate']);
 });

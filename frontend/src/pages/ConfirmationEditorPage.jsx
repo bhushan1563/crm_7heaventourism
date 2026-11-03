@@ -11,7 +11,7 @@ import BookingEditor from '../components/confirmation/BookingEditor';
 import CancelBookingDialog from '../components/confirmation/CancelBookingDialog';
 import ConfirmationPreview from '../components/confirmation/ConfirmationPreview';
 import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
-import { balanceOf, bookingErrors, bookingPayload, firstErrorKey, formFromConfirmation } from '../utils/confirmation';
+import { balanceOf, bookingErrors, bookingPayload, firstErrorKey, formFromConfirmation, hotelsOfQuote } from '../utils/confirmation';
 import { formatDate } from '../utils/dateHelper';
 import './itineraries.css';
 import '../components/confirmation/confirmation.css';
@@ -230,7 +230,7 @@ export const ConfirmationEditorPage = () => {
         <div><dt>Confirmed</dt><dd>{record.confirmedAt ? formatDate(record.confirmedAt) : '–'}{record.createdByName ? ` by ${record.createdByName}` : ''}</dd></div>
       </dl>
 
-      <BookingEditor form={form} errors={errors} onChange={set} readOnly={readOnly} />
+      <BookingEditor form={form} errors={errors} onChange={set} readOnly={readOnly} hotels={hotelsOfQuote(record.quote)} />
 
       <div className="edit-bar" role="region" aria-label="Save">
         <span className={`edit-bar-status${dirty ? ' is-dirty' : ''}`}>{dirty ? 'You have unsaved changes' : readOnly ? 'Read only' : 'All changes saved'}</span>

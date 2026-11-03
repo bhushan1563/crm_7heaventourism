@@ -16,8 +16,14 @@ export const CONFIRMATION_LIMITS = {
   paymentNote: 300,
   notes: 5000,
   reason: 300,
+  hotels: 50,
+  hotelNo: 60,
+  hotelPhone: 40,
   maxAmount: 1_000_000_000
 };
+
+const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const HOTEL_PHONE = /^[0-9+\-().\s]{5,40}$/;
 
 const fail = (message) => ({ ok: false, message });
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -132,6 +138,31 @@ export const normalizeBookingInput = (body, current = {}) => {
     }
     if (payment.received > payment.totalAmount) return fail(`The amount received (${rs(payment.received)}) cannot be more than the total amount (${rs(payment.totalAmount)}).`);
     data.payment = payment;
+  }
+
+  // What each hotel gave once the room was booked (the hotel's own confirmation number, its contact number and the times), in the
+  // order of the hotels of the copy of the quotation.
+  if (body.hotelBookings !== undefined) {
+    if (!Array.isArray(body.hotelBookings)) return fail('The hotel booking details must be a list.');
+    if (body.hotelBookings.length > L.hotels) return fail(`A booking can have details for at most ${L.hotels} hotels (there are ${body.hotelBookings.length}).`);
+    const hotels = [];
+    for (const [index, raw] of body.hotelBookings.entries()) {
+      const n = index + 1;
+      if (!isPlainObject(raw)) return fail(`The booking details of hotel ${n} are not valid.`);
+      const confirmationNo = line(raw.confirmationNo, `the confirmation number of hotel ${n}`, L.hotelNo);
+      if (!confirmationNo.ok) return confirmationNo;
+      const contactNumber = line(raw.contactNumber, `the contact number of hotel ${n}`, L.hotelPhone);
+      if (!contactNumber.ok) return contactNumber;
+      if (contactNumber.value && !HOTEL_PHONE.test(contactNumber.value)) return fail(`The contact number of hotel ${n} can only have digits, spaces and + - ( ) . characters (5 to ${L.hotelPhone} of them).`);
+      const times = {};
+      for (const [key, label] of [['checkInTime', 'check-in time'], ['checkOutTime', 'check-out time']]) {
+        const time = blank(raw[key]) ? '' : raw[key];
+        if (time !== '' && (typeof time !== 'string' || !TIME.test(time))) return fail(`The ${label} of hotel ${n} must be a time like 14:00.`);
+        times[key] = time;
+      }
+      hotels.push({ confirmationNo: confirmationNo.value, contactNumber: contactNumber.value, ...times });
+    }
+    data.hotelBookings = hotels;
   }
 
   if (body.notes !== undefined) {

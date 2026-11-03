@@ -428,3 +428,26 @@ test('a cancelled booking keeps the contact it had: it can no longer be changed'
   assert.match(attempt.body.message, /cancelled and can no longer be changed/);
   assert.equal((await ConfirmationModel.findById(c._id)).clientPhone, '+91 98765 11111');
 });
+
+test('what each hotel gave (its confirmation number, contact number and times) is saved with the booking, in order, and refused in plain words when wrong', async () => {
+  const q = await makeQuotation({ packageDetails: { hotels: [stay('Hotel Sunrise'), stay('Hotel Moonlight')] } });
+  const c = (await confirm(q)).data;
+  assert.deepEqual(c.hotelBookings, [], 'a new booking starts with none');
+  const save = (json) => conf(`/${c._id}`, { method: 'PUT', token: admin.token, json });
+
+  const saved = (await save({ hotelBookings: [{ confirmationNo: 'HB-2291', contactNumber: '+91 294 242 8800', checkInTime: '14:00', checkOutTime: '11:00' }, { confirmationNo: 'MN-77', contactNumber: '', checkInTime: '12:00', checkOutTime: '' }] })).body;
+  assert.equal(saved.success, true, saved.message);
+  assert.deepEqual(saved.data.hotelBookings, [
+    { confirmationNo: 'HB-2291', contactNumber: '+91 294 242 8800', checkInTime: '14:00', checkOutTime: '11:00' },
+    { confirmationNo: 'MN-77', contactNumber: '', checkInTime: '12:00', checkOutTime: '' }
+  ]);
+
+  const refused = (await save({ hotelBookings: [{ checkInTime: '99:99' }] })).body;
+  assert.equal(refused.success, false);
+  assert.match(refused.message, /check-in time of hotel 1 must be a time like 14:00/);
+  assert.equal((await conf(`/${c._id}`, { token: admin.token })).body.data.hotelBookings.length, 2, 'a refused save changes nothing');
+
+  const other = (await save({ notes: 'only the notes' })).body;
+  assert.equal(other.data.hotelBookings.length, 2, 'saving something else leaves the hotels\' details alone');
+  assert.equal(other.data.quote.packageDetails.hotels.length, 2, 'the copy of the quotation is not touched');
+});

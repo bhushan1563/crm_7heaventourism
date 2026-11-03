@@ -1,15 +1,24 @@
 import React, { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { AlertCircle, ChevronLeft, ChevronRight, ImagePlus, Loader2, RotateCcw, Trash2, X } from 'lucide-react';
+import { AlertCircle, ChevronLeft, ChevronRight, ClipboardPaste, ImagePlus, Loader2, RotateCcw, Trash2, X } from 'lucide-react';
 import Modal from './Modal';
 import { mediaUrl, uploadPhoto } from '../services/mediaService';
 import { photoProblem } from '../utils/photos';
+import { CLIPBOARD_BLOCKED, NOTHING_PASTED, blobText, fileFromDataUrl, fileFromUrl, imageSources, readClipboard, toPhotoFile } from '../utils/pastedImages';
 import './photos.css';
 
 const PARALLEL_UPLOADS = 3;
 
+// The gallery that Ctrl+V is meant for: the one the pointer or the keyboard is on. A page can have many (a day of an itinerary has its own),
+// and only one of them may take a pasted picture.
+let activeGallery = null;
+
+const isTyping = (el) => Boolean(el && (['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) || el.isContentEditable));
+
 /**
  * Photo picker for a record. `photos` is the list kept on the record: [{ token, width, height, caption }].
  * Photos are shrunk in the browser, uploaded to the server and added to the list; the first photo is the cover.
+ * Photos are added by choosing files, by dropping them (also a picture dragged from a web page), or by PASTING a copied picture: copy it
+ * on Google or any page (right-click, "Copy image") or take a screenshot, point at the gallery and press Ctrl+V, or use the Paste tile.
  */
 export const PhotoGallery = ({
   photos = [],
@@ -22,6 +31,7 @@ export const PhotoGallery = ({
   captions = true
 }) => {
   const inputId = useId();
+  const galleryId = useId();
   const inputRef = useRef(null);
   const latest = useRef(photos);
   const queue = useRef([]);
@@ -32,10 +42,29 @@ export const PhotoGallery = ({
   const [notes, setNotes] = useState([]); // files that were turned away, with the reason
   const [dragging, setDragging] = useState(false);
   const [viewing, setViewing] = useState(null);
+  const [fetching, setFetching] = useState(0); // pictures being fetched from a web address
+  const pendingRef = useRef([]);
+  const pastedCount = useRef(0); // numbers the pictures pasted on this screen ("Pasted photo 3")
+  const hover = useRef(false);
+  const focused = useRef(false);
+  const pasteHandler = useRef(null);
 
   useEffect(() => {
     latest.current = photos;
   }, [photos]);
+  pendingRef.current = pending;
+
+  // Whether Ctrl+V is for this gallery: the pointer is over it or the keyboard is inside it (and it is the one used most recently).
+  const refreshActive = () => {
+    if (hover.current || focused.current) activeGallery = galleryId;
+    else if (activeGallery === galleryId) activeGallery = null;
+  };
+  useEffect(
+    () => () => {
+      if (activeGallery === galleryId) activeGallery = null;
+    },
+    [galleryId]
+  );
 
   const commit = useCallback(
     (next) => {
@@ -76,12 +105,16 @@ export const PhotoGallery = ({
     }
   }, [commit, purpose]);
 
-  const addFiles = (fileList) => {
+  const addFiles = (fileList, earlierNotes = []) => {
     const files = Array.from(fileList || []);
-    if (!files.length || disabled) return;
-    const messages = [];
+    if (disabled) return;
+    if (!files.length) {
+      if (earlierNotes.length) setNotes(earlierNotes);
+      return;
+    }
+    const messages = [...earlierNotes];
     const accepted = [];
-    let room = max - latest.current.length - pending.length;
+    let room = max - latest.current.length - pendingRef.current.length;
     for (const file of files) {
       const problem = photoProblem(file);
       if (problem) messages.push(problem);
@@ -96,6 +129,90 @@ export const PhotoGallery = ({
       setPending((list) => [...list, ...accepted]);
       queue.current.push(...accepted);
       pump();
+    }
+  };
+
+  /**
+   * Adds what was pasted (or dragged in from a web page): picture files, or a picture carried in the copied page, or a picture at a web
+   * address. Anything the browser or the site will not give us is told in plain words, with what to do instead.
+   */
+  const takePasted = async ({ files, html, text }) => {
+    if (disabled) return;
+    if (latest.current.length + pendingRef.current.length >= max) {
+      setNotes([`Only ${max} ${max === 1 ? 'photo fits' : 'photos fit'} here. Remove one to add another.`]);
+      return;
+    }
+    const found = [...files];
+    const problems = [];
+    if (!found.length) {
+      const sources = imageSources(html, text);
+      if (sources.length) setFetching((n) => n + 1);
+      try {
+        for (const source of sources) {
+          try {
+            const file = source.kind === 'data' ? fileFromDataUrl(source.value) : await fileFromUrl(source.value);
+            if (file) found.push(file);
+          } catch (error) {
+            problems.push(error.message);
+          }
+        }
+      } finally {
+        if (sources.length) setFetching((n) => n - 1);
+      }
+    }
+    const ready = [];
+    for (const file of found) {
+      try {
+        ready.push(await toPhotoFile(file, (pastedCount.current += 1)));
+      } catch (error) {
+        problems.push(error.message);
+      }
+    }
+    const notesToShow = [...new Set(problems)];
+    if (!ready.length && !notesToShow.length) notesToShow.push(NOTHING_PASTED);
+    addFiles(ready, notesToShow);
+  };
+  pasteHandler.current = takePasted;
+
+  // Ctrl+V: for the gallery the pointer or the keyboard is on. A paste that holds no picture (ordinary text) is left alone.
+  useEffect(() => {
+    if (disabled) return undefined;
+    const onPaste = (event) => {
+      if (activeGallery !== galleryId) return;
+      const contents = readClipboard(event.clipboardData);
+      const hasPicture = contents.files.length > 0 || imageSources(contents.html, contents.text).length > 0;
+      if (!hasPicture) return;
+      if (isTyping(event.target) && !contents.files.length) return; // text being pasted into a box keeps going there
+      event.preventDefault();
+      pasteHandler.current?.(contents);
+    };
+    document.addEventListener('paste', onPaste);
+    return () => document.removeEventListener('paste', onPaste);
+  }, [disabled, galleryId]);
+
+  // The Paste tile, for people who do not know the shortcut: asks the browser for what was copied.
+  const pasteFromButton = async () => {
+    if (typeof navigator === 'undefined' || typeof navigator.clipboard?.read !== 'function') {
+      setNotes([CLIPBOARD_BLOCKED]);
+      return;
+    }
+    try {
+      const files = [];
+      let html = '';
+      let text = '';
+      for (const item of await navigator.clipboard.read()) {
+        const imageType = item.types.find((type) => /^image\//i.test(type));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          files.push(new File([blob], '', { type: blob.type || imageType }));
+          continue;
+        }
+        if (item.types.includes('text/html')) html += await blobText(await item.getType('text/html'));
+        if (item.types.includes('text/plain')) text += await blobText(await item.getType('text/plain'));
+      }
+      await takePasted({ files, html, text });
+    } catch {
+      setNotes([CLIPBOARD_BLOCKED]);
     }
   };
 
@@ -120,13 +237,34 @@ export const PhotoGallery = ({
   const canAdd = !disabled && total < max;
 
   return (
-    <div className="photo-gallery">
+    <div
+      className="photo-gallery"
+      onMouseEnter={() => {
+        hover.current = true;
+        refreshActive();
+      }}
+      onMouseLeave={() => {
+        hover.current = false;
+        refreshActive();
+      }}
+      onFocus={() => {
+        focused.current = true;
+        refreshActive();
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+          focused.current = false;
+          refreshActive();
+        }
+      }}
+    >
       <div className="photo-gallery-head">
         <label className="form-label" htmlFor={inputId} style={{ margin: 0 }}>
           {label} <span className="photo-count">({photos.length}/{max})</span>
         </label>
       </div>
       {help && <p className="photo-help">{help}</p>}
+      {canAdd && <p className="photo-help">You can also paste: copy a picture on Google or any web page (right-click it, then "Copy image"), point at this box and press Ctrl+V.</p>}
 
       <div
         className={`photo-grid${dragging ? ' is-dragging' : ''}`}
@@ -139,7 +277,10 @@ export const PhotoGallery = ({
         onDrop={(e) => {
           e.preventDefault();
           setDragging(false);
-          if (canAdd) addFiles(e.dataTransfer.files);
+          if (!canAdd) return;
+          // Files from the computer, or a picture dragged from a web page (which arrives as its page or its address).
+          if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+          else takePasted(readClipboard(e.dataTransfer));
         }}
       >
         {photos.map((photo, index) => (
@@ -207,11 +348,26 @@ export const PhotoGallery = ({
           </div>
         ))}
 
+        {fetching > 0 && (
+          <div className="photo-tile photo-pending" role="status">
+            <Loader2 size={20} className="animate-spin" />
+            <span className="photo-pending-note">Getting the picture…</span>
+          </div>
+        )}
+
         {canAdd && (
           <button type="button" className="photo-add" onClick={() => inputRef.current?.click()}>
             <ImagePlus size={22} />
             <span>{total === 0 ? 'Add photos' : 'Add more'}</span>
             <small>or drop them here</small>
+          </button>
+        )}
+
+        {canAdd && (
+          <button type="button" className="photo-add photo-paste" onClick={pasteFromButton} aria-label="Paste a picture you copied">
+            <ClipboardPaste size={22} />
+            <span>Paste a picture</span>
+            <small>copied from Google or any page</small>
           </button>
         )}
       </div>

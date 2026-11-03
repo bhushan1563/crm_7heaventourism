@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { STAY_LIMITS, blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from './hotelStay';
+import { STAY_LIMITS, blankStay, hotelDestination, hotelQuotationProblem, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from './hotelStay';
 
 const photo = (n) => ({ token: `${n}`.padStart(24, 'p'), width: 1600, height: 1000, caption: `c${n}` });
 const hotel = (over = {}) => ({
@@ -65,16 +65,24 @@ describe('stayFromHotel', () => {
 });
 
 describe('quotationFromHotel', () => {
-  it('starts a hotel quotation titled with the hotel and its city, with the stay filled in', () => {
+  it('starts a hotel quotation titled with the DESTINATION (the city), not the hotel, with the stay filled in', () => {
     const draft = quotationFromHotel(hotel());
-    expect(draft).toMatchObject({ quotationType: 'Only Hotel', destination: 'THE UBUD RETREAT, UBUD', duration: '1 Night / 2 Days' });
+    expect(draft).toMatchObject({ quotationType: 'Only Hotel', destination: 'UBUD', duration: '1 Night / 2 Days' });
+    expect(draft.destination).not.toMatch(/RETREAT/);
     expect(draft.stay.hotelId).toBe('0123456789abcdef01234567');
-    expect(hotelTitle({ name: 'Plain Inn', city: '' })).toBe('PLAIN INN');
+    expect(draft.stay.hotelName).toBe('The Ubud Retreat'); // the hotel itself still comes below the destination
+  });
+  it('falls back to the hotel name only when the hotel has no city, so the title is never empty', () => {
+    expect(hotelDestination({ name: 'Plain Inn', city: '' })).toBe('PLAIN INN');
+    expect(hotelDestination({ name: 'Plain Inn', city: '   ' })).toBe('PLAIN INN');
+    expect(hotelDestination({ name: 'Taj Lake Palace', city: ' Udaipur ' })).toBe('UDAIPUR');
+    expect(hotelDestination({})).toBe('');
   });
   it('knows which titles are only placeholders', () => {
     expect(isPlaceholderTitle('')).toBe(true);
     expect(isPlaceholderTitle('LUXURY HOTEL BOOKING')).toBe(true);
-    expect(isPlaceholderTitle('TAJ LAKE PALACE, UDAIPUR')).toBe(false);
+    expect(isPlaceholderTitle('UDAIPUR')).toBe(false);
+    expect(isPlaceholderTitle('TAJ LAKE PALACE, UDAIPUR')).toBe(false); // an older title is a real one: it is never replaced
   });
 });
 

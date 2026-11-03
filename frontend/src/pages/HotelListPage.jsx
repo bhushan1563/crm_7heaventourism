@@ -208,7 +208,7 @@ export const HotelListPage = () => {
           ) : (
             <>
               <h3>No hotels yet</h3>
-              <p>Add a hotel once, with its photos and room types, and pick it in any quotation instead of typing it again.</p>
+              <p>Add a hotel once, with its photos and details, and pick it in any quotation instead of typing it again.</p>
               {can('hotels', 'canCreate') && (
                 <button type="button" className="btn btn-primary" onClick={() => navigate('/hotels/new')}>
                   <Plus size={16} /> Add the first hotel

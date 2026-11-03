@@ -6,6 +6,7 @@ import {
   Building2,
   UserCog,
   ShieldCheck,
+  ScrollText,
   ScanLine,
   Sparkles,
   FileText,
@@ -56,7 +57,7 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
       label: 'Administration',
       items: [
         { to: '/users', label: 'User Management', icon: UserCog },
-        ...(isAdmin ? [{ to: '/rights', label: 'Rights & Security', icon: ShieldCheck }] : [])
+        ...(isAdmin ? [{ to: '/notes-policies', label: 'Notes & Policies', icon: ScrollText }, { to: '/rights', label: 'Rights & Security', icon: ShieldCheck }] : [])
       ]
     }
   ];

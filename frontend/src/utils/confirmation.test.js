@@ -31,7 +31,7 @@ describe('the form and the payload', () => {
     expect(p.customFields).toEqual([{ label: 'Driver', value: 'Raju' }]);
   });
   it('copes with a confirmation that has nothing yet', () => {
-    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', note: '' }, notes: '', customFields: [] });
+    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', note: '' }, hotelBookings: [], notes: '', customFields: [] });
     expect(toDateInput(null)).toBe('');
   });
   it('trims what is typed', () => {
@@ -84,8 +84,8 @@ describe('bookingErrors', () => {
 
 describe('the printed view', () => {
   it('numbers the copy of the quotation with the confirmation number', () => {
-    expect(quotationOf({ confirmationNo: '7H-CF-2026-004', quote: { quotationNo: '7H-QT-2026-009', destination: 'GOA' } })).toEqual({ quotationNo: '7H-CF-2026-004', destination: 'GOA' });
-    expect(quotationOf(undefined)).toEqual({ quotationNo: '' });
+    expect(quotationOf({ confirmationNo: '7H-CF-2026-004', quote: { quotationNo: '7H-QT-2026-009', destination: 'GOA' } })).toMatchObject({ quotationNo: '7H-CF-2026-004', destination: 'GOA', confirmationInfo: { no: '7H-CF-2026-004', status: 'Confirmed' } });
+    expect(quotationOf(undefined)).toMatchObject({ quotationNo: '', packageDetails: { hotels: [] } });
   });
   it('shows what is typed (saved or not), leaves empty lines out, and works out the balance', () => {
     const v = bookingView({}, form({ travellers: [{ name: 'Aarav', age: '41', passportNo: '', notes: '' }, { ...blankTraveller() }], customFields: [{ label: 'Driver', value: 'Raju' }, { ...blankDetail() }] }));

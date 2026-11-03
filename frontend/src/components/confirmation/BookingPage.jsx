@@ -18,6 +18,7 @@ const Heading = ({ children }) => (
 export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFooter, pageContainerStyle }) => {
   const cancelled = confirmation.status === 'Cancelled';
   const facts = [
+    ['Confirmation no', confirmation.confirmationNo],
     ['Client', confirmation.clientName],
     ['Destination', confirmation.destination],
     ['Duration', confirmation.duration],
@@ -47,6 +48,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
           </div>
         )}
 
+        <Heading>Confirmation Details</Heading>
         <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
           {facts.map(([label, value]) => (
             <div key={label}>

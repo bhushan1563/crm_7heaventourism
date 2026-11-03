@@ -1,7 +1,10 @@
 // Booking confirmations: the booking information added when a quotation is confirmed (travellers, payment, notes, additional
 // details). Pure functions (no network, no React) so every rule can be tested. The server repeats these checks.
 
-export const CONFIRMATION_LIMITS = { travellers: 50, name: 100, passport: 30, note: 200, maxAge: 120, customFields: 30, label: 60, value: 500, paymentNote: 300, notes: 5000, reason: 300, maxAmount: 1_000_000_000 };
+export const CONFIRMATION_LIMITS = { travellers: 50, name: 100, passport: 30, note: 200, maxAge: 120, customFields: 30, label: 60, value: 500, paymentNote: 300, notes: 5000, reason: 300, hotels: 50, hotelNo: 60, hotelPhone: 40, maxAmount: 1_000_000_000 };
+
+const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
+const HOTEL_PHONE = /^[0-9+\-().\s]{5,40}$/;
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -12,6 +15,22 @@ export const isFullyPaid = (payment) => (Number(payment?.totalAmount) || 0) > 0 
 
 export const blankTraveller = () => ({ name: '', age: '', passportNo: '', notes: '' });
 export const blankDetail = () => ({ label: '', value: '' });
+export const blankHotelBooking = () => ({ confirmationNo: '', contactNumber: '', checkInTime: '', checkOutTime: '' });
+
+/** The hotels of the copy of the quotation a booking was made from (the booking keeps one entry of details for each, in this order). */
+export const hotelsOfQuote = (quote) => (Array.isArray(quote?.packageDetails?.hotels) ? quote.packageDetails.hotels : []);
+
+/**
+ * The details of each hotel as the form holds them: what was saved for it, and for a hotel with nothing saved yet what the hotel list
+ * already said (its contact number and its usual check-in and check-out time), so there is little to type.
+ */
+export const hotelBookingsOf = (confirmation) =>
+  hotelsOfQuote(confirmation?.quote).map((stay, i) => {
+    const saved = confirmation?.hotelBookings?.[i];
+    return saved
+      ? { confirmationNo: saved.confirmationNo || '', contactNumber: saved.contactNumber || '', checkInTime: saved.checkInTime || '', checkOutTime: saved.checkOutTime || '' }
+      : { confirmationNo: '', contactNumber: stay?.contactNumber || '', checkInTime: stay?.checkInTime || '', checkOutTime: stay?.checkOutTime || '' };
+  });
 
 /** A stored date as the value of a date input (yyyy-mm-dd), or ''. */
 export const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
@@ -21,6 +40,7 @@ export const formFromConfirmation = (c) => ({
   travelDate: toDateInput(c?.travelDate),
   travellers: (c?.travellers || []).map((t) => ({ name: t.name || '', age: t.age ?? '', passportNo: t.passportNo || '', notes: t.notes || '' })),
   payment: { totalAmount: c?.payment?.totalAmount ?? 0, received: c?.payment?.received ?? 0, balanceDueDate: toDateInput(c?.payment?.balanceDueDate), note: c?.payment?.note || '' },
+  hotelBookings: hotelBookingsOf(c),
   notes: c?.notes || '',
   customFields: (c?.customFields || []).map((f) => ({ label: f.label || '', value: f.value || '' }))
 });
@@ -30,6 +50,7 @@ export const bookingPayload = (form) => ({
   travelDate: form.travelDate || '',
   travellers: form.travellers.map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
   payment: { totalAmount: Number(form.payment.totalAmount) || 0, received: Number(form.payment.received) || 0, balanceDueDate: form.payment.balanceDueDate || '', note: form.payment.note.trim() },
+  hotelBookings: (form.hotelBookings || []).map((h) => ({ confirmationNo: h.confirmationNo.trim(), contactNumber: h.contactNumber.trim(), checkInTime: h.checkInTime, checkOutTime: h.checkOutTime })),
   notes: form.notes,
   customFields: form.customFields.map((f) => ({ label: f.label.trim(), value: f.value.trim() }))
 });
@@ -74,6 +95,14 @@ export const bookingErrors = (form) => {
   }
   if (form.payment.balanceDueDate && !isRealDate(form.payment.balanceDueDate)) add('payment-date', 'Please enter the balance due date as a real date.');
 
+  (form.hotelBookings || []).forEach((h, i) => {
+    const n = i + 1;
+    if (h.confirmationNo.trim().length > L.hotelNo) add(`hotel-${i}-no`, `The confirmation number of hotel ${n} is too long (the limit is ${L.hotelNo} characters).`);
+    if (h.contactNumber.trim() && !HOTEL_PHONE.test(h.contactNumber.trim())) add(`hotel-${i}-phone`, `The contact number of hotel ${n} can only have digits, spaces and + - ( ) . characters (5 to ${L.hotelPhone} of them).`);
+    if (h.checkInTime && !TIME.test(h.checkInTime)) add(`hotel-${i}-in`, `The check-in time of hotel ${n} must be a time like 14:00.`);
+    if (h.checkOutTime && !TIME.test(h.checkOutTime)) add(`hotel-${i}-out`, `The check-out time of hotel ${n} must be a time like 11:00.`);
+  });
+
   const seen = new Map();
   form.customFields.forEach((f, i) => {
     const label = f.label.trim();
@@ -89,12 +118,29 @@ export const bookingErrors = (form) => {
 
 /** The first field with an error, in the order the page shows them (for moving focus there). */
 export const firstErrorKey = (errors, form) => {
-  const order = ['travelDate', ...form.travellers.flatMap((_, i) => [`traveller-${i}-name`, `traveller-${i}-age`, `traveller-${i}-passport`]), 'payment-total', 'payment-received', 'payment-date', ...form.customFields.flatMap((_, i) => [`detail-${i}-label`, `detail-${i}-value`])];
+  const order = ['travelDate', ...form.travellers.flatMap((_, i) => [`traveller-${i}-name`, `traveller-${i}-age`, `traveller-${i}-passport`]), ...(form.hotelBookings || []).flatMap((_, i) => [`hotel-${i}-no`, `hotel-${i}-phone`, `hotel-${i}-in`, `hotel-${i}-out`]), 'payment-total', 'payment-received', 'payment-date', ...form.customFields.flatMap((_, i) => [`detail-${i}-label`, `detail-${i}-value`])];
   return order.find((key) => errors[key]) || Object.keys(errors)[0] || null;
 };
 
-/** The quotation as a confirmation prints it: the frozen copy, numbered with the confirmation number. */
-export const quotationOf = (confirmation) => ({ ...(confirmation?.quote || {}), quotationNo: confirmation?.confirmationNo || confirmation?.quote?.quotationNo || '' });
+/**
+ * The quotation as a confirmation prints it: the frozen copy, numbered with the confirmation number. It also carries
+ * `confirmationInfo` (what the header says under the destination) and each hotel carries what the hotel gave (`bookingNo`, its
+ * contact number and its times). The details are taken from `form` when there is one, so a preview shows what is on the screen.
+ */
+export const quotationOf = (confirmation, form) => {
+  const quote = confirmation?.quote || {};
+  const bookings = form?.hotelBookings || hotelBookingsOf(confirmation);
+  const hotels = hotelsOfQuote(quote).map((stay, i) => {
+    const b = bookings[i];
+    return b ? { ...stay, bookingNo: b.confirmationNo, contactNumber: b.contactNumber, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime } : stay;
+  });
+  return {
+    ...quote,
+    quotationNo: confirmation?.confirmationNo || quote.quotationNo || '',
+    packageDetails: { ...(quote.packageDetails || {}), hotels },
+    confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed' }
+  };
+};
 
 /** What the printed booking page shows: the saved confirmation with any unsaved edits on top, empty lines left out. */
 export const bookingView = (confirmation, form) => {

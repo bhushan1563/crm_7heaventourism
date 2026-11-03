@@ -111,7 +111,46 @@ Already there and not touched: the client name, duration / nights, pax breakdown
 - [x] 12.3 The "N room types" count is removed from the hotel cards and from the hotel picker (it would say "0 room types" on every new hotel). The server still sends the count; nothing shows it
 - [ ] 12.4 Not done on purpose: the stored `roomTypes` / `mealPlans` fields and the server rules for them stay, so nothing already saved is lost and the mobile app keeps working. They can be removed later with a data clean-up once the user is sure they are not wanted
 
-(Step 7, 8, 9, 10, 11 and 12 are complete; what remains is waiting on the client, see above.)
+### Steps 13 to 17: the client's hotel and booking messages of 3 Nov 2026 (added 2026-11-04; the user asked for them one by one, not in one)
+Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No of Nights / No Of Rooms / Total" with rows 2 Adults, Extra bed, Child With bed, Child No Bed and a Grand Total; "for Package format: based on per person cost"; "keep optional for Extra bed, Child with bed and Child No bed"; the 12:30 and 12:31 messages; the 12:55 list for confirmations; "Master Editor for Notes and Policy"; "Dollar symbol to Rupee symbol") and the user's note that the hotel Option 1 / Option 2 print looks plain and must look professional.
+
+### Step 13: Hotel quotation layout: the destination on top, then the hotel with its room and address, then the dates
+- [x] 13.1 On top of a hotel quotation: the DESTINATION (the city), not the hotel name. A hotel quotation made from a hotel now starts with the hotel's city as its destination (it used to start with the hotel's own name, which is why the print said "TAJ LAKE PALACE" on top); picking the first hotel into an empty hotel quotation fills the city the same way. Quotations already made are not changed
+- [x] 13.2 Under it, each hotel: the hotel name, then its room category, then its address (the order the client asked for; the city is not repeated when the address already has it)
+- [x] 13.3 Under the hotel details: check-in and check-out date, written the way the client wrote it ("Check In: 07 Mar 2026", "Check Out: 10 Mar 2026"); a date that was not entered is left out
+- [x] 13.4 The same on the printed Option cards and on the single-hotel print (the PDF is made from the same page)
+- [x] 13.5 The hotels inside an option can now be given what the print shows: Check-in date, Check-out date, No. of rooms and the address (before, an option's hotel had no boxes for these). The nights follow the two dates once both are entered (and can still be changed by hand); a check-out that is not after the check-in is refused in plain words, naming the option and the hotel
+
+### Step 14: Hotel rates in the client's table, for 3 star and 4 star options with several hotels each
+- [x] 14.1 Under each hotel of each option: the client's table, columns Per room per night, No of nights, No of rooms, Total; the first row is the room for 2 adults; Extra bed, Child with bed and Child no bed are optional rows (added with a button, left out when not needed). Nights and rooms start from the stay (grey), can be changed per row; every total is counted, never typed. A hotel picked into a hotel quotation arrives with its room row ready
+- [x] 14.2 The Grand Total of an option is the sum of its hotels; it is stored as the option's total (the server counts it itself and ignores a typed one), so the booking total, the confirm window and the list keep working. The price per person of such an option is only that total shared by the guests. A package quotation keeps the price per person (the client: "for Package format, based on per person cost"). An older hotel option with only a price per person keeps it, with a button to move to the table
+- [x] 14.3 Options print as a professional proposal: a dark header per option (OPTION 1, its name, a "Recommended" ribbon), each hotel with its room, address, dates and its table, a Hotel total when there are extra rows, and a Grand Total bar. Each hotel is its own block so the PDF continues a long option on the next page without splitting a table (checked on the real 3-page PDF). A confirmed booking prints the same tables and "Grand Total"
+- [x] 14.4 The server checks the table (kind, label, rate, nights, rooms, limits) in plain words, naming the hotel and the row; the browser and the server use the same file for the figures (a test keeps the two copies identical and a property test compares them)
+
+### Step 15: Booking confirmation: what the client asked to add once a quotation turns into a confirmation (hotel and package)
+- [x] 15.1 The vehicle notes ("Points to be Noted (Vehicle Note)") are left out of a confirmation (the quotation behind it keeps them)
+- [x] 15.2 Hotel confirmation number below the hotel name: entered on the booking page, in a new "Hotels" section with one block for each hotel of the booking (hotel confirmation number, hotel contact number, check-in time, check-out time), saved with the booking (`hotelBookings`, checked in plain words by the server); printed only when entered
+- [x] 15.3 Hotel contact number after the address (it starts from the hotel list's number and can be changed for this booking)
+- [x] 15.4 Check In and Check Out time after the dates: "Check In: 07 Mar 2026, Time: 14:00" and "Check Out: 10 Mar 2026, Time: 11:00" (the times start from the hotel list's usual times); "Time: ____" is printed to write in when no time is known; the separate "Timings" line is not printed on a confirmation
+- [x] 15.5 "Confirmation Details" below the destination name: a heading on the booking page (with the confirmation number added to the details) and a line "Confirmation Details: 7H-CF-… • Confirmed on …" under the destination on the pages of the quotation copy ("CANCELLED" is added for a cancelled booking)
+- [x] 15.6 All of this is the same for hotel and package confirmations; a quotation (before it is confirmed) prints exactly as it did
+
+### Step 16: Master editor for Notes and Policy
+- [x] 16.1 The Master Editor: a screen "Notes & Policies" (Administration, for Admins) where the standard Notes and Policy text is changed once instead of quotation by quotation: five lists (important notes & terms, payment policy, cancellation policy, exclusions, vehicle notes), each line formatted text, with add, remove and move. Saved on the server as one record (`/api/master-text`); until something is saved the built-in text (as before) is used, and "Back to the built-in text" removes the saved record after asking
+- [x] 16.2 A NEW quotation starts with the saved text, only in a list nobody has typed in; "Reset Default" on a quotation's payment and cancellation policy goes back to it. A quotation that was already made keeps its own text (checked on a real database and in the browser), so what a client was sent never changes
+- [x] 16.3 Everyone who reads quotations can read it; only people with the update right on rights (Admins) can change it. Another person who opens the address sees it read-only with a plain note; the server refuses their save. Two Admins editing at once: the second save is refused with "Load the latest version". Formatted text is cleaned on the server like every other quotation list
+- [ ] 16.4 Open: the same editor for the other standard texts (inclusions, the end-of-tour banner) if the client wants them; not asked for now
+
+### Step 17: Rupee symbol
+- [x] 17.1 Every dollar sign in the interface is now a rupee: the icons on the Dashboard card ("Confirmed & Paid"), the quotation list card and the "5. Pricing" tab (the guest list's unused dollar icon import was removed). Amounts are written "Rs 1,00,000" (Indian grouping) everywhere; the whole source is searched for dollar icons, "$" amounts, USD and US number formats, and a test keeps it that way
+
+### Step 18: Paste a copied picture into any photo gallery (added 2026-11-04, from the user's message with the "Photos of the destination" screenshot)
+- [x] 18.1 In every photo gallery (itinerary, hotel, quotation days): copy a picture on Google or any page (right-click, "Copy image") or take a screenshot, point at the gallery (or click inside it) and press Ctrl+V. The picture is prepared and uploaded like any chosen photo, named "Pasted photo 1.png" (a real file name is kept). Tested with the real clipboard in a real browser
+- [x] 18.2 A "Paste a picture" tile next to "Add photos" for people who do not know the shortcut (asks the browser for what was copied; if the browser will not allow it, says to click once and press Ctrl+V), and a tip line under the gallery
+- [x] 18.3 Also taken: a picture copied together with its web page, a copied picture address (even without ".jpg" at the end, fetched when the site allows it, with a "Getting the picture…" tile), and a picture dragged from a web page onto the box. Other kinds of picture (GIF, AVIF, BMP) are converted to PNG
+- [x] 18.4 Plain words when it cannot work: no picture in what was copied, a site that does not allow copying (what to do instead), a link that is not a picture, the gallery full. Ordinary text is never taken: pasting words, or text into a caption box, behaves as before. A page with several galleries (the days of an itinerary) pastes only into the one the pointer or keyboard is on
+
+(Steps 7 to 18 are complete; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

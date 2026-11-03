@@ -12,7 +12,7 @@ import {
   Plane,
   Building2,
   FileText,
-  DollarSign,
+  IndianRupee,
   Calendar,
   Users,
   CheckCircle2,
@@ -64,6 +64,10 @@ import TagInput from '../components/itinerary/TagInput';
 import FormattedLine from '../components/quotation/FormattedLine';
 import OptionsEditor from '../components/quotation/OptionsEditor';
 import { hotelsOfFirstOption, optionsProblem, repriceOptions, startHotelOptions, startOptions } from '../utils/quotationOptions';
+import { startRates } from '../utils/rateTable';
+import { DEFAULT_CANCELLATION_POLICY, DEFAULT_EXCLUSIONS, DEFAULT_IMPORTANT_NOTES, DEFAULT_PAYMENT_POLICY, DEFAULT_VEHICLE_NOTES } from '../utils/standardText';
+import { standardLists, startingLists } from '../utils/masterText';
+import masterTextService from '../services/masterTextService';
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
@@ -79,7 +83,7 @@ import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
-import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
+import { blankStay, hotelDestination, hotelQuotationProblem, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
 import './quotationHotels.css';
 import '../components/confirmation/confirmation.css';
@@ -108,7 +112,7 @@ const tabsFor = (quotation) => {
     { id: 'itinerary', label: '2. Itinerary', icon: Calendar },
     { id: 'package', label: '3. Hotel Details', icon: Building2 },
     { id: 'flights', label: '4. Flights', icon: Plane },
-    { id: 'pricing', label: '5. Pricing', icon: DollarSign },
+    { id: 'pricing', label: '5. Pricing', icon: IndianRupee },
     { id: 'notes', label: '6. Notes & Terms', icon: FileText }
   ];
 };
@@ -130,45 +134,6 @@ const DEFAULT_INCLUSIONS = [
   'Assistance provided by dedicated driver / representative throughout the tour',
   'Transfers & sightseeing by private dedicated AC vehicle',
   'All toll taxes, parking fees, fuel & driver allowances'
-];
-
-const DEFAULT_EXCLUSIONS = [
-  'Any kind of monument / temple entry fees unless specified',
-  'Personal expenses such as laundry, telephone, room service, alcoholic/non-alcoholic beverages',
-  'Early check-in and late check-out charges',
-  'Airfare / Train fare unless explicitly specified',
-  'Cost of optional excursions, rides or services not mentioned in the inclusions',
-  'Travel Insurance and emergency medical expenses'
-];
-
-const DEFAULT_PAYMENT_POLICY = [
-  '25% Token advance payment at the time of booking confirmation.',
-  '50% Second payment installment 30 days prior to travel departure.',
-  '25% Balance final payment at least 15 days prior to arrival date.',
-  '100% full payment required at booking confirmation for flight tickets and peak-season hotels.'
-];
-
-const DEFAULT_CANCELLATION_POLICY = [
-  '30 days or more prior to departure: 10% of total tour cost or token booking fee.',
-  '15 to 29 days prior to departure: 25% of total tour cost.',
-  '07 to 14 days prior to departure: 50% of total tour cost.',
-  'Less than 07 days / No-show: 100% of total tour cost (Non-refundable).',
-  'Flight cancellations and non-refundable hotel rates subject to airline/supplier terms.'
-];
-
-const DEFAULT_VEHICLE_NOTES = [
-  'For airport transfers in case of flight delays exceeding 1 hr, charges apply as per hourly schedule',
-  'Opening & closing kilometers and hours calculated garage to garage',
-  'AC system will be switched off on hilly / ghat sections where applicable',
-  'Extra mileage exceeding package limits will be charged at standard per-km rates',
-  'Local usage beyond 12 hours will be billed on hourly & extra km basis'
-];
-
-const DEFAULT_IMPORTANT_NOTES = [
-  'All guests must carry valid government-issued photo ID (Aadhaar / Passport / Voter ID).',
-  'Hotel check-in time is standard 12:00 PM / 02:00 PM and check-out is 10:00 AM / 11:00 AM.',
-  'Extras and personal incidentals to be settled directly at the hotel upon check-out.',
-  'Quotation rates are subject to availability at the time of final confirmation.'
 ];
 
 const DEFAULT_PRICING_ITEMS = [
@@ -257,6 +222,24 @@ export const QuotationBuilderPage = () => {
     vehicleNotes: [...DEFAULT_VEHICLE_NOTES],
     importantNotes: [...DEFAULT_IMPORTANT_NOTES]
   });
+
+  // The company's own standard Notes and Policy text (the master text), when an Admin has saved one: a new quotation starts with it,
+  // but only in a list nobody has typed in yet, and "Reset Default" goes back to it. Without one the built-in text is used, as before.
+  const [master, setMaster] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    masterTextService
+      .get()
+      .then((res) => {
+        if (cancelled || !res?.success || !res.data) return;
+        setMaster(res.data);
+        if (!isEditMode) setFormData((prev) => ({ ...prev, ...startingLists(prev, res.data) }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode]);
 
   // Load Initial Data (Guests, Users, Existing Quotation or GuestParam)
   useEffect(() => {
@@ -560,17 +543,19 @@ export const QuotationBuilderPage = () => {
     const target = hotelPicker;
     setFormData((prev) => {
       const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
-      const title = retitle ? { destination: hotelTitle(hotel) } : {};
+      const title = retitle ? { destination: hotelDestination(hotel) } : {};
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
+        // In a hotel quotation every hotel carries its rate table, so the room rate row is ready as soon as the hotel is chosen.
+        const withRates = (stay) => (prev.quotationType === 'Only Hotel' && !stay.rates?.length ? { ...stay, rates: startRates() } : stay);
         const options = (prev.options || []).map((option, i) => {
           if (i !== target.option) return option;
           const hotels = [...option.hotels];
-          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(stayFromHotel(hotel, blankStay()));
-          else hotels[target.hotel] = stayFromHotel(hotel, hotels[target.hotel]);
+          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(withRates(stayFromHotel(hotel, blankStay())));
+          else hotels[target.hotel] = withRates(stayFromHotel(hotel, hotels[target.hotel]));
           return { ...option, hotels };
         });
-        return { ...prev, ...title, options };
+        return { ...prev, ...title, options: repriceOptions(options, prev.paxDetails) };
       }
       const hotels = [...(prev.packageDetails?.hotels || [])];
       if (target && target.mode !== 'new' && hotels[target.index]) hotels[target.index] = stayFromHotel(hotel, hotels[target.index]);
@@ -698,7 +683,7 @@ export const QuotationBuilderPage = () => {
   const handleResetPaymentPolicy = () => {
     setFormData(prev => ({
       ...prev,
-      paymentPolicy: [...DEFAULT_PAYMENT_POLICY]
+      paymentPolicy: standardLists(master).paymentPolicy
     }));
   };
 
@@ -728,7 +713,7 @@ export const QuotationBuilderPage = () => {
   const handleResetCancellationPolicy = () => {
     setFormData(prev => ({
       ...prev,
-      cancellationPolicy: [...DEFAULT_CANCELLATION_POLICY]
+      cancellationPolicy: standardLists(master).cancellationPolicy
     }));
   };
 
@@ -2166,7 +2151,9 @@ export const QuotationBuilderPage = () => {
 
               {(formData.options || []).length > 0 && (
                 <div className="cf-banner" role="note">
-                  <span>This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.</span>
+                  <span>{formData.quotationType === 'Only Hotel'
+                    ? 'This quotation offers hotel options, so each hotel is priced in its own rate table under the options (per room per night, nights and rooms; the Grand Total of each option is counted from them). This price list is for a quotation with a single offer.'
+                    : 'This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.'}</span>
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveTab('package')}>
                     Go to the hotel options
                   </button>

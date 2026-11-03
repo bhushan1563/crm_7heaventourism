@@ -30,6 +30,18 @@ const customFieldSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// What the hotel gave once the room was booked, one entry for each hotel of the copy of the quotation (the same order): the hotel's
+// own confirmation number, its contact number, and the check-in and check-out time.
+const hotelBookingSchema = new mongoose.Schema(
+  {
+    confirmationNo: { type: String, default: '' },
+    contactNumber: { type: String, default: '' },
+    checkInTime: { type: String, default: '' },
+    checkOutTime: { type: String, default: '' }
+  },
+  { _id: false }
+);
+
 const confirmationSchema = new mongoose.Schema(
   {
     confirmationNo: { type: String, required: true },
@@ -61,6 +73,7 @@ const confirmationSchema = new mongoose.Schema(
       balanceDueDate: { type: Date, default: null, set: parseDateValue },
       note: { type: String, default: '' }
     },
+    hotelBookings: { type: [hotelBookingSchema], default: [] }, // per hotel of the copy: its confirmation number, contact number and times
     notes: { type: String, default: '' }, // formatted text (sanitised on the server), printed on the confirmation
     customFields: { type: [customFieldSchema], default: [] }, // "Additional details": label + value, for what the client adds to their list
 

@@ -26,6 +26,7 @@ import itineraryRoutes from './routes/itineraryRoutes.js';
 import hotelRoutes from './routes/hotelRoutes.js';
 import visaRoutes from './routes/visaRoutes.js';
 import confirmationRoutes from './routes/confirmationRoutes.js';
+import masterTextRoutes from './routes/masterTextRoutes.js';
 import { serveMedia } from './controllers/mediaController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -139,6 +140,7 @@ app.use('/api/itineraries', itineraryRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/visas', visaRoutes);
 app.use('/api/confirmations', confirmationRoutes);
+app.use('/api/master-text', masterTextRoutes);
 app.use('/api', apiNotFound);
 
 // Serve the built frontend when it exists (monorepo single-server deployment).

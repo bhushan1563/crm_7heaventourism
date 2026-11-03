@@ -2,9 +2,11 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plane, Check, X, Diamond, Building2, Calendar, MapPin, Phone, Mail, Award, Coffee, Utensils, CreditCard, AlertCircle } from 'lucide-react';
 import logoImg from '../assets/logo.webp';
-import { formatDate } from '../utils/dateHelper';
+import { formatDate, formatLongDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
+import { addressLine } from '../utils/hotelStay';
+import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
 import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableTotal } from '../utils/priceTables';
@@ -64,20 +66,31 @@ const DayPhotos = ({ photos, maxRowHeight = 150 }) => {
 const amenityLine = (amenities) => (amenities || []).join('  •  ');
 const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean).join('  •  ');
 
+/** A date and its time as a confirmation prints them: "07 Mar 2026, Time: 14:00", or "Time: ____" to write in when there is none yet. */
+const whenText = (date, time) => `${formatLongDate(date)}, Time: ${time || '____'}`;
+
+/** Under the destination of a booking confirmation: its number and the day it was confirmed (nothing on a quotation). */
+const ConfirmationLine = ({ info, align = 'left' }) =>
+  info ? (
+    <div style={{ fontSize: '9px', fontWeight: 700, color: info.status === 'Cancelled' ? '#b91c1c' : '#047857', letterSpacing: '0.02em', textTransform: 'none', marginTop: '2px', textAlign: align }}>
+      Confirmation Details: {info.no}{info.confirmedAt ? ` • Confirmed on ${formatLongDate(info.confirmedAt)}` : ''}{info.status === 'Cancelled' ? ' • CANCELLED' : ''}
+    </div>
+  ) : null;
+
 /**
  * One hotel of a HOTEL quotation. A hotel quotation shows more about the hotel than a package does: a large cover photo
  * with a strip of more photos, the address and contact details, the stay, the room and meal plan, the check-in and
  * check-out times and the amenities.
  */
-const HotelStayCard = ({ h }) => {
+const HotelStayCard = ({ h, confirmed = false }) => {
   const [cover, ...more] = h.photos || [];
   const facts = [
-    (h.checkInDate || h.checkOutDate) && ['Stay', [h.checkInDate ? formatDate(h.checkInDate) : '', h.checkOutDate ? formatDate(h.checkOutDate) : ''].filter(Boolean).join(' to ')],
+    h.checkInDate && ['Check In', confirmed ? whenText(h.checkInDate, h.checkInTime) : formatLongDate(h.checkInDate)],
+    h.checkOutDate && ['Check Out', confirmed ? whenText(h.checkOutDate, h.checkOutTime) : formatLongDate(h.checkOutDate)],
     h.nights && ['Nights', h.nights],
     h.noOfRooms && ['Rooms', h.noOfRooms],
-    h.roomCategory && ['Room', h.roomCategory],
     h.mealPlan && ['Meal plan', h.mealPlan],
-    timesLine(h) && ['Timings', timesLine(h)]
+    !confirmed && timesLine(h) && ['Timings', timesLine(h)] // a confirmation shows the times after the dates instead
   ].filter(Boolean);
   return (
     <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -92,7 +105,10 @@ const HotelStayCard = ({ h }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</div>
-            {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {[h.address, h.city].filter(Boolean).join(', ')}</div>}
+            {confirmed && h.bookingNo && <div style={{ fontSize: '10px', color: '#0f172a', marginTop: '1px' }}><strong>Hotel Confirmation No:</strong> {h.bookingNo}</div>}
+            {h.roomCategory && <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>{h.roomCategory}</div>}
+            {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {addressLine(h)}</div>}
+            {confirmed && h.contactNumber && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '1px' }}><strong style={{ color: '#0f172a' }}>Hotel Contact No:</strong> {h.contactNumber}</div>}
           </div>
           {h.starRating && h.starRating !== 'Unrated' && (
             <span style={{ flex: 'none', fontSize: '9px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '2px 7px', borderRadius: '3px' }}>★ {h.starRating}</span>
@@ -112,11 +128,12 @@ const HotelStayCard = ({ h }) => {
             <strong style={{ color: '#0f172a' }}>Amenities:</strong> {amenityLine(h.amenities)}
           </div>
         )}
-        {(h.contactNumber || h.email || h.contactPerson) && (
+        {((!confirmed && h.contactNumber) || h.email || h.contactPerson) && (
           <div style={{ marginTop: '5px', fontSize: '8.5px', color: '#64748b' }}>
-            {[h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
+            {[!confirmed && h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
           </div>
         )}
+        <RateTablePrint stay={h} />
       </div>
     </div>
   );
@@ -331,6 +348,145 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
   );
 };
 
+const inr = (n) => (Number(n) || 0).toLocaleString('en-IN');
+
+/**
+ * The rates of one hotel, as the client's sheet: the room, then (only when they were added) an extra bed, a child with a bed and a
+ * child with no bed; for each the rate per room per night, the nights, the rooms and the total. A row with no rate is left out.
+ */
+const RateTablePrint = ({ stay }) => {
+  const rows = (stay.rates || []).filter((r) => Number(r.rate) > 0);
+  if (!rows.length) return null;
+  const cell = { border: '1px solid #cbd5e1', padding: '3px 6px', fontSize: '9.5px', color: '#0f172a' };
+  const head = { ...cell, background: '#f1f5f9', fontWeight: 800, fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.03em', color: '#475569' };
+  const num = { textAlign: 'right', whiteSpace: 'nowrap' };
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '7px' }}>
+      <thead>
+        <tr>
+          <th style={{ ...head, textAlign: 'left' }}>Room</th>
+          <th style={{ ...head, ...num }}>Per room per night (Rs)</th>
+          <th style={{ ...head, ...num }}>No of nights</th>
+          <th style={{ ...head, ...num }}>No of rooms</th>
+          <th style={{ ...head, ...num }}>Total (Rs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.kind}>
+            <td style={{ ...cell, fontWeight: 700 }}>{r.label || RATE_LABELS[r.kind]}</td>
+            <td style={{ ...cell, ...num }}>{inr(r.rate)}</td>
+            <td style={{ ...cell, ...num }}>{rowNights(stay, r)}</td>
+            <td style={{ ...cell, ...num }}>{rowUnits(stay, r)}</td>
+            <td style={{ ...cell, ...num, fontWeight: 700 }}>{inr(rateRowTotal(stay, r))}</td>
+          </tr>
+        ))}
+      </tbody>
+      {rows.length > 1 && (
+        <tfoot>
+          <tr>
+            <td colSpan={4} style={{ ...cell, textAlign: 'right', fontWeight: 800, background: '#f8fafc' }}>Hotel total</td>
+            <td style={{ ...cell, ...num, fontWeight: 800, background: '#f8fafc' }}>{inr(hotelTotal(stay))}</td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  );
+};
+
+/** What one hotel of an option shows: its photo, its name, room category and address, its dates, and its rate table. */
+const HotelProposalBody = ({ h }) => {
+  const cover = h.photos?.[0];
+  return (
+    <div style={{ padding: '8px 10px 9px' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+        {cover && <img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} width={cover.width} height={cover.height} crossOrigin={photoCrossOrigin} style={{ flex: 'none', display: 'block', width: '112px', height: '76px', objectFit: 'cover', borderRadius: '5px' }} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</span>
+            {h.starRating && h.starRating !== 'Unrated' && <span style={{ fontSize: '8.5px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '1px 6px', borderRadius: '3px' }}>★ {h.starRating}</span>}
+          </div>
+          {h.roomCategory && <div style={{ fontSize: '10px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>{h.roomCategory}</div>}
+          {(h.address || h.city) && <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>📍 {addressLine(h)}</div>}
+          {(h.checkInDate || h.checkOutDate) && (
+            <div style={{ fontSize: '9px', color: '#0f172a', marginTop: '3px' }}>
+              {h.checkInDate && <span><strong>Check In:</strong> {formatLongDate(h.checkInDate)}</span>}
+              {h.checkInDate && h.checkOutDate && '   •   '}
+              {h.checkOutDate && <span><strong>Check Out:</strong> {formatLongDate(h.checkOutDate)}</span>}
+            </div>
+          )}
+          <div style={{ fontSize: '8.5px', color: '#334155', marginTop: '2px' }}>{[h.nights, h.noOfRooms, h.mealPlan].filter(Boolean).join('   •   ')}</div>
+          {h.amenities?.length > 0 && <div style={{ fontSize: '8px', color: '#64748b', marginTop: '2px' }}>{amenityLine(h.amenities.slice(0, 5))}</div>}
+        </div>
+      </div>
+      <RateTablePrint stay={h} />
+    </div>
+  );
+};
+
+/**
+ * One option of a HOTEL quotation, laid out as a proposal: a header band (OPTION 1, its name, a ribbon when it is recommended), each
+ * of its hotels with its room, address, dates and rate table, and the Grand Total of the option at the end. Each hotel is its own
+ * block, so a long option can continue on the next page without splitting a table (the blocks are never nested).
+ */
+const OptionProposal = ({ option, number }) => {
+  const name = option.name || `Option ${number}`;
+  const byTables = optionUsesRates(option);
+  const note = option.priceNote && option.priceNote !== 'Per person' ? option.priceNote : '';
+  const blocks = option.hotels.length ? option.hotels : [null];
+  const border = option.recommended ? '#f59e0b' : '#cbd5e1';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {blocks.map((h, k) => {
+        const first = k === 0;
+        const last = k === blocks.length - 1;
+        return (
+          <div key={k} className="quotation-keep" style={{ border: `${option.recommended ? 2 : 1}px solid ${border}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+            {first ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: '#0f172a', color: '#ffffff', padding: '6px 10px' }}>
+                <div>
+                  <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.14em', color: '#7dd3fc' }}>OPTION {number}</span>
+                  <div style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>{name}</div>
+                </div>
+                {option.recommended && <span style={{ background: '#f59e0b', color: '#ffffff', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', padding: '2px 8px', borderRadius: '3px' }}>★ RECOMMENDED</span>}
+              </div>
+            ) : (
+              <div style={{ background: '#f1f5f9', color: '#475569', fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', textTransform: 'uppercase' }}>Option {number} · {name}</div>
+            )}
+            {h ? <HotelProposalBody h={h} /> : <div style={{ padding: '10px', fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
+            {last && (
+              <div style={{ background: '#e0f2fe', borderTop: '1px solid #bae6fd', padding: '7px 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0c4a6e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{byTables ? 'Grand Total' : option.pricePerPerson > 0 ? 'Price per person' : 'Price'}</span>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#0c4a6e' }}>{byTables ? `Rs ${inr(optionTotal(option))}` : option.pricePerPerson > 0 ? `Rs ${inr(option.pricePerPerson)}` : 'On request'}</span>
+                </div>
+                {!byTables && option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '9px', color: '#0c4a6e', fontWeight: 700, textAlign: 'right' }}>Total: Rs {inr(option.totalPrice)}</div>}
+                {note && <div style={{ fontSize: '8.5px', color: '#0c4a6e', marginTop: '2px' }}><Line value={note} /></div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** The options of a hotel quotation, one after the other, each priced by the rate tables of its hotels. */
+const HotelOptionsProposal = ({ options }) => (
+  <div style={{ marginBottom: '10px' }}>
+    <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <Building2 size={13} style={{ color: '#0284c7' }} />
+      <span>Hotel Options</span>
+    </div>
+    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>Please choose the option that suits you best. All amounts are in Rs.</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {options.map((option, i) => (
+        <OptionProposal key={i} option={option} number={i + 1} />
+      ))}
+    </div>
+  </div>
+);
+
 /**
  * Hotel options side by side: one card per option with its hotels and its price per person. The cheapest price is not
  * singled out (the guest compares); an option the sales person recommends carries a ribbon.
@@ -362,8 +518,16 @@ const OptionsComparison = ({ options, paxDetails }) => {
                     {h.hotelName || 'Hotel'}
                     {h.starRating && h.starRating !== 'Unrated' && <span style={{ marginLeft: '4px', fontSize: '8px', color: '#b45309', fontWeight: 700 }}>★ {h.starRating}</span>}
                   </div>
-                  {h.city && <div style={{ fontSize: '8px', color: '#64748b' }}>📍 {h.city}</div>}
-                  <div style={{ fontSize: '8px', color: '#334155', marginTop: '1px' }}>{[h.nights, h.roomCategory, h.mealPlan, h.noOfRooms].filter(Boolean).join('  •  ')}</div>
+                  {h.roomCategory && <div style={{ fontSize: '8.5px', fontWeight: 700, color: '#0369a1' }}>{h.roomCategory}</div>}
+                  {(h.address || h.city) && <div style={{ fontSize: '8px', color: '#64748b' }}>📍 {addressLine(h)}</div>}
+                  {(h.checkInDate || h.checkOutDate) && (
+                    <div style={{ fontSize: '8px', color: '#0f172a', marginTop: '1px' }}>
+                      {h.checkInDate && <span><strong>Check In:</strong> {formatLongDate(h.checkInDate)}</span>}
+                      {h.checkInDate && h.checkOutDate && '  •  '}
+                      {h.checkOutDate && <span><strong>Check Out:</strong> {formatLongDate(h.checkOutDate)}</span>}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '8px', color: '#334155', marginTop: '1px' }}>{[h.nights, h.mealPlan, h.noOfRooms].filter(Boolean).join('  •  ')}</div>
                   {h.amenities?.length > 0 && <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '1px' }}>{amenityLine(h.amenities.slice(0, 4))}</div>}
                 </div>
               ))}
@@ -404,7 +568,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const exclusions = quotation.exclusions || [];
   const paymentPolicy = quotation.paymentPolicy || [];
   const cancellationPolicy = quotation.cancellationPolicy || [];
-  const vehicleNotes = quotationType === 'Visa' ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
+  // A booking confirmation carries `confirmationInfo`: it says so under the destination, shows what each hotel gave, and leaves the vehicle notes out.
+  const confirmationInfo = quotation.confirmationInfo || null;
+  const isConfirmation = Boolean(confirmationInfo);
+  const vehicleNotes = quotationType === 'Visa' || isConfirmation ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
   const importantNotes = quotation.importantNotes || [];
 
   // Header Component
@@ -691,7 +858,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
           </div>
           {pricing.grandTotal > 0 && (
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
-              Total Package: Rs {pricing.grandTotal.toLocaleString('en-IN')}
+              {quotationType === 'Only Hotel' ? 'Grand Total' : 'Total Package'}: Rs {pricing.grandTotal.toLocaleString('en-IN')}
             </div>
           )}
         </div>
@@ -727,6 +894,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               >
                 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
               </h2>
+              <ConfirmationLine info={confirmationInfo} align="center" />
               {quotation.duration && (
                 <div
                   style={{
@@ -890,6 +1058,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
             >
               <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 📍 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
+                <ConfirmationLine info={confirmationInfo} />
               </div>
               <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
                 Guest: <strong style={{ color: '#0f172a' }}>{quotation.clientName || 'Valued Guest'}</strong>
@@ -918,7 +1087,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && !isVisaQuotation && hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
+                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel' ? <HotelOptionsProposal options={options} /> : <OptionsComparison options={options} paxDetails={quotation.paxDetails} />)}
 
                 {/* Hotels Table / Cards Layout */}
                 {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (
@@ -930,7 +1099,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {packageDetails.hotels.map((h, i) => (quotationType === 'Only Hotel' ? (
-                        <HotelStayCard key={i} h={h} />
+                        <HotelStayCard key={i} h={h} confirmed={isConfirmation} />
                       ) : (
                         <div
                           key={i}
@@ -973,6 +1142,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                             </div>
                           </div>
 
+                          {isConfirmation && h.bookingNo && (
+                            <div style={{ fontSize: '10px', color: '#0f172a', margin: '-1px 0 5px' }}>
+                              <strong>Hotel Confirmation No:</strong> {h.bookingNo}
+                            </div>
+                          )}
+
                           {/* Hotel Sub-grid Attributes: Meal Plan, Dates, Rooms */}
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px', fontSize: '9px', color: '#334155' }}>
                             {h.mealPlan && (
@@ -980,7 +1155,17 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                                 <strong style={{ color: '#0f172a' }}>🍽 Meal Plan:</strong> {h.mealPlan}
                               </div>
                             )}
-                            {(h.checkInDate || h.checkOutDate) && (
+                            {isConfirmation && h.checkInDate && (
+                              <div>
+                                <strong style={{ color: '#0f172a' }}>📅 Check In:</strong> {whenText(h.checkInDate, h.checkInTime)}
+                              </div>
+                            )}
+                            {isConfirmation && h.checkOutDate && (
+                              <div>
+                                <strong style={{ color: '#0f172a' }}>📅 Check Out:</strong> {whenText(h.checkOutDate, h.checkOutTime)}
+                              </div>
+                            )}
+                            {!isConfirmation && (h.checkInDate || h.checkOutDate) && (
                               <div>
                                 <strong style={{ color: '#0f172a' }}>📅 Stay:</strong> {[h.checkInDate ? formatDate(h.checkInDate) : '', h.checkOutDate ? formatDate(h.checkOutDate) : ''].filter(Boolean).join(' to ')}
                               </div>
@@ -990,7 +1175,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                                 <strong style={{ color: '#0f172a' }}>🚪 Rooms:</strong> {h.noOfRooms}
                               </div>
                             )}
-                            {timesLine(h) && (
+                            {!isConfirmation && timesLine(h) && (
                               <div>
                                 <strong style={{ color: '#0f172a' }}>🕑 Timings:</strong> {timesLine(h)}
                               </div>
@@ -1014,7 +1199,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                               )}
                               {h.contactNumber && (
                                 <div>
-                                  <strong style={{ color: '#334155' }}>Phone:</strong> {h.contactNumber}
+                                  <strong style={{ color: '#334155' }}>{isConfirmation ? 'Hotel Contact No:' : 'Phone:'}</strong> {h.contactNumber}
                                 </div>
                               )}
                               {(h.email || h.contactPerson) && (
@@ -1082,6 +1267,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
             >
               <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 📍 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
+                <ConfirmationLine info={confirmationInfo} />
               </div>
               <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
                 Guest: <strong style={{ color: '#0f172a' }}>{quotation.clientName || 'Valued Guest'}</strong>

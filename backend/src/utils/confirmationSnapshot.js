@@ -1,4 +1,5 @@
 import { tableHasData, tableTotal } from './quotationPriceTables.js';
+import { optionTotal, optionUsesRates } from './hotelRates.js';
 
 // Turning a quotation into the frozen copy a confirmation keeps. Pure logic (no database), so it can be tested exhaustively.
 
@@ -43,7 +44,9 @@ export const confirmationFromQuotation = (quotation, optionIndex, priceTableInde
 
     const option = options[index];
     // The total is stored as the browser sent it; a client that sent none still gets the price per person times the guests.
-    const total = Number(option.totalPrice) > 0 ? round2(option.totalPrice) : round2((Number(option.pricePerPerson) || 0) * guestCount(quotation.paxDetails));
+    // An option priced by the rate tables of its hotels has the Grand Total the tables give (each hotel keeps its table in the copy).
+    const byTables = optionUsesRates(option);
+    const total = byTables ? optionTotal(option) : Number(option.totalPrice) > 0 ? round2(option.totalPrice) : round2((Number(option.pricePerPerson) || 0) * guestCount(quotation.paxDetails));
     quote.options = [];
     quote.packageDetails = { ...(quotation.packageDetails || {}), hotels: option.hotels || [] };
     quote.pricing = {
@@ -52,8 +55,8 @@ export const confirmationFromQuotation = (quotation, optionIndex, priceTableInde
       packageCostPerPerson: 0,
       airfareCostPerPerson: 0,
       otherCostPerPerson: 0,
-      totalCostPerPerson: round2(option.pricePerPerson),
-      totalCostNote: `${rs(option.pricePerPerson)} ${option.priceNote || 'Per person'}`,
+      totalCostPerPerson: byTables ? 0 : round2(option.pricePerPerson),
+      totalCostNote: byTables ? 'Grand Total as per the rates of the hotels above' : `${rs(option.pricePerPerson)} ${option.priceNote || 'Per person'}`,
       grandTotal: total
     };
     optionName = option.name || `Option ${index + 1}`;

@@ -1,0 +1,34 @@
+/* The rates of one hotel in a hotel quotation, laid out like the client's sheet (room, rate per room per night, nights, rooms, total).
+   It stays a table. Where there is not enough room (a phone) it scrolls sideways inside its own box, with the name of the row staying
+   in view, rather than turning into a long stack of boxes. */
+.rt { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; border-top: 1px dashed var(--border-color); }
+.rt-title { font-size: 0.78rem; font-weight: 800; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em; }
+.rt-title small { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-muted); margin-left: 4px; }
+.rt-empty { padding-top: 6px; }
+.rt-scroll { overflow-x: auto; }
+.rt-grid { width: 100%; min-width: 560px; table-layout: fixed; border-collapse: collapse; font-size: 0.85rem; }
+.rt-col-label { width: 26%; }
+.rt-col-rate { width: 22%; }
+.rt-col-count { width: 13%; }
+.rt-col-total { width: 20%; }
+.rt-col-remove { width: 6%; }
+.rt-grid th, .rt-grid td { border: 1px solid var(--border-color); padding: 4px; text-align: left; }
+.rt-grid thead th { background: var(--surface-2); font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); text-align: center; padding: 7px 4px; }
+/* The shared form rules make every field 44px high on touch-sized screens; inside the table the fields are compact. */
+.rt-grid .form-input { height: 36px; min-height: 36px; padding: 4px 6px; font-size: 0.85rem; border-radius: 6px; box-shadow: none; }
+.rt-grid .rt-num { text-align: right; }
+.rt-grid input[type='number'] { -moz-appearance: textfield; appearance: textfield; }
+.rt-grid input[type='number']::-webkit-outer-spin-button,
+.rt-grid input[type='number']::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+/* What is worked out for you is shaded and bold, so it is never mistaken for something to type. */
+.rt-grid td.rt-calc { text-align: right; font-weight: 700; color: var(--text-primary); background: var(--surface-2); white-space: nowrap; padding: 4px 10px 4px 4px; }
+.rt-calc:empty::after { content: '–'; font-weight: 400; color: var(--text-muted); }
+.rt-remove { text-align: center; border: 0 !important; background: transparent; padding: 4px 0 !important; }
+.rt-remove .btn-icon { min-width: 30px; min-height: 30px; width: 30px; height: 30px; padding: 0; }
+.rt-remove .btn-icon:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.rt-grid tfoot th, .rt-grid tfoot td { background: var(--primary-tint); font-weight: 800; }
+.rt-grid .rt-total-label { text-align: right; }
+.rt-grid td.rt-total { text-align: right; color: var(--text-primary); white-space: nowrap; padding-right: 10px; }
+.rt-grid tfoot td:last-child { border: 0; background: transparent; }
+.rt-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rt-add-hint { font-size: 0.75rem; color: var(--text-muted); }

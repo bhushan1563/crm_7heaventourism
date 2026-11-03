@@ -11,7 +11,7 @@ import {
   Edit,
   Trash2,
   Calendar,
-  DollarSign,
+  IndianRupee,
   CheckCircle2,
   Clock,
   Send,
@@ -344,7 +344,7 @@ export const QuotationListPage = () => {
               color: 'var(--fg-2563EB)'
             }}
           >
-            <DollarSign size={22} />
+            <IndianRupee size={22} />
           </div>
           <div>
             <div style={{ fontSize: '0.75rem', color: 'var(--fg-64748B)', textTransform: 'uppercase', fontWeight: 600 }}>

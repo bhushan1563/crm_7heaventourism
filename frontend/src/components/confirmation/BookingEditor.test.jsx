@@ -10,13 +10,14 @@ vi.mock('../LazyRichTextEditor', () => ({ default: ({ value, onChange, ariaLabel
 
 afterEach(cleanup);
 
-const Harness = ({ initial, onState, readOnly = false, showErrors = false }) => {
+const Harness = ({ initial, onState, readOnly = false, showErrors = false, hotels = [] }) => {
   const [form, setForm] = useState(initial);
   return (
     <BookingEditor
       form={form}
       errors={showErrors ? bookingErrors(form) : {}}
       readOnly={readOnly}
+      hotels={hotels}
       onChange={(patch) => {
         setForm((f) => {
           const next = { ...f, ...patch };
@@ -112,5 +113,53 @@ describe('BookingEditor', () => {
     expect(screen.queryByRole('button', { name: /Remove/ })).toBeNull();
     for (const field of screen.getAllByRole('textbox')) expect(field).toBeDisabled();
     expect(screen.getByLabelText('Total amount (Rs)')).toBeDisabled();
+  });
+});
+
+describe('BookingEditor: what each hotel gave', () => {
+  const stays = [{ hotelName: 'Hotel Sunrise', city: 'Udaipur', contactNumber: '+91 294 111 2222', checkInTime: '14:00', checkOutTime: '11:00' }, { hotelName: 'Hotel Moonlight', city: 'Jaipur' }];
+  const withHotels = (over = {}) => formFromConfirmation({ payment: { totalAmount: 120000, received: 0 }, quote: { packageDetails: { hotels: stays } }, ...over });
+
+  it('has a section for the hotels with the four boxes for each, started from the hotel list', () => {
+    render(<Harness initial={withHotels()} hotels={stays} />);
+    expect(screen.getByRole('heading', { name: /Hotels/ })).toBeInTheDocument();
+    const first = screen.getByRole('group', { name: 'Hotel 1: Hotel Sunrise' });
+    expect(within(first).getByLabelText('Hotel confirmation number')).toHaveValue('');
+    expect(within(first).getByLabelText('Hotel contact number')).toHaveValue('+91 294 111 2222');
+    expect(within(first).getByLabelText('Check-in time')).toHaveValue('14:00');
+    expect(within(first).getByLabelText('Check-out time')).toHaveValue('11:00');
+    expect(within(first).getByLabelText('Check-in time')).toHaveAttribute('type', 'time');
+    const second = screen.getByRole('group', { name: 'Hotel 2: Hotel Moonlight' });
+    expect(within(second).getByLabelText('Hotel contact number')).toHaveValue('');
+    expect(screen.getByText('Jaipur', { exact: false })).toBeInTheDocument();
+  });
+
+  it('keeps what is typed for each hotel on that hotel only', async () => {
+    const seen = {};
+    render(<Harness initial={withHotels()} hotels={stays} onState={(f) => Object.assign(seen, f)} />);
+    const second = screen.getByRole('group', { name: 'Hotel 2: Hotel Moonlight' });
+    await userEvent.type(within(second).getByLabelText('Hotel confirmation number'), 'MN-77');
+    await userEvent.type(within(second).getByLabelText('Hotel contact number'), '+91 141 222 3333');
+    expect(seen.hotelBookings[1]).toMatchObject({ confirmationNo: 'MN-77', contactNumber: '+91 141 222 3333' });
+    expect(seen.hotelBookings[0]).toMatchObject({ confirmationNo: '', contactNumber: '+91 294 111 2222' });
+  });
+
+  it('shows a problem next to the box, naming the hotel', () => {
+    const initial = withHotels();
+    initial.hotelBookings[1] = { confirmationNo: '', contactNumber: 'call me', checkInTime: '25:00', checkOutTime: '' };
+    render(<Harness initial={initial} hotels={stays} showErrors />);
+    expect(screen.getByText(/contact number of hotel 2 can only have digits/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Hotel contact number', { selector: '#hotel-1-phone' })).toHaveAttribute('aria-invalid', 'true');
+  });
+
+  it('has no hotels section for a booking without hotels (a visa, a land service)', () => {
+    render(<Harness initial={start()} />);
+    expect(screen.queryByRole('heading', { name: /Hotels/ })).toBeNull();
+  });
+
+  it('cannot be typed into when the booking is read only', () => {
+    render(<Harness initial={withHotels()} hotels={stays} readOnly />);
+    const first = screen.getByRole('group', { name: 'Hotel 1: Hotel Sunrise' });
+    for (const label of ['Hotel confirmation number', 'Hotel contact number', 'Check-in time', 'Check-out time']) expect(within(first).getByLabelText(label)).toBeDisabled();
   });
 });

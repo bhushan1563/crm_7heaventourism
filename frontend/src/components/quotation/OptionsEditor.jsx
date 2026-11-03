@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, CheckCircle2, Copy, Hotel, Plus, Star, Trash2, Undo2 } from 'lucide-react';
 import { HOTEL_STAR_RATINGS, MEAL_PLANS } from '../../config';
-import { OPTION_LIMITS, addOption, duplicateOption, guestCount, moveOption, removeOption, setPrice, setRecommended } from '../../utils/quotationOptions';
-import { blankStay } from '../../utils/hotelStay';
+import { OPTION_LIMITS, addOption, duplicateOption, guestCount, moveOption, removeOption, repriceOptions, setPrice, setRecommended } from '../../utils/quotationOptions';
+import { blankStay, stayDatePatch } from '../../utils/hotelStay';
+import { optionTotal, optionUsesRates } from '../../utils/hotelRates';
+import { startRates } from '../../utils/rateTable';
+import { toInputDate } from '../../utils/dateHelper';
 import FormattedLine from './FormattedLine';
+import RateTable from './RateTable';
 import './optionsEditor.css';
 
 const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -11,24 +15,35 @@ const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 /**
  * The hotel options of a quotation: each option has its own hotels and its own price per person. `onChange(options)` gets the
  * whole new list. `onChooseHotel(optionIndex, hotelIndex | null)` opens the hotel list for that option (null = a new hotel).
- * `onSingle()` goes back to a single offer. The total of an option is worked out from the price and the number of guests.
+ * `onSingle()` goes back to a single offer. In a hotel quotation every hotel has its rate table (the client's sheet) and the total of
+ * an option is the Grand Total of its hotels; in any other quotation it is worked out from the price per person and the guests.
  */
 export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, canUseList, onChooseHotel, onSingle }) => {
   const [askSingle, setAskSingle] = useState(false);
   const guests = guestCount(paxDetails);
   const fromListOnly = quotationType === 'Only Hotel';
 
-  const patchOption = (i, patch) => onChange(options.map((o, k) => (k === i ? { ...o, ...patch } : o)));
+  // Every change goes through here, so the totals are counted again at once and can never disagree with what is shown.
+  const patchOption = (i, patch) => onChange(repriceOptions(options.map((o, k) => (k === i ? { ...o, ...patch } : o)), paxDetails));
   const patchHotel = (i, h, patch) => patchOption(i, { hotels: options[i].hotels.map((s, k) => (k === h ? { ...s, ...patch } : s)) });
-  const addByHand = (i) => patchOption(i, { hotels: [...options[i].hotels, blankStay()] });
-  const removeHotel = (i, h) => patchOption(i, { hotels: options[i].hotels.filter((_, k) => k !== h) });
+  const addByHand = (i) => patchOption(i, { hotels: [...options[i].hotels, fromListOnly ? { ...blankStay(), rates: startRates() } : blankStay()] });
+  const removeHotel = (i, h) => {
+    const hotels = options[i].hotels.filter((_, k) => k !== h);
+    // When the last rate table leaves with its hotel, the figures counted from it go too (they were never typed).
+    const lostTables = optionUsesRates(options[i]) && !optionUsesRates({ hotels });
+    patchOption(i, { hotels, ...(lostTables ? { pricePerPerson: 0, totalPrice: 0 } : {}) });
+  };
 
   return (
     <div className="options-editor">
       <div className="options-head">
         <div>
           <div className="options-title">Hotel options ({options.length})</div>
-          <div className="options-hint">Offer the guest a choice. Each option has its own hotels and its own price, and they are shown side by side. Prices are per person for {guests} {guests === 1 ? 'guest' : 'guests'}.</div>
+          {fromListOnly ? (
+            <div className="options-hint">Offer the guest a choice, for example 3 star and 4 star hotels. Each option can have several hotels; under each hotel enter its rates, and the Grand Total of the option is counted from them.</div>
+          ) : (
+            <div className="options-hint">Offer the guest a choice. Each option has its own hotels and its own price, and they are shown side by side. Prices are per person for {guests} {guests === 1 ? 'guest' : 'guests'}.</div>
+          )}
         </div>
         <div className="options-tools">
           <button type="button" className="btn btn-outline-azure btn-sm" onClick={() => onChange(addOption(options))} disabled={options.length >= OPTION_LIMITS.options}>
@@ -130,6 +145,22 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
                         ))}
                       </select>
                     </div>
+                    <div className="option-hotel-grid">
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-in-${i}-${k}`}>Check-in date</label>
+                        <input id={`opt-in-${i}-${k}`} type="date" className="form-input" value={toInputDate(h.checkInDate)} aria-label={`Hotel ${k + 1} check-in date, option ${i + 1}`} onChange={(e) => patchHotel(i, k, stayDatePatch(h, 'checkInDate', e.target.value))} />
+                      </div>
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-out-${i}-${k}`}>Check-out date</label>
+                        <input id={`opt-out-${i}-${k}`} type="date" className="form-input" value={toInputDate(h.checkOutDate)} aria-label={`Hotel ${k + 1} check-out date, option ${i + 1}`} onChange={(e) => patchHotel(i, k, stayDatePatch(h, 'checkOutDate', e.target.value))} />
+                      </div>
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-rooms-count-${i}-${k}`}>No. of rooms</label>
+                        <input id={`opt-rooms-count-${i}-${k}`} type="text" className="form-input" value={h.noOfRooms || ''} placeholder="e.g. 2 Rooms" aria-label={`Hotel ${k + 1} rooms, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { noOfRooms: e.target.value })} />
+                      </div>
+                      <input type="text" className="form-input option-address" value={h.address || ''} maxLength={300} placeholder="Hotel address" aria-label={`Hotel ${k + 1} address, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { address: e.target.value })} />
+                    </div>
+                    {fromListOnly && <RateTable stay={h} where={`hotel ${k + 1}, option ${i + 1}`} onChange={(rates) => patchHotel(i, k, { rates })} />}
                   </div>
                 );
               })}
@@ -147,20 +178,37 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
               </div>
             </div>
 
-            <div className="option-price">
-              <div>
-                <label className="form-label" htmlFor={`opt-price-${i}`}>Price per person (Rs)</label>
-                <input id={`opt-price-${i}`} type="number" min={0} step="any" className="form-input" value={option.pricePerPerson || ''} placeholder="e.g. 25000" onChange={(e) => onChange(setPrice(options, i, e.target.value, paxDetails))} />
+            {/* A hotel quotation is priced by the rate tables of its hotels; an older option that has only a price per person keeps that
+                price until a hotel of it gets a rate table. Any other quotation is priced per person. */}
+            {fromListOnly && (optionUsesRates(option) || !(option.pricePerPerson > 0)) ? (
+              <div className="option-price option-price-tables">
+                <div>
+                  <span className="form-label">Grand Total of option {i + 1}</span>
+                  <div className="option-total" aria-live="polite" aria-label={`Grand Total of option ${i + 1}`}>{optionUsesRates(option) && optionTotal(option) > 0 ? money(optionTotal(option)) : '—'}</div>
+                  <div className="options-hint">Counted from the rates of the hotels above, for {guests} {guests === 1 ? 'guest' : 'guests'}.</div>
+                </div>
+                <div className="option-note">
+                  <span className="form-label">Note under the total (optional)</span>
+                  <FormattedLine value={option.priceNote && option.priceNote !== 'Per person' ? option.priceNote : ''} maxLength={200} placeholder="e.g. Taxes extra, rates valid till 31 Mar" ariaLabel={`Price note of option ${i + 1}`} onChange={(value) => patchOption(i, { priceNote: value })} />
+                </div>
               </div>
-              <div>
-                <span className="form-label">Total for {guests} {guests === 1 ? 'guest' : 'guests'}</span>
-                <div className="option-total" aria-live="polite">{option.pricePerPerson > 0 ? money(option.totalPrice) : '—'}</div>
+            ) : (
+              <div className="option-price">
+                <div>
+                  <label className="form-label" htmlFor={`opt-price-${i}`}>Price per person (Rs)</label>
+                  <input id={`opt-price-${i}`} type="number" min={0} step="any" className="form-input" value={option.pricePerPerson || ''} placeholder="e.g. 25000" onChange={(e) => onChange(setPrice(options, i, e.target.value, paxDetails))} />
+                </div>
+                <div>
+                  <span className="form-label">Total for {guests} {guests === 1 ? 'guest' : 'guests'}</span>
+                  <div className="option-total" aria-live="polite">{option.pricePerPerson > 0 ? money(option.totalPrice) : '—'}</div>
+                </div>
+                <div className="option-note">
+                  <span className="form-label">Price note</span>
+                  <FormattedLine value={option.priceNote || ''} maxLength={200} placeholder="e.g. Per person on twin sharing, incl. GST" ariaLabel={`Price note of option ${i + 1}`} onChange={(value) => patchOption(i, { priceNote: value })} />
+                </div>
+                {fromListOnly && <p className="options-hint option-legacy">This option was priced per person. To price it from the client's rate table instead, add the room rate under a hotel above.</p>}
               </div>
-              <div className="option-note">
-                <span className="form-label">Price note</span>
-                <FormattedLine value={option.priceNote || ''} maxLength={200} placeholder="e.g. Per person on twin sharing, incl. GST" ariaLabel={`Price note of option ${i + 1}`} onChange={(value) => patchOption(i, { priceNote: value })} />
-              </div>
-            </div>
+            )}
           </section>
         ))}
       </div>
