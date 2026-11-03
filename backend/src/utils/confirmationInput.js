@@ -67,6 +67,20 @@ export const normalizeBookingInput = (body, current = {}) => {
     data.travelDate = r.value;
   }
 
+  // The client's contact details: the Send window keeps a WhatsApp number or an e-mail address typed there. Empty clears it.
+  if (body.clientPhone !== undefined) {
+    const r = line(body.clientPhone, "the client's phone number", 30);
+    if (!r.ok) return r;
+    if (r.value && !/^\+?[0-9][0-9 ().-]{4,28}$/.test(r.value)) return fail('The client\'s phone number can only have digits, spaces, "+" and "-".');
+    data.clientPhone = r.value;
+  }
+  if (body.clientEmail !== undefined) {
+    const r = line(body.clientEmail, "the client's e-mail address", 254);
+    if (!r.ok) return r;
+    if (r.value && !/^[^\s@,;]+@[^\s@,;.]+(\.[^\s@,;.]+)+$/.test(r.value)) return fail("The client's e-mail address does not look right. It should be like name@example.com.");
+    data.clientEmail = r.value;
+  }
+
   if (body.travellers !== undefined) {
     if (!Array.isArray(body.travellers)) return fail('The travellers must be a list.');
     if (body.travellers.length > L.travellers) return fail(`A booking can list at most ${L.travellers} travellers (there are ${body.travellers.length}).`);

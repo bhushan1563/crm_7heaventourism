@@ -388,3 +388,43 @@ test('someone who may create bookings but has no access to quotations cannot con
   assert.equal((await setRight({ canRead: true })).body.success, true);
   assert.equal((await confirm(q, {}, person)).success, true, 'and once they may read quotations again they can');
 });
+
+test('the client\'s contact can be kept on the booking (the quotation stays locked and untouched), by those who may change the booking', async () => {
+  const q = await makeQuotation({ clientPhone: '', clientEmail: '' });
+  const c = (await confirm(q)).data;
+  const put = (json, who = admin) => conf(`/${c._id}`, { method: 'PUT', token: who.token, json });
+  const first = await put({ clientPhone: '+91 98765 43210', clientEmail: 'meera@example.com', updatedAt: c.updatedAt });
+  assert.equal(first.body.success, true, first.body.message);
+  assert.deepEqual([first.body.data.clientPhone, first.body.data.clientEmail], ['+91 98765 43210', 'meera@example.com']);
+  const listed = (await conf(`?search=${encodeURIComponent('98765')}`, { token: admin.token })).body.data;
+  assert.ok(listed.some((x) => x._id === c._id), 'the list finds the booking by the number kept on it');
+  assert.equal((await QuotationModel.findById(q._id)).clientPhone, '', 'the locked quotation is not touched');
+
+  const stale = await put({ clientPhone: '+91 90000 00000', updatedAt: c.updatedAt }); // the second save with the old version
+  assert.equal(stale.body.success, false);
+  assert.match(stale.body.message, /while you were editing it/);
+
+  const cleared = await put({ clientPhone: '', updatedAt: first.body.data.updatedAt });
+  assert.equal(cleared.body.success, true);
+  assert.equal(cleared.body.data.clientPhone, '');
+  assert.equal(cleared.body.data.clientEmail, 'meera@example.com', 'only what was sent changed');
+
+  const refused = await put({ clientPhone: 'call me', updatedAt: cleared.body.data.updatedAt });
+  assert.equal(refused.body.success, false);
+  assert.match(refused.body.message, /phone number can only have digits/);
+
+  const denied = await put({ clientPhone: '+91 90000 00000' }, viewer);
+  assert.equal(denied.body.success, false);
+  assert.match(denied.body.message, /Permission Denied/);
+  assert.equal((await ConfirmationModel.findById(c._id)).clientPhone, '');
+});
+
+test('a cancelled booking keeps the contact it had: it can no longer be changed', async () => {
+  const q = await makeQuotation({ clientPhone: '+91 98765 11111' });
+  const c = (await confirm(q)).data;
+  await conf(`/${c._id}/cancel`, asAdmin({ reason: 'The client changed their plans' }));
+  const attempt = await conf(`/${c._id}`, { method: 'PUT', token: admin.token, json: { clientPhone: '+91 90000 00000' } });
+  assert.equal(attempt.body.success, false);
+  assert.match(attempt.body.message, /cancelled and can no longer be changed/);
+  assert.equal((await ConfirmationModel.findById(c._id)).clientPhone, '+91 98765 11111');
+});

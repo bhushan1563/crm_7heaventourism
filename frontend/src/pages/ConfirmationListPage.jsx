@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Loader2, Lock, RefreshCw, Search } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Loader2, Lock, RefreshCw, Search, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import confirmationService from '../services/confirmationService';
 import { getErrorMessage } from '../services/api';
 import ConfirmationPreview from '../components/confirmation/ConfirmationPreview';
+import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
 import { formatDate } from '../utils/dateHelper';
 import './itineraries.css';
 import '../components/confirmation/confirmation.css';
@@ -21,7 +22,7 @@ const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 export const ConfirmationListPage = () => {
   const navigate = useNavigate();
-  const { can, canEditRecord } = useAuth();
+  const { user, can, canEditRecord } = useAuth();
   const { showToast } = useToast();
 
   const [filters, setFilters] = useState(NO_FILTERS);
@@ -31,6 +32,7 @@ export const ConfirmationListPage = () => {
   const [error, setError] = useState('');
   const [previewing, setPreviewing] = useState(null); // the full record being previewed
   const [openingId, setOpeningId] = useState('');
+  const [sharing, setSharing] = useState(null); // the booking being sent to the client
   const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
@@ -80,6 +82,13 @@ export const ConfirmationListPage = () => {
     } finally {
       setOpeningId('');
     }
+  };
+
+  // A number or address kept from the Send window is shown in the list at once, and the window holds the new version of the booking.
+  const contactKept = (id, patch, updated) => {
+    const merged = { ...patch, ...(updated?.updatedAt ? { updatedAt: updated.updatedAt } : {}) };
+    setResult((r) => ({ ...r, data: r.data.map((x) => (x._id === id ? { ...x, ...merged } : x)) }));
+    setSharing((current) => (current && current._id === id ? { ...current, ...merged } : current));
   };
 
   const { data, total, pages } = result;
@@ -165,12 +174,12 @@ export const ConfirmationListPage = () => {
           <table className="luxury-table table-stack cf-table">
             <thead>
               <tr>
-                <th style={{ width: '15%' }}>Booking</th>
-                <th style={{ width: '20%' }}>Client &amp; guests</th>
-                <th style={{ width: '20%' }}>Destination &amp; travel date</th>
-                <th style={{ width: '17%' }}>Payment</th>
+                <th style={{ width: '14%' }}>Booking</th>
+                <th style={{ width: '17%' }}>Client &amp; guests</th>
+                <th style={{ width: '19%' }}>Destination &amp; travel date</th>
+                <th style={{ width: '16%' }}>Payment</th>
                 <th style={{ width: '10%' }}>Status</th>
-                <th style={{ width: '18%', textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '24%', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -210,6 +219,11 @@ export const ConfirmationListPage = () => {
                         <button type="button" className="btn btn-outline-azure btn-sm btn-icon" onClick={() => openPreview(item)} disabled={openingId === item._id} title="Preview and download the confirmation" aria-label={`Preview ${item.confirmationNo}`}>
                           {openingId === item._id ? <Loader2 size={13} className="animate-spin" /> : <Eye size={13} />}
                         </button>
+                        {item.status === 'Confirmed' && can('confirmations', 'canDownload') && (
+                          <button type="button" className="btn btn-primary btn-sm" onClick={() => setSharing(item)} title="Send the confirmation to the client by WhatsApp or e-mail" aria-label={`Send ${item.confirmationNo} to the client`}>
+                            <Send size={13} /> Send
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -233,6 +247,17 @@ export const ConfirmationListPage = () => {
       )}
 
       <ConfirmationPreview confirmation={previewing} isOpen={Boolean(previewing)} onClose={() => setPreviewing(null)} />
+      {sharing && (
+        <ShareConfirmationDialog
+          confirmation={sharing}
+          isOpen
+          onClose={() => setSharing(null)}
+          canEdit={canEditRecord('confirmations', sharing) && can('confirmations', 'canUpdate')}
+          onContactSaved={(patch, updated) => contactKept(sharing._id, patch, updated)}
+          senderName={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''}
+          senderNumber={user?.senderNumber || ''}
+        />
+      )}
     </div>
   );
 };

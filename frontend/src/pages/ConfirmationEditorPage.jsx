@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Ban, Eye, Lock, RefreshCw, Save } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Ban, Eye, Lock, RefreshCw, Save, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import confirmationService from '../services/confirmationService';
@@ -10,6 +10,7 @@ import PageLoader from '../components/PageLoader';
 import BookingEditor from '../components/confirmation/BookingEditor';
 import CancelBookingDialog from '../components/confirmation/CancelBookingDialog';
 import ConfirmationPreview from '../components/confirmation/ConfirmationPreview';
+import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
 import { balanceOf, bookingErrors, bookingPayload, firstErrorKey, formFromConfirmation } from '../utils/confirmation';
 import { formatDate } from '../utils/dateHelper';
 import './itineraries.css';
@@ -20,7 +21,7 @@ const money = (n) => `₹${(Number(n) || 0).toLocaleString('en-IN')}`;
 export const ConfirmationEditorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { can, canEditRecord } = useAuth();
+  const { user, can, canEditRecord } = useAuth();
   const { showToast } = useToast();
 
   const [record, setRecord] = useState(null);
@@ -35,6 +36,7 @@ export const ConfirmationEditorPage = () => {
   const [conflict, setConflict] = useState(false);
   const [dialog, setDialog] = useState(null); // 'leave' | 'reload' | 'cancel'
   const [previewing, setPreviewing] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const heldId = useRef(null);
 
   const apply = useCallback((data) => {
@@ -178,6 +180,11 @@ export const ConfirmationEditorPage = () => {
           <button type="button" className="btn btn-outline-azure" onClick={() => setPreviewing(true)}>
             <Eye size={15} /> <span>Preview &amp; PDF</span>
           </button>
+          {!cancelled && can('confirmations', 'canDownload') && (
+            <button type="button" className="btn btn-primary" onClick={() => setSharing(true)} disabled={dirty} title={dirty ? 'Save your changes first, so the client gets what is on this page' : 'Send the confirmation to the client by WhatsApp or e-mail'}>
+              <Send size={15} /> <span>Send to client</span>
+            </button>
+          )}
           {!cancelled && !readOnly && can('confirmations', 'canUpdate') && (
             <button type="button" className="btn btn-outline cf-cancel-btn" onClick={() => setDialog('cancel')}>
               <Ban size={15} /> <span>Cancel booking</span>
@@ -238,6 +245,17 @@ export const ConfirmationEditorPage = () => {
       </div>
 
       <ConfirmationPreview confirmation={record} form={form} isOpen={previewing} onClose={() => setPreviewing(false)} />
+      {sharing && (
+        <ShareConfirmationDialog
+          confirmation={record}
+          isOpen
+          onClose={() => setSharing(false)}
+          canEdit={!readOnly && can('confirmations', 'canUpdate')}
+          onContactSaved={(patch, updated) => updated && apply(updated)}
+          senderName={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''}
+          senderNumber={user?.senderNumber || ''}
+        />
+      )}
       <CancelBookingDialog confirmation={record} isOpen={dialog === 'cancel'} onClose={() => setDialog(null)} onConfirm={cancelBooking} busy={cancelling} />
       <ConfirmDialog
         isOpen={dialog === 'leave'}

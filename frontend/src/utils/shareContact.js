@@ -52,10 +52,14 @@ export const whatsappLink = (digits, message) => `https://wa.me/${digits}?text=$
 
 export const mailtoLink = (to, subject, body) => `mailto:${to}?subject=${encodeURIComponent(String(subject || '').slice(0, SHARE_LIMITS.subject))}&body=${encodeURIComponent(String(body || '').slice(0, SHARE_LIMITS.message))}`;
 
-/** The same name the quotation list gives its PDF, so a file is called the same wherever it is saved from. */
-export const shareFileName = (quotation, extension) => {
-  const destination = String(quotation?.destination || '7Heaven').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || '7Heaven';
-  return `7Heaven_Quotation_${destination}_${quotation?.quotationNo || 'Doc'}.${extension}`;
+/**
+ * The same name the quotation list gives its PDF, so a file is called the same wherever it is saved from. A booking confirmation
+ * (`kind` "Confirmation") is named after its own number.
+ */
+export const shareFileName = (record, extension, kind = 'Quotation') => {
+  const destination = String(record?.destination || '7Heaven').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').slice(0, 40) || '7Heaven';
+  const number = kind === 'Confirmation' ? record?.confirmationNo || record?.quotationNo : record?.quotationNo;
+  return `7Heaven_${kind}_${destination}_${number || 'Doc'}.${extension}`;
 };
 
 export const FORMAT_LABELS = { pdf: 'PDF', docx: 'Word' };
@@ -63,7 +67,7 @@ export const FORMAT_LABELS = { pdf: 'PDF', docx: 'Word' };
 const clip = (value, length) => String(value || '').trim().slice(0, length);
 
 /** A friendly message to start from; the person can change every word of it before sending. */
-export const defaultShareMessage = ({ quotation, format = 'pdf', senderName = '', company = {} }) => {
+export const defaultShareMessage = ({ quotation, format = 'pdf', senderName = '', senderNumber = '', company = {} }) => {
   const client = clip(quotation?.clientName, 80);
   const lines = [
     client ? `Hello ${client},` : 'Hello,',
@@ -72,9 +76,28 @@ export const defaultShareMessage = ({ quotation, format = 'pdf', senderName = ''
   ];
   if (quotation?.travelDate) lines.push(`Travel date: ${formatDate(quotation.travelDate)}`);
   lines.push('', 'Please let us know if you would like any changes.', '', 'Warm regards,', clip(senderName, 60) || 'The 7Heaven Tourism team');
-  if (company.phone) lines.push(company.phone);
+  const reach = clip(senderNumber, 30) || company.phone; // the sender's own number, else the company's
+  if (reach) lines.push(reach);
   return lines.join('\n').slice(0, SHARE_LIMITS.message);
 };
+
+/** The message that goes with a booking confirmation: the booking, the destination, when they travel and who travels. */
+export const defaultConfirmationMessage = ({ confirmation, senderName = '', senderNumber = '', company = {} }) => {
+  const client = clip(confirmation?.clientName, 80);
+  const lines = [
+    client ? `Hello ${client},` : 'Hello,',
+    '',
+    `Greetings from ${company.name ? company.name.replace(/\s+/g, ' ') : '7Heaven Tourism'}! Your booking${confirmation?.confirmationNo ? ` ${confirmation.confirmationNo}` : ''} for ${clip(confirmation?.destination, 80) || 'your trip'} is confirmed. Please find the booking confirmation attached as a PDF file.`
+  ];
+  if (confirmation?.travelDate) lines.push(`Travel date: ${formatDate(confirmation.travelDate)}`);
+  if (confirmation?.paxDetails) lines.push(`Travellers: ${clip(confirmation.paxDetails, 60)}`);
+  lines.push('', 'Please keep it with you, and let us know if anything needs to change.', '', 'Warm regards,', clip(senderName, 60) || 'The 7Heaven Tourism team');
+  const reach = clip(senderNumber, 30) || company.phone;
+  if (reach) lines.push(reach);
+  return lines.join('\n').slice(0, SHARE_LIMITS.message);
+};
+
+export const confirmationEmailSubject = (confirmation) => clip(`7Heaven Tourism: Booking confirmation${confirmation?.confirmationNo ? ` ${confirmation.confirmationNo}` : ''} for ${confirmation?.destination || 'your trip'}`, SHARE_LIMITS.subject);
 
 export const defaultEmailSubject = (quotation) => clip(`7Heaven Tourism: ${quotation?.destination || 'Travel'} quotation${quotation?.quotationNo ? ` ${quotation.quotationNo}` : ''}`, SHARE_LIMITS.subject);
 

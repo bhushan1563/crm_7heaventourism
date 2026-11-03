@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { formatDate } from './dateHelper';
-import { SHARE_LIMITS, contactToSave, defaultEmailSubject, defaultShareMessage, emailAddress, mailtoLink, shareFileName, whatsappLink, whatsappNumber } from './shareContact';
+import { SHARE_LIMITS, confirmationEmailSubject, contactToSave, defaultConfirmationMessage, defaultEmailSubject, defaultShareMessage, emailAddress, mailtoLink, shareFileName, whatsappLink, whatsappNumber } from './shareContact';
 
 describe('whatsappNumber', () => {
   it.each([
@@ -183,5 +183,57 @@ describe('contactToSave', () => {
   });
   it('never saves what was not valid', () => {
     expect(contactToSave({}, phone('12'), email('nope'))).toEqual({});
+  });
+});
+
+describe('the sender number', () => {
+  const q = { destination: 'JAPAN TOURIST VISA', quotationNo: '7H-QT-2026-014', clientName: 'Meera Iyer' };
+  const company = { name: '7HEAVEN TOURISM', phone: '+91 7862829178' };
+  it('closes the message with the sender\'s own number when they have one, else with the company number', () => {
+    const own = defaultShareMessage({ quotation: q, senderName: 'Sana Tester', senderNumber: '+919876543210', company });
+    expect(own.endsWith('Sana Tester\n+919876543210')).toBe(true);
+    expect(own).not.toContain('7862829178');
+    const none = defaultShareMessage({ quotation: q, senderName: 'Sana Tester', senderNumber: '', company });
+    expect(none.endsWith('Sana Tester\n+91 7862829178')).toBe(true);
+    expect(defaultShareMessage({ quotation: q, company: {} }).endsWith('The 7Heaven Tourism team')).toBe(true);
+  });
+});
+
+describe('a booking confirmation', () => {
+  const c = { confirmationNo: '7H-CF-2026-001', quotationNo: '7H-QT-2026-022', clientName: 'Pujan', destination: 'Vietnam', travelDate: '2027-03-21T00:00:00.000Z', paxDetails: '6 Adults' };
+  const company = { name: '7HEAVEN TOURISM', phone: '+91 7862829178' };
+  it('is named after the booking number, like the preview names its PDF', () => {
+    expect(shareFileName(c, 'pdf', 'Confirmation')).toBe('7Heaven_Confirmation_Vietnam_7H-CF-2026-001.pdf');
+    expect(shareFileName({ ...c, confirmationNo: '' }, 'pdf', 'Confirmation')).toBe('7Heaven_Confirmation_Vietnam_7H-QT-2026-022.pdf');
+    expect(shareFileName(c, 'pdf')).toBe('7Heaven_Quotation_Vietnam_7H-QT-2026-022.pdf'); // a quotation keeps its own name
+  });
+  it('gets a message that says the booking is confirmed, with the dates and the travellers, signed with the sender\'s number', () => {
+    const text = defaultConfirmationMessage({ confirmation: c, senderName: 'Sana Tester', senderNumber: '+919876543210', company });
+    expect(text).toMatch(/^Hello Pujan,/);
+    expect(text).toContain('Your booking 7H-CF-2026-001 for Vietnam is confirmed');
+    expect(text).toContain('attached as a PDF file');
+    expect(text).toContain(`Travel date: ${formatDate(c.travelDate)}`);
+    expect(text).toContain('Travellers: 6 Adults');
+    expect(text.endsWith('Sana Tester\n+919876543210')).toBe(true);
+    expect(formatDate(c.travelDate)).not.toBe('');
+  });
+  it('leaves out what it does not have, and still reads well', () => {
+    const text = defaultConfirmationMessage({ confirmation: {}, company: {} });
+    expect(text).toMatch(/^Hello,/);
+    expect(text).toContain('Your booking for your trip is confirmed');
+    expect(text).not.toContain('Travel date');
+    expect(text).not.toContain('Travellers');
+  });
+  it('has an e-mail subject that names the booking and the destination', () => {
+    expect(confirmationEmailSubject(c)).toBe('7Heaven Tourism: Booking confirmation 7H-CF-2026-001 for Vietnam');
+    expect(confirmationEmailSubject({})).toBe('7Heaven Tourism: Booking confirmation for your trip');
+  });
+  it('property: the message and subject never go over their limits', () => {
+    fc.assert(
+      fc.property(fc.record({ clientName: fc.string({ maxLength: 400 }), destination: fc.string({ maxLength: 400 }), confirmationNo: fc.string({ maxLength: 100 }), paxDetails: fc.string({ maxLength: 400 }) }), fc.string({ maxLength: 200 }), (confirmation, sender) => {
+        expect(defaultConfirmationMessage({ confirmation, senderName: sender, senderNumber: sender, company }).length).toBeLessThanOrEqual(SHARE_LIMITS.message);
+        expect(confirmationEmailSubject(confirmation).length).toBeLessThanOrEqual(SHARE_LIMITS.subject);
+      })
+    );
   });
 });

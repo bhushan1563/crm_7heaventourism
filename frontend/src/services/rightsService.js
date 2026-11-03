@@ -31,6 +31,9 @@ export const rightsService = {
     return res.data;
   },
 
+  // The number a person's messages to clients carry (empty removes it). Part of Rights & Security.
+  setSenderNumber: async (userId, senderNumber) => (await api.put(`/rights/sender-number/${userId}`, { senderNumber })).data,
+
   bulkUpdateUserRights: async (userId, permissions) => {
     const res = await api.post('/rights/bulk', { userId, permissions });
     return res.data;

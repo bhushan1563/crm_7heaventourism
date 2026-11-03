@@ -4,12 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), edit: true }));
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ can: () => true, canEditRecord: () => h.edit }) }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), edit: true, download: true, update: true }));
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { firstName: 'Sana', lastName: 'Tester', senderNumber: '+919876543210' }, can: (m, a) => (a === 'canDownload' ? h.download : a === 'canUpdate' ? h.update : true), canEditRecord: () => h.edit }) }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('../services/confirmationService', () => ({ default: { get: vi.fn(), update: vi.fn(), cancel: vi.fn() } }));
 vi.mock('../components/LazyRichTextEditor', () => ({ default: ({ value, onChange, ariaLabel, disabled }) => <textarea aria-label={ariaLabel} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} /> }));
 vi.mock('../components/confirmation/ConfirmationPreview', () => ({ default: ({ isOpen, form }) => (isOpen ? <div role="dialog" aria-label="preview">Preview with {form.travellers.length} travellers</div> : null) }));
+
+vi.mock('../components/confirmation/ShareConfirmationDialog', () => ({
+  default: ({ confirmation, canEdit, senderName, senderNumber, onContactSaved, onClose }) => (
+    <div role="dialog" aria-label="share">
+      Sending {confirmation.confirmationNo} edit:{String(canEdit)} from:{senderName} {senderNumber}
+      <button onClick={() => onContactSaved({ clientPhone: '+91 98765 43210' }, { ...confirmation, clientPhone: '+91 98765 43210', updatedAt: '2026-11-04T10:00:00.000Z' })}>Pretend it was kept</button>
+      <button onClick={onClose}>Close share</button>
+    </div>
+  )
+}));
 
 import confirmationService from '../services/confirmationService';
 import ConfirmationEditorPage from './ConfirmationEditorPage';
@@ -25,6 +35,8 @@ beforeEach(() => {
   Object.values(confirmationService).forEach((fn) => fn.mockReset());
   h.showToast.mockReset();
   h.edit = true;
+  h.download = true;
+  h.update = true;
 });
 afterEach(cleanup);
 
@@ -174,3 +186,54 @@ describe('ConfirmationEditorPage', () => {
     expect(await screen.findByRole('heading', { name: '7H-CF-2026-001' })).toBeInTheDocument();
   });
 });
+
+describe('ConfirmationEditorPage: sending the booking to the client', () => {
+  it('has a Send to client button, which opens the share window with the booking and the sender', async () => {
+    confirmationService.get.mockResolvedValue({ success: true, data: stored() });
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: /Send to client/ }));
+    expect(screen.getByRole('dialog', { name: 'share' })).toHaveTextContent('Sending 7H-CF-2026-001 edit:true from:Sana Tester +919876543210');
+  });
+
+  it('waits for unsaved changes to be saved, so the client gets what is on the page', async () => {
+    confirmationService.get.mockResolvedValue({ success: true, data: stored() });
+    show();
+    const send = await screen.findByRole('button', { name: /Send to client/ });
+    expect(send).toBeEnabled();
+    await userEvent.clear(screen.getByLabelText('Name'));
+    await userEvent.type(screen.getByLabelText('Name'), 'Someone Else');
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute('title', expect.stringContaining('Save your changes first'));
+  });
+
+  it('is not offered on a cancelled booking, nor without the Download right', async () => {
+    confirmationService.get.mockResolvedValue({ success: true, data: stored({ status: 'Cancelled', cancelReason: 'Plans changed', cancelledAt: '2026-11-02T10:00:00.000Z' }) });
+    show();
+    await screen.findByRole('heading', { name: '7H-CF-2026-001' });
+    expect(screen.queryByRole('button', { name: /Send to client/ })).toBeNull();
+    cleanup();
+    h.download = false;
+    confirmationService.get.mockResolvedValue({ success: true, data: stored() });
+    show();
+    await screen.findByRole('heading', { name: '7H-CF-2026-001' });
+    expect(screen.queryByRole('button', { name: /Send to client/ })).toBeNull();
+  });
+
+  it('lets the window keep a number only for someone who may change the booking', async () => {
+    h.edit = false;
+    confirmationService.get.mockResolvedValue({ success: true, data: stored() });
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: /Send to client/ }));
+    expect(screen.getByRole('dialog', { name: 'share' })).toHaveTextContent('edit:false');
+  });
+
+  it('shows the saved version of the booking after a number was kept, without a false "unsaved changes"', async () => {
+    confirmationService.get.mockResolvedValue({ success: true, data: stored() });
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: /Send to client/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Pretend it was kept' }));
+    expect(screen.getByText('All changes saved')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Send to client/ })).toBeEnabled();
+  });
+});
+

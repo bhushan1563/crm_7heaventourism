@@ -34,3 +34,5 @@ html[data-theme='dark'] .share-notice.is-error { background: rgba(239, 68, 68, 0
   .share-row { flex-direction: column; }
   .share-row .btn { justify-content: center; }
 }
+.share-from { margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+.share-from strong { color: var(--text-primary); }

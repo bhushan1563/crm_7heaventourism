@@ -4,13 +4,23 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), edit: true }));
-vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ can: () => true, canEditRecord: () => h.edit }) }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), edit: true, download: true, update: true }));
+vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { firstName: 'Sana', lastName: 'Tester', senderNumber: '+919876543210' }, can: (m, a) => (a === 'canDownload' ? h.download : a === 'canUpdate' ? h.update : true), canEditRecord: () => h.edit }) }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => h.navigate }));
 vi.mock('../services/confirmationService', () => ({ default: { list: vi.fn(), get: vi.fn() } }));
 // The real preview has its own tests; here it only says it is open.
 vi.mock('../components/confirmation/ConfirmationPreview', () => ({ default: ({ confirmation, isOpen }) => (isOpen ? <div role="dialog" aria-label="preview">Preview of {confirmation.confirmationNo} with {Object.keys(confirmation.quote || {}).length} quote fields</div> : null) }));
+
+vi.mock('../components/confirmation/ShareConfirmationDialog', () => ({
+  default: ({ confirmation, canEdit, senderName, senderNumber, onContactSaved, onClose }) => (
+    <div role="dialog" aria-label="share">
+      Sending {confirmation.confirmationNo} edit:{String(canEdit)} from:{senderName} {senderNumber}
+      <button onClick={() => onContactSaved({ clientPhone: '+91 98765 43210' }, { updatedAt: '2026-11-04T10:00:00.000Z' })}>Pretend it was kept</button>
+      <button onClick={onClose}>Close share</button>
+    </div>
+  )
+}));
 
 import confirmationService from '../services/confirmationService';
 import ConfirmationListPage from './ConfirmationListPage';
@@ -28,6 +38,8 @@ beforeEach(() => {
   h.showToast.mockReset();
   h.navigate.mockReset();
   h.edit = true;
+  h.download = true;
+  h.update = true;
 });
 afterEach(cleanup);
 
@@ -118,3 +130,51 @@ describe('ConfirmationListPage', () => {
     expect(row1).toBeInTheDocument();
   });
 });
+
+describe('ConfirmationListPage: sending a booking to the client', () => {
+  it('has a Send button on a confirmed booking, which opens the share window for it with the name and number of the sender', async () => {
+    confirmationService.list.mockResolvedValue(page([row(1)]));
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Send 7H-CF-2026-001 to the client' }));
+    expect(screen.getByRole('dialog', { name: 'share' })).toHaveTextContent('Sending 7H-CF-2026-001 edit:true from:Sana Tester +919876543210');
+  });
+
+  it('has no Send on a cancelled booking: there is nothing to confirm to the client', async () => {
+    confirmationService.list.mockResolvedValue(page([row(1), row(2, { status: 'Cancelled' })]));
+    show();
+    await screen.findByText('7H-CF-2026-002');
+    expect(screen.getAllByRole('button', { name: /Send .* to the client/ })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Send 7H-CF-2026-002 to the client' })).toBeNull();
+  });
+
+  it('is only for people who may download: without that right there is no Send', async () => {
+    h.download = false;
+    confirmationService.list.mockResolvedValue(page([row(1)]));
+    show();
+    await screen.findByText('7H-CF-2026-001');
+    expect(screen.queryByRole('button', { name: /Send .* to the client/ })).toBeNull();
+  });
+
+  it('lets the window keep a typed number only where the person may change that booking', async () => {
+    confirmationService.list.mockResolvedValue(page([row(1)]));
+    h.edit = false;
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Send 7H-CF-2026-001 to the client' }));
+    expect(screen.getByRole('dialog', { name: 'share' })).toHaveTextContent('edit:false');
+    cleanup();
+    h.edit = true;
+    h.update = false;
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Send 7H-CF-2026-001 to the client' }));
+    expect(screen.getByRole('dialog', { name: 'share' })).toHaveTextContent('edit:false');
+  });
+
+  it('closes the window on request', async () => {
+    confirmationService.list.mockResolvedValue(page([row(1)]));
+    show();
+    await userEvent.click(await screen.findByRole('button', { name: 'Send 7H-CF-2026-001 to the client' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Close share' }));
+    expect(screen.queryByRole('dialog', { name: 'share' })).toBeNull();
+  });
+});
+

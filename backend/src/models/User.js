@@ -44,6 +44,11 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  // The WhatsApp / phone number the messages this person sends to clients carry ("+" and the digits). Only an Admin sets it, on the Rights & Security screen.
+  senderNumber: {
+    type: String,
+    default: ''
+  },
   // Sessions issued before this moment are rejected (set whenever the password changes).
   passwordChangedAt: {
     type: Date,

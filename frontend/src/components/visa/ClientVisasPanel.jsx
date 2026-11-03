@@ -180,12 +180,12 @@ export const ClientVisasPanel = () => {
           <table className="luxury-table table-stack cf-table">
             <thead>
               <tr>
-                <th style={{ width: '14%' }}>Quotation</th>
-                <th style={{ width: '17%' }}>Client</th>
-                <th style={{ width: '21%' }}>Visa</th>
-                <th style={{ width: '20%' }}>Trip</th>
-                <th style={{ width: '11%' }}>Fees</th>
-                <th style={{ width: '17%', textAlign: 'right' }}>Actions</th>
+                <th style={{ width: '13%' }}>Quotation</th>
+                <th style={{ width: '15%' }}>Client</th>
+                <th style={{ width: '18%' }}>Visa</th>
+                <th style={{ width: '17%' }}>Trip</th>
+                <th style={{ width: '9%' }}>Fees</th>
+                <th style={{ width: '28%', textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -277,6 +277,7 @@ export const ClientVisasPanel = () => {
           canEdit={canEditRecord('quotations', sharing) && !sharing.confirmationId}
           onContactSaved={(patch) => contactSaved(sharing._id, patch)}
           senderName={user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : ''}
+          senderNumber={user?.senderNumber || ''}
         />
       )}
       {files.host}
