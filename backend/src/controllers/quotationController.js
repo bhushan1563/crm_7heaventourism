@@ -103,7 +103,9 @@ const buildQuotationFilter = (query = {}) => {
   const ops = queryString(query.ops);
   const guestId = queryString(query.guestId);
   const search = queryString(query.search);
+  const quotationType = queryString(query.quotationType);
   if (status) filter.status = status;
+  if (quotationType) filter.quotationType = quotationType; // e.g. "Visa": the Visas section lists only visa quotations
   if (destination) filter.destination = containsRegex(destination);
   if (sales) filter.sales = containsRegex(sales);
   if (ops) filter.ops = containsRegex(ops);
@@ -116,6 +118,8 @@ const buildQuotationFilter = (query = {}) => {
       { destination: regex },
       { clientEmail: regex },
       { clientPhone: regex },
+      { 'visa.country': regex }, // a visa is found by its country even when the title was typed differently
+      { 'visa.visaType': regex },
       { sales: regex },
       { ops: regex }
     ];
@@ -137,8 +141,8 @@ const getNextQuotationNo = async () => {
 
 export const getQuotations = async (req, res) => {
   try {
-    const { status, destination, sales, ops, guestId, search } = req.query;
-    const filter = buildQuotationFilter({ status, destination, sales, ops, guestId, search });
+    const { status, destination, sales, ops, guestId, search, quotationType } = req.query;
+    const filter = buildQuotationFilter({ status, destination, sales, ops, guestId, search, quotationType });
     let quotations = await QuotationModel.find(filter).sort({ createdAt: -1 });
     // A quotation left locked by a confirmation that never finished (the server restarted half-way) is released before it is listed.
     const stale = quotations.filter((q) => isStaleClaim(q));

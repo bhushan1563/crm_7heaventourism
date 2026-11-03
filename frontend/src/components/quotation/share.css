@@ -1,0 +1,36 @@
+/* The window that sends a quotation to the client by WhatsApp or e-mail. */
+.share-dialog { display: flex; flex-direction: column; gap: 16px; }
+.share-block { display: flex; flex-direction: column; gap: 6px; }
+.share-label { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); }
+.share-formats { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+.share-formats button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--border-strong, var(--border-color)); border-radius: 8px; background: var(--surface); color: var(--text-primary); font-weight: 700; font-size: 0.88rem; cursor: pointer; }
+.share-formats button small { font-weight: 500; color: var(--text-muted); }
+.share-formats button.is-active { border-color: var(--primary, #0284c7); background: var(--primary-tint); color: var(--primary-text); box-shadow: 0 0 0 1px var(--primary, #0284c7) inset; }
+.share-formats button:disabled { opacity: 0.55; cursor: not-allowed; }
+.share-count { align-self: flex-end; font-size: 0.72rem; color: var(--text-muted); }
+.share-channel { padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.share-row { display: flex; gap: 8px; align-items: stretch; }
+.share-row .form-input { flex: 1; min-width: 0; }
+.share-row .btn { white-space: nowrap; }
+.share-whatsapp { background: #15803d; border-color: #15803d; color: #ffffff; }
+.share-whatsapp:hover:not(:disabled) { background: #166534; border-color: #166534; }
+.share-ask { margin: 0; padding: 7px 10px; border-radius: 6px; background: #fef3c7; color: #92400e; font-size: 0.82rem; font-weight: 600; }
+html[data-theme='dark'] .share-ask { background: rgba(245, 158, 11, 0.16); color: #fcd34d; }
+.share-subject { margin-top: 6px; font-size: 0.74rem; font-weight: 700; color: var(--text-secondary); }
+.share-keep { display: flex; gap: 8px; align-items: flex-start; font-size: 0.85rem; color: var(--text-primary); cursor: pointer; }
+.share-keep input { margin-top: 3px; }
+.share-hint { margin: 0; }
+.share-more { display: flex; gap: 8px; flex-wrap: wrap; }
+.share-notice { min-height: 0; font-size: 0.85rem; line-height: 1.45; border-radius: 8px; }
+.share-notice[class*='is-'] { padding: 10px 12px; }
+.share-notice.is-success { background: #dcfce7; color: #166534; }
+.share-notice.is-info { background: #e0f2fe; color: #075985; }
+.share-notice.is-error { background: #fee2e2; color: #991b1b; }
+html[data-theme='dark'] .share-notice.is-success { background: rgba(34, 197, 94, 0.16); color: #86efac; }
+html[data-theme='dark'] .share-notice.is-info { background: rgba(14, 165, 233, 0.16); color: #7dd3fc; }
+html[data-theme='dark'] .share-notice.is-error { background: rgba(239, 68, 68, 0.18); color: #fca5a5; }
+.share-notice a { font-weight: 700; color: inherit; text-decoration: underline; }
+@media (max-width: 560px) {
+  .share-row { flex-direction: column; }
+  .share-row .btn { justify-content: center; }
+}

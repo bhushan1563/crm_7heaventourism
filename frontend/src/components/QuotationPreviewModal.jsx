@@ -9,7 +9,8 @@ import {
   ZoomOut,
   Sparkles,
   FileText,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 import QuotationDocumentView from './QuotationDocumentView';
 import { generateQuotationPDF, printQuotation } from '../utils/quotationPdfGenerator';
@@ -25,7 +26,8 @@ const fitZoom = () => {
 
 // `before` adds pages ahead of the quotation and `documentLabel` names the document (a booking confirmation uses both).
 // `canDownload` is the person's Download right: without it the document can be looked at but not printed or saved as a PDF.
-export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true }) => {
+// `onShare` (optional) adds a "Send to client" button, which hands the quotation to the caller to open its share window.
+export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true, onShare = null }) => {
   const { showToast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -201,6 +203,19 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
                 </>
               )}
             </button>
+            )}
+
+            {/* Send to the client (WhatsApp / e-mail), when the page that opened this window offers it */}
+            {canDownload && onShare && (
+              <button
+                onClick={() => onShare(quotation)}
+                className="btn btn-primary btn-sm"
+                disabled={isGenerating}
+                title="Send to the client by WhatsApp or e-mail"
+              >
+                <Send size={14} />
+                <span>Send to client</span>
+              </button>
             )}
 
             {/* Close Button */}

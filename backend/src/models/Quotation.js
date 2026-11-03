@@ -140,13 +140,18 @@ const quotationSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // A visa quotation prints these two, so it must never print a trip nobody typed: its defaults are empty.
   duration: {
     type: String,
-    default: '3 Nights / 4 Days'
+    default() {
+      return this.quotationType === 'Visa' ? '' : '3 Nights / 4 Days';
+    }
   },
   paxDetails: {
     type: String,
-    default: '3 Adults'
+    default() {
+      return this.quotationType === 'Visa' ? '' : '3 Adults';
+    }
   },
   travelDate: {
     type: Date,

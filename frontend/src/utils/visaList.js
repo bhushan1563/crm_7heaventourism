@@ -106,3 +106,22 @@ export const applyVisaItem = (quotation, item) => ({
   visaDocuments: [...(item.documents || [])],
   visaInclusions: [...(item.inclusions || [])]
 });
+
+/**
+ * The visa of a quotation as a visa of the list, so a visa made for a client can be kept and picked next time: the details, the
+ * documents checklist, the fees (as they are in the quotation, per applicant or for the group) and the inclusions. Blank lines are
+ * left out. Nothing about the client or the trip goes with it.
+ */
+export const visaItemFromQuotation = (quotation = {}) => {
+  const v = quotation.visa || {};
+  const filled = (list) => (list || []).filter((line) => richToPlainText(line).trim());
+  const text = (key) => String(v[key] ?? '');
+  return {
+    visa: { country: text('country'), visaType: text('visaType'), entryType: text('entryType'), mode: text('mode'), validity: text('validity'), stay: text('stay'), processingTime: text('processingTime'), priceNote: text('priceNote'), applicants: 1 },
+    visaFees: (quotation.visaFees || []).map((f) => ({ label: f.label || '', amount: f.amount ?? '', per: f.per === 'group' ? 'group' : 'applicant' })),
+    visaDocuments: filled(quotation.visaDocuments),
+    visaInclusions: filled(quotation.visaInclusions),
+    notes: '',
+    status: 'Active'
+  };
+};
