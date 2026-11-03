@@ -185,7 +185,7 @@ Decisions taken (so the build can go on; each can be changed):
 - Pictures: shown through the server (the page's security rules forbid other sites' pictures), only JPEG/PNG/WebP, only addresses the reader itself found (signed, short-lived), and only copied into the app when the person saves, shrunk in the browser exactly like uploaded photos.
 - Rights: the `hotels` module (finding needs create, saved finds need read/update/delete, downloads need download).
 - [x] 22.1 The safe web reader: address checks, DNS pinned at connect time, redirects re-checked, size/time/redirect caps, compression, content-type, robots.txt, sitemap reading
-- [ ] 22.2 The extractors (pure, tested on fixture pages): structured data, meta tags, page text (contact, address, rating, times, amenities, rooms, rates), pictures, link ranking
+- [x] 22.2 The extractors (pure, tested on fixture pages): structured data, meta tags, page text (contact, address, rating, times, amenities, rooms, rates), pictures, link ranking
 - [ ] 22.3 The pipeline: crawl plan and time budget, merging with a source and a confidence for every field, cleaning and validation, completeness score, plain messages for every failure, pasted-text fallback
 - [ ] 22.4 The API: find, find from pasted text, signed picture proxy, saved finds (list, read, update, delete), rate and concurrency limits, rights, audit tags
 - [ ] 22.5 The "Find hotel info" page (CRM theme): address box with checks, progress, results with confidence marks, picture picker, edit before saving, Word / PDF / CSV, Save to the app

@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+<title>Hostile &lt;script&gt;alert(1)&lt;/script&gt; page</title>
+<script type="application/ld+json">{ "@type": "Hotel", "name": "Broken JSON hotel", "telephone": "+91 98765 4321 </script>
+<script type="application/ld+json">{"@type":"Hotel","name":"<img src=x onerror=alert(1)>Evil Inn","description":"<script>alert(2)<\/script>Nice place &amp; clean rooms.","address":"1 Main St, Testville, Test State 123456, India","email":"info@example.com","telephone":["0000000000","+1 (555) 010-9999"],"geo":{"latitude":999,"longitude":0},"starRating":{"ratingValue":"9"},"aggregateRating":{"ratingValue":"11","bestRating":"5"},"checkinTime":"banana","amenityFeature":"not a list","image":"javascript:alert(1)","sameAs":["javascript:alert(3)","https://www.facebook.com/evilinn"]}</script>
+</head>
+<body>
+<h1>Evil Inn</h1>
+<p>Rates: Rs 50 off today. Only 12 rooms left! 4.5 million guests. Call 2019-2024 for archive. Coordinates 24.5714, 73.6804.</p>
+<p>Contact: info@@broken..com, user@localhost, a@b.c, test@example.com, valid.person@evilinn.example</p>
+<p>Phone: 123456789012345678 or 1111111111 or 12-12-2024</p>
+<table><tr><td>Room</td><td>₹ 4,200 per night</td></tr></table>
+<div><div><div><div><div><div><div><div><div><div><div><div><div><div><div><div><div><div><div><div>
+<span>unclosed <b>bold <i>italic
+<a href="mailto:bad address@x.com">mail</a>
+<a href="tel:+">call</a>
+<a href="http://[::1]/">v6</a>
+<a href="https://www.facebook.com/">root only</a>
+<img src="http://localhost/x.jpg" width="1600" height="900">
+</body>
+</html>
