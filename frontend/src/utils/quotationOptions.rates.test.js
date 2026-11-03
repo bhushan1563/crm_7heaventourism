@@ -83,10 +83,10 @@ describe('optionsProblem with rate tables', () => {
 });
 
 describe('starting a hotel quotation', () => {
-  it('gives the hotel it already has a room rate row, so the table is ready to fill in', () => {
+  it('does not give the hotel a rate table of its own: the prices are in the pricing tables, one for each option', () => {
     const start = startHotelOptions({ paxDetails: '2 Adults', packageDetails: { hotels: [{ hotelName: 'Taj', hotelId: 'x', nights: '2 Nights' }] } });
     expect(start.options).toHaveLength(2);
-    expect(start.options[0].hotels[0].rates).toEqual(startRates());
+    expect(start.options[0].hotels[0].rates).toBeUndefined();
     expect(start.options[1].hotels).toEqual([]);
     expect(start.packageDetails.hotels).toEqual([]);
   });

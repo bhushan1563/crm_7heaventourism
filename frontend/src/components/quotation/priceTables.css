@@ -19,6 +19,15 @@
 .pt-col-pax { width: 7%; }
 .pt-col-final { width: 12%; }
 .pt-col-remove { width: 5%; }
+/* The rooms layout (a package): the room, the rate per room per night, the nights, the rooms and the Total. */
+.pt-rooms { min-width: 560px; }
+.pt-col-roomlabel { width: 28%; }
+.pt-col-rate { width: 22%; }
+.pt-col-count { width: 14%; }
+.pt-col-roomtotal { width: 20%; }
+.pt-rooms .pt-pax::placeholder { color: var(--text-muted); opacity: 0.8; }
+/* The long headings ("Per room per night", "No of nights") wrap onto two lines instead of running into each other. */
+.pt-grid.pt-rooms thead th { white-space: normal; line-height: 1.25; vertical-align: middle; overflow-wrap: anywhere; }
 .pt-grid th, .pt-grid td { border: 1px solid var(--border-color); padding: 4px; text-align: left; }
 .pt-grid thead th { background: var(--surface-2); font-weight: 800; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); text-align: center; white-space: nowrap; padding: 8px 4px; }
 .pt-grid tbody th { background: var(--surface-2); }

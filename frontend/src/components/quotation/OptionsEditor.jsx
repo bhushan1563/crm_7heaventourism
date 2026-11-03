@@ -18,7 +18,7 @@ const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
  * `onSingle()` goes back to a single offer. In a hotel quotation every hotel has its rate table (the client's sheet) and the total of
  * an option is the Grand Total of its hotels; in any other quotation it is worked out from the price per person and the guests.
  */
-export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, canUseList, onChooseHotel, onSingle }) => {
+export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, pricedByTables = false, canUseList, onChooseHotel, onSingle }) => {
   const [askSingle, setAskSingle] = useState(false);
   const guests = guestCount(paxDetails);
   const fromListOnly = quotationType === 'Only Hotel';
@@ -39,7 +39,9 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
       <div className="options-head">
         <div>
           <div className="options-title">Hotel options ({options.length})</div>
-          {fromListOnly ? (
+          {pricedByTables ? (
+            <div className="options-hint">Offer the guest a choice, for example 3 star and 4 star {fromListOnly ? 'hotels' : 'packages'}. Each option can have several hotels, with their dates and rooms. The prices are in the pricing table on the Pricing tab: Option 1 there is for the first option here, Option 2 for the second.</div>
+          ) : fromListOnly ? (
             <div className="options-hint">Offer the guest a choice, for example 3 star and 4 star hotels. Each option can have several hotels; under each hotel enter its rates, and the Grand Total of the option is counted from them.</div>
           ) : (
             <div className="options-hint">Offer the guest a choice. Each option has its own hotels and its own price, and they are shown side by side. Prices are per person for {guests} {guests === 1 ? 'guest' : 'guests'}.</div>
@@ -160,7 +162,7 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
                       </div>
                       <input type="text" className="form-input option-address" value={h.address || ''} maxLength={300} placeholder="Hotel address" aria-label={`Hotel ${k + 1} address, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { address: e.target.value })} />
                     </div>
-                    {fromListOnly && <RateTable stay={h} where={`hotel ${k + 1}, option ${i + 1}`} onChange={(rates) => patchHotel(i, k, { rates })} />}
+                    {fromListOnly && !pricedByTables && <RateTable stay={h} where={`hotel ${k + 1}, option ${i + 1}`} onChange={(rates) => patchHotel(i, k, { rates })} />}
                   </div>
                 );
               })}
@@ -180,7 +182,9 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
 
             {/* A hotel quotation is priced by the rate tables of its hotels; an older option that has only a price per person keeps that
                 price until a hotel of it gets a rate table. Any other quotation is priced per person. */}
-            {fromListOnly && (optionUsesRates(option) || !(option.pricePerPerson > 0)) ? (
+            {pricedByTables ? (
+              <p className="options-hint option-in-tables">The price of this option is in the pricing table (Pricing tab).</p>
+            ) : fromListOnly && (optionUsesRates(option) || !(option.pricePerPerson > 0)) ? (
               <div className="option-price option-price-tables">
                 <div>
                   <span className="form-label">Grand Total of option {i + 1}</span>

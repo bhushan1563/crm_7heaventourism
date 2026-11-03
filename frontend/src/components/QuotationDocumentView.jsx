@@ -9,7 +9,8 @@ import { addressLine } from '../utils/hotelStay';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
-import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableTotal } from '../utils/priceTables';
+import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableLayout, tableTotal, tablesOf } from '../utils/priceTables';
+import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../utils/roomTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
 
@@ -142,18 +143,54 @@ const HotelStayCard = ({ h, confirmed = false }) => {
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 /**
- * The PRICING of a hotel quotation, laid out like the company's sheet: a box titled PRICING, then for each option its name, a table
- * (Sr No, Package, Airfare, Visa, TCS, Total, PAX, Final Price; a row for Adult, Extra bed, CWB, CNB ...) and the Grand Total.
- * Empty cells stay empty, as on the sheet. Totals are worked out here from the amounts and PAX, so they always agree.
+ * The PRICING of a hotel or package quotation, laid out like the company's sheets: a box titled PRICING, then for each option its name,
+ * a table and the Grand Total. A hotel quotation has the first sheet (Sr No, Package, Airfare, Visa, TCS, Total, PAX, Final Price; a row
+ * for Adult, Extra bed, CWB, CNB ...); a package has the second (Room, Per room per night, No of nights, No of rooms, Total; a row for
+ * For 2 Adults, Extra bed, Child With bed, Child No Bed). Empty cells stay empty, as on the sheets. Every total is worked out here from
+ * the figures, so they always agree.
  */
-const PriceTablesSection = ({ tables }) => {
+const PriceTablesSection = ({ tables, quotation }) => {
   const border = '1px solid #0f172a';
   const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
+  const defaults = roomDefaults(quotation);
   return (
     <div style={{ marginBottom: '14px' }}>
       <div className="quotation-keep" style={{ border: '1.5px solid #0f172a', textAlign: 'center', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', padding: '4px 0', color: '#0f172a' }}>PRICING</div>
-      {tables.map((table, i) => (
+      {tables.map((table, i) => tableLayout(table) === 'rooms' ? (
+        <div key={i} className="quotation-keep" style={{ marginTop: '8px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+            <thead>
+              <tr>
+                <th colSpan={5} style={{ ...head, fontSize: '10.5px', borderBottom: 'none' }}>{table.name || `Option ${i + 1}`}</th>
+              </tr>
+              <tr>
+                {['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((title, c) => (
+                  <th key={title} style={{ ...head, width: c === 0 ? '28%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(table.rows || []).map((row, r) => {
+                const priced = Number(row.rate) > 0; // a row with no rate is left empty, like the sheet
+                return (
+                  <tr key={r}>
+                    <td style={{ ...cell, textAlign: 'left', fontWeight: 800 }}>{row.label}</td>
+                    <td style={cell}>{cellText(row.rate)}</td>
+                    <td style={{ ...cell, textAlign: 'center' }}>{priced ? roomRowNights(row, defaults) : ''}</td>
+                    <td style={{ ...cell, textAlign: 'center' }}>{priced ? roomRowRooms(row) : ''}</td>
+                    <td style={{ ...cell, fontWeight: 800 }}>{cellText(roomRowTotal(row, defaults))}</td>
+                  </tr>
+                );
+              })}
+              <tr>
+                <td colSpan={4} style={{ ...cell, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
         <div key={i} className="quotation-keep" style={{ marginTop: '8px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
@@ -180,7 +217,7 @@ const PriceTablesSection = ({ tables }) => {
               ))}
               <tr>
                 <td colSpan={7} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table))}</td>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
               </tr>
             </tbody>
           </table>
@@ -395,7 +432,7 @@ const RateTablePrint = ({ stay }) => {
 };
 
 /** What one hotel of an option shows: its photo, its name, room category and address, its dates, and its rate table. */
-const HotelProposalBody = ({ h }) => {
+const HotelProposalBody = ({ h, priced = false }) => {
   const cover = h.photos?.[0];
   return (
     <div style={{ padding: '8px 10px 9px' }}>
@@ -419,7 +456,7 @@ const HotelProposalBody = ({ h }) => {
           {h.amenities?.length > 0 && <div style={{ fontSize: '8px', color: '#64748b', marginTop: '2px' }}>{amenityLine(h.amenities.slice(0, 5))}</div>}
         </div>
       </div>
-      <RateTablePrint stay={h} />
+      {!priced && <RateTablePrint stay={h} />}
     </div>
   );
 };
@@ -429,7 +466,7 @@ const HotelProposalBody = ({ h }) => {
  * of its hotels with its room, address, dates and rate table, and the Grand Total of the option at the end. Each hotel is its own
  * block, so a long option can continue on the next page without splitting a table (the blocks are never nested).
  */
-const OptionProposal = ({ option, number }) => {
+const OptionProposal = ({ option, number, priced = false }) => {
   const name = option.name || `Option ${number}`;
   const byTables = optionUsesRates(option);
   const note = option.priceNote && option.priceNote !== 'Per person' ? option.priceNote : '';
@@ -453,8 +490,8 @@ const OptionProposal = ({ option, number }) => {
             ) : (
               <div style={{ background: '#f1f5f9', color: '#475569', fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', textTransform: 'uppercase' }}>Option {number} · {name}</div>
             )}
-            {h ? <HotelProposalBody h={h} /> : <div style={{ padding: '10px', fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
-            {last && (
+            {h ? <HotelProposalBody h={h} priced={priced} /> : <div style={{ padding: '10px', fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
+            {last && !priced && (
               <div style={{ background: '#e0f2fe', borderTop: '1px solid #bae6fd', padding: '7px 10px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                   <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0c4a6e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{byTables ? 'Grand Total' : option.pricePerPerson > 0 ? 'Price per person' : 'Price'}</span>
@@ -472,16 +509,16 @@ const OptionProposal = ({ option, number }) => {
 };
 
 /** The options of a hotel quotation, one after the other, each priced by the rate tables of its hotels. */
-const HotelOptionsProposal = ({ options }) => (
+const HotelOptionsProposal = ({ options, priced = false }) => (
   <div style={{ marginBottom: '10px' }}>
     <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
       <Building2 size={13} style={{ color: '#0284c7' }} />
       <span>Hotel Options</span>
     </div>
-    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>Please choose the option that suits you best. All amounts are in Rs.</div>
+    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>{priced ? 'Please choose the option that suits you best. The price of each option is in the pricing table below. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.'}</div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {options.map((option, i) => (
-        <OptionProposal key={i} option={option} number={i + 1} />
+        <OptionProposal key={i} option={option} number={i + 1} priced={priced} />
       ))}
     </div>
   </div>
@@ -491,7 +528,7 @@ const HotelOptionsProposal = ({ options }) => (
  * Hotel options side by side: one card per option with its hotels and its price per person. The cheapest price is not
  * singled out (the guest compares); an option the sales person recommends carries a ribbon.
  */
-const OptionsComparison = ({ options, paxDetails }) => {
+const OptionsComparison = ({ options, paxDetails, priced = false }) => {
   const columns = Math.min(options.length, 3);
   return (
     <div style={{ marginBottom: '10px' }}>
@@ -499,17 +536,19 @@ const OptionsComparison = ({ options, paxDetails }) => {
         <Building2 size={13} style={{ color: '#0284c7' }} />
         <span>Hotel Options</span>
       </div>
-      <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '6px' }}>Please choose the option that suits you best.{paxDetails ? ` Prices are for ${paxDetails}.` : ''}</div>
+      <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '6px' }}>Please choose the option that suits you best.{priced ? ' The price of each option is in the pricing table below.' : paxDetails ? ` Prices are for ${paxDetails}.` : ''}</div>
       <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`, gap: '8px', alignItems: 'stretch' }}>
         {options.map((option, i) => (
           <div key={i} style={{ display: 'flex', flexDirection: 'column', border: option.recommended ? '2px solid #f59e0b' : '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
             {option.recommended && <div style={{ background: '#f59e0b', color: '#ffffff', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', textAlign: 'center', padding: '2px 0' }}>★ RECOMMENDED</div>}
             <div style={{ background: '#0f172a', color: '#ffffff', fontSize: '10.5px', fontWeight: 800, padding: '5px 8px' }}>{option.name || `Option ${i + 1}`}</div>
-            <div style={{ padding: '7px 8px 6px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
-              <div style={{ fontSize: '15px', fontWeight: 800, color: '#0369a1', lineHeight: 1.1 }}>{option.pricePerPerson > 0 ? rs(option.pricePerPerson) : 'On request'}</div>
-              <div style={{ fontSize: '8px', color: '#64748b', marginTop: '1px' }}><Line value={option.priceNote || 'Per person'} /></div>
-              {option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '8.5px', color: '#0f172a', fontWeight: 700, marginTop: '3px' }}>Total: {rs(option.totalPrice)}</div>}
-            </div>
+            {!priced && (
+              <div style={{ padding: '7px 8px 6px', borderBottom: '1px solid #e2e8f0', backgroundColor: '#f8fafc' }}>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#0369a1', lineHeight: 1.1 }}>{option.pricePerPerson > 0 ? rs(option.pricePerPerson) : 'On request'}</div>
+                <div style={{ fontSize: '8px', color: '#64748b', marginTop: '1px' }}><Line value={option.priceNote || 'Per person'} /></div>
+                {option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '8.5px', color: '#0f172a', fontWeight: 700, marginTop: '3px' }}>Total: {rs(option.totalPrice)}</div>}
+              </div>
+            )}
             <div style={{ padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: '7px', flex: 1 }}>
               {option.hotels.map((h, k) => (
                 <div key={k}>
@@ -751,8 +790,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     pricing.grandTotal > 0 ||
     pricing.totalCostNote;
 
-  // A hotel quotation priced with the pricing tables prints them (only the options with something entered) instead of the price list.
-  const priceTables = quotationType === 'Only Hotel' ? (quotation.priceTables || []).filter(tableHasData) : [];
+  // A hotel quotation (the sheet) or a package (per room per night) priced with the pricing tables prints them (only the options with
+  // something entered, and only those laid out for this kind of quotation) instead of the price list.
+  const priceTables = tablesOf(quotation).filter(tableHasData);
   const hasPriceTables = priceTables.length > 0;
   const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0));
   const hasExclusions = exclusions && exclusions.length > 0;
@@ -802,7 +842,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
-    if (hasPriceTables) return <PriceTablesSection tables={priceTables} />;
+    if (hasPriceTables) return <PriceTablesSection tables={priceTables} quotation={quotation} />;
     if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
@@ -1087,7 +1127,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel' ? <HotelOptionsProposal options={options} /> : <OptionsComparison options={options} paxDetails={quotation.paxDetails} />)}
+                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel' ? <HotelOptionsProposal options={options} priced={hasPriceTables} /> : <OptionsComparison options={options} paxDetails={quotation.paxDetails} priced={hasPriceTables} />)}
 
                 {/* Hotels Table / Cards Layout */}
                 {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (
