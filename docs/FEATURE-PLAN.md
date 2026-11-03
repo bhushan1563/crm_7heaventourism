@@ -153,7 +153,13 @@ Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No
 - [x] 18.5 Phone layout (from the user's phone screenshot): the "Paste a picture" tile stuck out past the dashed box. The two-column grid now lets its columns shrink, the tiles wrap their text, the message icon sits on its first line, and the caption hint is shorter. Checked in a real browser at 390, 360 and 320 px (touch, dark) with and without photos, and on the computer layout. A phone has no Ctrl+V, so it shows "touch and hold it, then Copy image, then tap Paste a picture", and the messages no longer say "right-click" or "Ctrl+V" only
 - [x] 18.6 Found while checking on the phone and fixed: two or three uploads that finish almost together could silently lose one photo (a stale copy of the list overwrote a newer one). The gallery now keeps building on the newest list it made. A test reproduces the loss (2 of 3 photos) on the old behaviour
 
-(Steps 7 to 18 are complete; what else remains is waiting on the client, see above.)
+### Step 19: Phone layout: the page slid up under the top bar and left a blank band (added 2026-11-04, from the user's phone screenshots of the live site)
+- [x] 19.1 On a phone the whole PAGE could scroll, not only the app's content area: the body was 100vh (which counts the area behind the address bar) while the app shell is 100dvh, so the page was taller than the screen. The top bar slid out of view and a blank band (about 50px) was left at the bottom, with the content cut off above it ("stuck" scrolling). While the app is on screen the page itself no longer scrolls (class on the page set by the Layout), and the body is the visible height. Reproduced by modelling the address-bar difference (3 of 12 checks passed before, 12 of 12 after) and checked on 16 screens at 360 px
+- [x] 19.2 A second cause on the dashboard: a visually hidden table header (position absolute) deep in the long page had no positioned parent, so it stretched the whole page by 723px. The app shell is now the positioned parent, so nothing hidden can stretch the page
+- [x] 19.3 The save bar at the bottom of a form (Back / Create) is lower on a phone (about 83px instead of about 140px: the two buttons share a row) and sits on the bottom edge of the screen instead of floating above it with the form showing through underneath
+- [ ] 19.4 Open: the same checks on a real phone by the user (the address-bar behaviour is modelled, not seen on a device)
+
+(Steps 7 to 19 are complete; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

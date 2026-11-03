@@ -118,6 +118,12 @@ input[aria-invalid='true'] { border-color: #ef4444 !important; }
 .edit-bar-status.is-dirty { color: #b45309; font-weight: 700; }
 html[data-theme='dark'] .edit-bar-status.is-dirty { color: #fbbf24; }
 
+/* A bar stuck to the bottom of the scrolling page stops above the page's bottom padding, and the form showed through the strip under it.
+   On tablets and phones it reaches down through that padding, so it sits on the bottom edge of the screen. */
+@media (max-width: 1023.98px) {
+  .edit-bar { bottom: calc(var(--content-pad-bottom, 0px) * -1); }
+}
+
 /* Fingers need bigger targets than a mouse pointer. */
 @media (max-width: 760px), (pointer: coarse) {
   .itin-tabs button { min-height: 36px; }
@@ -128,9 +134,10 @@ html[data-theme='dark'] .edit-bar-status.is-dirty { color: #fbbf24; }
   .basics-grid, .day-fields, .itin-two-col { grid-template-columns: 1fr; }
   .day-head { flex-wrap: wrap; }
   .day-tools { width: 100%; justify-content: flex-end; padding-bottom: 6px; }
-  .edit-bar { flex-wrap: wrap; justify-content: stretch; }
-  .edit-bar .btn { flex: 1; justify-content: center; }
-  .edit-bar-status { width: 100%; margin: 0; }
+  /* The save bar covers the bottom of the form, so on a phone it is kept low: the status on one thin line and the two buttons side by side. */
+  .edit-bar { flex-wrap: wrap; justify-content: stretch; gap: 8px; padding: 8px 12px max(8px, env(safe-area-inset-bottom)); }
+  .edit-bar .btn { flex: 1 1 0; min-width: 0; justify-content: center; padding-inline: 10px; font-size: 0.85rem; white-space: nowrap; }
+  .edit-bar-status { width: 100%; margin: 0; font-size: 0.75rem; line-height: 1.2; }
 }
 
 /* ---- Downloads ---- */

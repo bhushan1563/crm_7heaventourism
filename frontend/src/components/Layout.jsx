@@ -12,6 +12,12 @@ export const Layout = () => {
   const [isCollapsed, setIsCollapsed] = useState(false); // desktop: icons-only sidebar
   const [mobileOpen, setMobileOpen] = useState(false); // phone / tablet: drawer
 
+  // While the app is on screen the page itself must not scroll (see layout.css): the content area scrolls inside the shell.
+  useEffect(() => {
+    document.documentElement.classList.add('app-shell-active');
+    return () => document.documentElement.classList.remove('app-shell-active');
+  }, []);
+
   // The drawer closes whenever you navigate, or when the window grows into the desktop layout.
   useEffect(() => {
     setMobileOpen(false);

@@ -11,6 +11,19 @@
   height: 100dvh; /* the real visible height on phones (address bar aware) */
   width: 100%;
   overflow: hidden;
+  /* The positioned parent of everything inside: an absolutely placed element with no positioned parent (a visually hidden table header
+     deep in a long page) is positioned against the whole page and used to stretch it, so the page itself could scroll. */
+  position: relative;
+}
+
+/* The app scrolls inside .app-content, never the page itself. Without this a phone showed a page taller than the screen: the body was
+   100vh (which counts the area behind the address bar) while the shell is 100dvh, so the whole page could slide up, the top bar went
+   out of view and a blank band was left at the bottom. (The class is put on <html> by the Layout while the app is on screen.) */
+html.app-shell-active,
+html.app-shell-active body {
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 .app-main {
@@ -647,7 +660,8 @@
   }
 
   .app-content {
-    padding: 16px 14px calc(24px + env(safe-area-inset-bottom));
+    --content-pad-bottom: calc(24px + env(safe-area-inset-bottom)); /* a bar stuck to the bottom reaches down into this space */
+    padding: 16px 14px var(--content-pad-bottom);
     padding-left: max(14px, env(safe-area-inset-left));
     padding-right: max(14px, env(safe-area-inset-right));
     overflow-x: hidden;
