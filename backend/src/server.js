@@ -22,12 +22,14 @@ import rightsRoutes from './routes/rightsRoutes.js';
 import scannerRoutes from './routes/scannerRoutes.js';
 import quotationRoutes from './routes/quotationRoutes.js';
 import mediaRoutes from './routes/mediaRoutes.js';
+import hotelFinderRoutes from './routes/hotelFinderRoutes.js';
 import itineraryRoutes from './routes/itineraryRoutes.js';
 import hotelRoutes from './routes/hotelRoutes.js';
 import visaRoutes from './routes/visaRoutes.js';
 import confirmationRoutes from './routes/confirmationRoutes.js';
 import masterTextRoutes from './routes/masterTextRoutes.js';
 import { serveMedia } from './controllers/mediaController.js';
+import { serveFinderImage } from './controllers/hotelFinderController.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -126,6 +128,8 @@ app.use(
 // Photos (public, unguessable, cached for a year): /media/<token> and /media/<token>/thumb
 app.get('/media/:token', mediaServeLimiter, serveMedia('full'));
 app.get('/media/:token/thumb', mediaServeLimiter, serveMedia('thumb'));
+// Pictures found by the hotel finder, shown through our own address with a signed one-hour ticket: /finder-image/<ticket>
+app.get('/finder-image/:ticket', mediaServeLimiter, serveFinderImage);
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -138,6 +142,7 @@ app.use('/api/scanner', scannerRoutes);
 app.use('/api/media', mediaRoutes);
 app.use('/api/itineraries', itineraryRoutes);
 app.use('/api/hotels', hotelRoutes);
+app.use('/api/hotel-finder', hotelFinderRoutes);
 app.use('/api/visas', visaRoutes);
 app.use('/api/confirmations', confirmationRoutes);
 app.use('/api/master-text', masterTextRoutes);
@@ -165,7 +170,7 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
   );
   // SPA fallback: non-API, non-static, non-photo GET requests get index.html (client-side routing). A file under /assets that does not
   // exist (a tab left open since before an update asking for a screen of the old version) is a plain 404, not a page of HTML in its place.
-  app.get(/^\/(?!api(\/|$)|static(\/|$)|media(\/|$)|assets(\/|$)).*/, (req, res) => {
+  app.get(/^\/(?!api(\/|$)|static(\/|$)|media(\/|$)|finder-image(\/|$)|assets(\/|$)).*/, (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
