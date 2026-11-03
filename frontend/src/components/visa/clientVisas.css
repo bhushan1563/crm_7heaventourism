@@ -1,0 +1,4 @@
+/* The visa quotations listed in the Visas section. The table itself uses the shared list styles. */
+.cvp { display: flex; flex-direction: column; gap: 16px; }
+.cvp .cf-lock { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; color: var(--success, #059669); }
+.cvp .itin-filters { justify-content: flex-start; }

@@ -10,13 +10,14 @@ Who may do what is decided in one place, `backend/src/config/rights.js`. The API
 | create | add records (for hotels and itineraries this includes adding photos; confirming a booking also needs *read* on quotations) |
 | update | change records (cancelling a booking is an update) |
 | delete | remove records. Hotels and itineraries are deleted from view but kept; **bookings are cancelled, never deleted** |
-| download | print or save as PDF/Word: the preview windows, the builder's Print buttons and the itinerary export all honour it |
+| download | print, save as PDF/Word or send to a client: the preview windows, the builder's Print buttons, the itinerary export and the PDF, Word and Send buttons of the visa quotations all honour it |
 | edit others | change records made by or assigned to someone else |
 
 Two rules sit on top of the rights:
 
 - **Confirmed bookings are locked.** A record that is Confirmed can only be changed by the people assigned to it (creator, sales, ops) and by an Admin, even for someone who has *edit others*.
 - **A confirmed quotation is locked for everyone**, Admin included, until its booking is cancelled.
+- **Visa quotations** are listed under *Visas > Client visas* for anyone who can read quotations. Opening one to change it follows the quotation rules above; the share window offers to keep a phone number or e-mail address on the quotation only where the person may change that quotation. *Save to the Visa List* needs the *create* right on visas.
 
 An **Admin** always has every right in every module. A right saved for one person beats a right saved for their role, which beats the built-in default below. The Rights screen shows this combined result for the person or role you select (the same rule the API applies on every request), so what you see there is what they can really do.
 

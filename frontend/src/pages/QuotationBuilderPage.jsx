@@ -69,6 +69,7 @@ import { isLandService, landServiceProblem, startLandService, vehiclesPayload } 
 import VisaEditor from '../components/quotation/VisaEditor';
 import PriceTablesEditor from '../components/quotation/PriceTablesEditor';
 import VisaPicker from '../components/visa/VisaPicker';
+import SaveVisaToList from '../components/visa/SaveVisaToList';
 import ConfirmDialog from '../components/ConfirmDialog';
 import visaService from '../services/visaService';
 import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
@@ -182,6 +183,7 @@ export const QuotationBuilderPage = () => {
   const guestIdParam = searchParams.get('guestId');
   const hotelIdParam = searchParams.get('hotelId'); // "Create quotation" on a hotel of the hotel list
   const visaIdParam = searchParams.get('visaId'); // "Create quotation" on a visa of the visa list
+  const newVisaParam = searchParams.get('type') === 'Visa'; // "New visa quotation" in the Visas section
 
   const { user, can } = useAuth();
   const { showToast } = useToast();
@@ -323,6 +325,11 @@ export const QuotationBuilderPage = () => {
           } else {
             showToast(vRes.message || 'That visa could not be opened, so the quotation starts empty.', 'error');
           }
+        }
+
+        // Started with "New visa quotation": a visa quotation with the visa fee and service charge lines ready to fill in.
+        if (!isEditMode && !visaIdParam && newVisaParam) {
+          setFormData((prev) => ({ ...prev, quotationType: 'Visa', ...startVisa(prev) }));
         }
 
         // Started from a hotel of the hotel list: a hotel quotation with that hotel already chosen.
@@ -885,7 +892,9 @@ export const QuotationBuilderPage = () => {
           origin: { y: 0.6 }
         });
 
-        showToast(`Quotation ${res.data.quotationNo} saved successfully!`, 'success');
+        // A visa quotation is kept with the visas: it can be found there by destination, changed, and sent to the client.
+        const toClientVisas = isVisa(formData) && can('visas', 'canRead');
+        showToast(toClientVisas ? `Quotation ${res.data.quotationNo} saved. You will find it under Visas > Client visas, where you can send it to the client.` : `Quotation ${res.data.quotationNo} saved successfully!`, 'success');
 
         if (downloadAfter) {
           const cleanDest = (res.data.destination || '7Heaven').replace(/[^a-zA-Z0-9]/g, '_');
@@ -894,7 +903,7 @@ export const QuotationBuilderPage = () => {
           showToast('Quotation PDF generated and downloaded!', 'success');
         }
 
-        navigate('/quotations');
+        navigate(toClientVisas ? '/visas?view=clients' : '/quotations');
       }
       else {
         showToast(res.message, 'error');
@@ -1459,6 +1468,7 @@ export const QuotationBuilderPage = () => {
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setVisaPickerOpen(true)}>Choose from the visa list</button>
                 </div>
               )}
+              {activeTab === 'visa' && can('visas', 'canCreate') && <SaveVisaToList quotation={formData} />}
               <VisaEditor quotation={formData} section={activeTab === 'visa' ? 'details' : 'fees'} onChange={(patch) => setFormData((prev) => ({ ...prev, ...patch }))} />
             </div>
           )}

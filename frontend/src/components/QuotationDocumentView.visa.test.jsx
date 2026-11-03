@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import QuotationDocumentView from './QuotationDocumentView';
+import { formatDate } from '../utils/dateHelper';
 
 afterEach(cleanup);
 
@@ -69,6 +70,48 @@ describe('the visa quotation document', () => {
     const { container } = view(visaQuotation({ visaDocuments: ['<b>not bold</b> & <script>x</script>'] }));
     expect(container).toHaveTextContent('<b>not bold</b> & <script>x</script>');
     expect(container.querySelector('script')).toBeNull();
+  });
+
+  describe('the applicant and trip details', () => {
+    const trip = () => screen.getByTestId('visa-trip-details');
+    const typed = { clientName: 'Meera Iyer', paxDetails: '2 Adults + 1 Child', travelDate: '2027-03-15', duration: '7 Nights / 8 Days', validUntil: '2027-01-31' };
+
+    it('prints the client, the guests, the travel date, the duration and how long the offer holds', () => {
+      view(visaQuotation(typed));
+      for (const [label, value] of [['Client', 'Meera Iyer'], ['Travellers', '2 Adults + 1 Child'], ['Travel date', formatDate('2027-03-15')], ['Duration', '7 Nights / 8 Days'], ['Quotation valid until', formatDate('2027-01-31')]]) {
+        expect(within(trip()).getByText(`${label}:`).parentElement).toHaveTextContent(value);
+      }
+      expect(formatDate('2027-03-15')).not.toBe('');
+    });
+
+    it('comes before the visa facts, so the page starts with who it is for', () => {
+      view(visaQuotation(typed));
+      const facts = screen.getByText('Visa type:').closest('div').parentElement;
+      expect(trip().compareDocumentPosition(facts) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('leaves out whatever was not typed, and the box itself when nothing was', () => {
+      view(visaQuotation({ clientName: '', paxDetails: '', travelDate: '2027-03-15', duration: '', validUntil: '' }));
+      expect(within(trip()).queryByText('Duration:')).toBeNull();
+      expect(within(trip()).queryByText('Client:')).toBeNull();
+      expect(within(trip()).getByText('Travel date:')).toBeInTheDocument();
+      cleanup();
+      view(visaQuotation({ clientName: '', paxDetails: '', travelDate: '', duration: '', validUntil: '' }));
+      expect(screen.queryByTestId('visa-trip-details')).toBeNull();
+    });
+
+    it('shows typed text as text only: markup in a field is never run', () => {
+      const { container } = view(visaQuotation({ ...typed, clientName: '<img src=x onerror="window.__pwned=1">Meera', duration: '<script>window.__pwned=1</script>7 Nights' }));
+      expect(container.querySelector('[data-testid="visa-trip-details"] img')).toBeNull();
+      expect(container.querySelector('[data-testid="visa-trip-details"] script')).toBeNull();
+      expect(trip()).toHaveTextContent('<img src=x onerror="window.__pwned=1">Meera');
+      expect(window.__pwned).toBeUndefined();
+    });
+
+    it('is only for visa quotations', () => {
+      view(visaQuotation({ ...typed, quotationType: 'Package' }));
+      expect(screen.queryByTestId('visa-trip-details')).toBeNull();
+    });
   });
 
   it('leaves other quotation types as they were: itinerary page, no visa section', () => {

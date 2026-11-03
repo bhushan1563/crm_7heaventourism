@@ -177,10 +177,18 @@ const PriceTablesSection = ({ tables }) => {
  * The body of a VISA quotation: the visa itself, the documents the applicants must bring (a checklist), the fees (per applicant or
  * for the whole group) with their total, and what the service includes. The price of the quotation is the fee table.
  */
-const VisaSection = ({ visa, fees, documents, inclusions }) => {
+const VisaSection = ({ visa, fees, documents, inclusions, trip = {} }) => {
   const applicants = Math.max(1, Number(visa.applicants) || 1);
   const total = visaFeeTotal(fees, applicants);
   const columns = '3fr 1.7fr 1.1fr 1.2fr';
+  // Who the visa is for and when: what was typed on the first tab (client, guests, travel date, duration) and how long the offer holds.
+  const tripFacts = [
+    ['Client', trip.client],
+    ['Travellers', trip.pax],
+    ['Travel date', trip.travelDate ? formatDate(trip.travelDate) : ''],
+    ['Duration', trip.duration],
+    ['Quotation valid until', trip.validUntil ? formatDate(trip.validUntil) : '']
+  ].filter(([, v]) => v);
   const facts = [
     ['Country', visa.country],
     ['Visa type', visa.visaType],
@@ -207,6 +215,16 @@ const VisaSection = ({ visa, fees, documents, inclusions }) => {
   );
   return (
     <div>
+      {tripFacts.length > 0 && (
+        <div className="quotation-keep" data-testid="visa-trip-details" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', marginBottom: '10px', padding: '6px 9px', backgroundColor: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
+          {tripFacts.map(([label, value]) => (
+            <div key={label}>
+              <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
+            </div>
+          ))}
+        </div>
+      )}
+
       {facts.length > 0 && (
         <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', marginBottom: '10px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
           {facts.map(([label, value]) => (
@@ -896,7 +914,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   {getPackageSectionTitle()}
                 </h3>
 
-                {isVisaQuotation && <VisaSection visa={visa} fees={visaFees} documents={visaDocuments} inclusions={visaInclusions} />}
+                {isVisaQuotation && <VisaSection visa={visa} fees={visaFees} documents={visaDocuments} inclusions={visaInclusions} trip={{ client: quotation.clientName, pax: quotation.paxDetails, travelDate: quotation.travelDate, duration: quotation.duration, validUntil: quotation.validUntil }} />}
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 

@@ -108,3 +108,55 @@ describe('property', () => {
     );
   });
 });
+
+describe('keeping the visa of a quotation in the list', () => {
+  const quotation = () => ({
+    clientName: 'Meera Iyer',
+    paxDetails: '2 Adults',
+    visa: { country: ' Japan ', visaType: 'Tourist', entryType: 'Single entry', mode: 'e-Visa', validity: '90 days', stay: '15 days', processingTime: '5 working days', priceNote: 'Fees may change', applicants: 3 },
+    visaFees: [{ label: 'Visa fee', amount: 6500, per: 'applicant' }, { label: 'Courier', amount: '800', per: 'group' }, { label: 'Service charge', amount: '', per: 'applicant' }],
+    visaDocuments: ['Passport', '   ', '<p><strong>Photos</strong></p>', '<p></p>'],
+    visaInclusions: ['Form filling', '']
+  });
+
+  it('takes the visa, the checklist, the fees and the inclusions, leaving out blank lines and anything about the client', async () => {
+    const { visaItemFromQuotation } = await import('./visaList');
+    const form = visaItemFromQuotation(quotation());
+    expect(form.visa).toMatchObject({ country: ' Japan ', visaType: 'Tourist', entryType: 'Single entry', mode: 'e-Visa', validity: '90 days', stay: '15 days', processingTime: '5 working days', priceNote: 'Fees may change', applicants: 1 });
+    expect(form.visaFees.map((f) => [f.label, f.amount, f.per])).toEqual([['Visa fee', 6500, 'applicant'], ['Courier', '800', 'group'], ['Service charge', '', 'applicant']]);
+    expect(form.visaDocuments).toEqual(['Passport', '<p><strong>Photos</strong></p>']);
+    expect(form.visaInclusions).toEqual(['Form filling']);
+    expect(JSON.stringify(form)).not.toMatch(/Meera|Adults/);
+  });
+
+  it('becomes what the server wants for a saved visa, with the fees as numbers and a trimmed country', async () => {
+    const { visaItemFromQuotation } = await import('./visaList');
+    const payload = visaItemPayload(visaItemFromQuotation(quotation()));
+    expect(payload.country).toBe('Japan');
+    expect(payload.fees).toEqual([{ label: 'Visa fee', amount: 6500, per: 'applicant' }, { label: 'Courier', amount: 800, per: 'group' }, { label: 'Service charge', amount: 0, per: 'applicant' }]);
+    expect(payload.documents).toHaveLength(2);
+    expect(visaItemProblem(visaItemFromQuotation(quotation()))).toBeNull();
+  });
+
+  it('copes with a quotation that has hardly anything, and says the country is missing', async () => {
+    const { visaItemFromQuotation } = await import('./visaList');
+    for (const bare of [undefined, {}, { visa: {} }, { visa: null, visaFees: null, visaDocuments: null }]) {
+      const form = visaItemFromQuotation(bare);
+      expect(form.visaFees).toEqual([]);
+      expect(visaItemProblem(form)).toBe('Please enter the country this visa is for.');
+      expect(() => visaItemPayload(form)).not.toThrow();
+    }
+  });
+
+  it('property: whatever the quotation holds, the result can always be turned into a payload', async () => {
+    const { visaItemFromQuotation } = await import('./visaList');
+    const text = fc.oneof(fc.string({ maxLength: 20 }), fc.constant(undefined), fc.constant(null));
+    fc.assert(
+      fc.property(fc.record({ country: text, visaType: text, mode: text }), fc.array(fc.record({ label: text, amount: fc.oneof(fc.integer({ min: 0, max: 99999 }), fc.string({ maxLength: 6 })), per: fc.constantFrom('applicant', 'group', 'x', undefined) }), { maxLength: 5 }), fc.array(text, { maxLength: 5 }), (visa, visaFees, visaDocuments) => {
+        const form = visaItemFromQuotation({ visa, visaFees, visaDocuments });
+        expect(() => visaItemPayload(form)).not.toThrow();
+        expect(form.visaFees.every((f) => f.per === 'applicant' || f.per === 'group')).toBe(true);
+      })
+    );
+  });
+});

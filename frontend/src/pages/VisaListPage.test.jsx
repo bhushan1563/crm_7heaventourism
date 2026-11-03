@@ -10,6 +10,7 @@ vi.mock('../context/AuthContext', () => ({
 }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => h.navigate }));
+vi.mock('../components/visa/ClientVisasPanel', () => ({ default: () => <div>CLIENT VISAS PANEL</div> }));
 vi.mock('../services/visaService', () => ({ default: { list: vi.fn(), update: vi.fn(), remove: vi.fn() } }));
 
 import visaService from '../services/visaService';
@@ -122,5 +123,48 @@ describe('VisaListPage', () => {
     expect(screen.getByRole('button', { name: /Previous/ })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: /Next/ }));
     await waitFor(() => expect(visaService.list).toHaveBeenLastCalledWith({ status: 'Active', page: 2, limit: 20 }));
+  });
+});
+
+describe('VisaListPage: saved visas and client visas', () => {
+  const showAt = (url) => render(<MemoryRouter initialEntries={[url]}><VisaListPage /></MemoryRouter>);
+  beforeEach(() => {
+    visaService.list.mockResolvedValue(page([item(1)]));
+  });
+
+  it('opens on the saved visas, with a switch to the visa quotations made for clients', async () => {
+    show();
+    expect(await screen.findByText('Country 1')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Saved visas' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Client visas' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.queryByText('CLIENT VISAS PANEL')).toBeNull();
+  });
+
+  it('shows the visa quotations when Client visas is chosen, and takes the saved-visa tools away', async () => {
+    show();
+    await screen.findByText('Country 1');
+    await userEvent.click(screen.getByRole('tab', { name: 'Client visas' }));
+    expect(screen.getByText('CLIENT VISAS PANEL')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Client visas' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByText('Country 1')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Add visa/ })).toBeNull();
+    expect(screen.queryByLabelText('Search visas')).toBeNull();
+    expect(screen.getByText(/find it by destination, change it, and send it to the client/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Saved visas' }));
+    expect(await screen.findByText('Country 1')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Add visa/ })).toBeInTheDocument();
+  });
+
+  it('can be opened straight on the client visas by its link', () => {
+    showAt('/visas?view=clients');
+    expect(screen.getByText('CLIENT VISAS PANEL')).toBeInTheDocument();
+  });
+
+  it('shows no switch, and ignores the link, for someone who may not see quotations', async () => {
+    h.perms.quote = false;
+    showAt('/visas?view=clients');
+    expect(await screen.findByText('Country 1')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Client visas' })).toBeNull();
+    expect(screen.queryByText('CLIENT VISAS PANEL')).toBeNull();
   });
 });

@@ -188,8 +188,9 @@ const openPrintFrame = async (container) => {
  * @param {string} containerId - The HTML element ID containing the .quotation-page elements
  * @param {string} filename - Desired output filename
  * @param {Function} onProgress - Optional progress callback
+ * @param {{ save?: boolean }} [options] - `save: false` returns the PDF as a Blob instead of downloading it (for sharing)
  */
-export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quotation.pdf', onProgress = null) => {
+export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quotation.pdf', onProgress = null, { save = true } = {}) => {
   const container = document.getElementById(containerId);
   if (!container) {
     throw new Error(`Quotation container #${containerId} not found in DOM.`);
@@ -283,6 +284,7 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
     onProgress(100, 'Finalizing PDF download...');
   }
 
+  if (!save) return pdf.output('blob');
   pdf.save(filename);
   return true;
   } finally {
