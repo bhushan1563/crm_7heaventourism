@@ -18,6 +18,7 @@ const PAGES = [
   ['/scanner', 'Operations', 'Mobile Scanner & Card OCR'],
   ['/users', 'Administration', 'User & Staff Management'],
   ['/rights', 'Administration', 'Access Rights & Security'],
+  ['/notes-policies', 'Administration', 'Notes & Policies'],
   ['/profile', 'Account', 'My Profile']
 ];
 

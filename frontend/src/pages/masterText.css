@@ -1,0 +1,13 @@
+/* The Master Editor (Notes & Policies): lists of lines, each one a formatted line with its small tools beside it. */
+.mt-status { margin-bottom: 0; }
+.mt-rows { display: flex; flex-direction: column; gap: 8px; }
+.mt-row { display: flex; align-items: center; gap: 8px; }
+.mt-row .fline, .mt-row .fline-editing { flex: 1 1 auto; min-width: 0; }
+.mt-bullet { color: var(--primary-text); font-weight: 800; min-width: 14px; text-align: center; }
+.mt-tools { display: inline-flex; gap: 4px; flex: none; }
+.mt-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+@media (max-width: 560px) {
+  .mt-row { flex-wrap: wrap; }
+  .mt-row .fline, .mt-row .fline-editing { flex-basis: calc(100% - 28px); }
+  .mt-tools { margin-left: 22px; }
+}

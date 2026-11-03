@@ -65,6 +65,9 @@ import FormattedLine from '../components/quotation/FormattedLine';
 import OptionsEditor from '../components/quotation/OptionsEditor';
 import { hotelsOfFirstOption, optionsProblem, repriceOptions, startHotelOptions, startOptions } from '../utils/quotationOptions';
 import { startRates } from '../utils/rateTable';
+import { DEFAULT_CANCELLATION_POLICY, DEFAULT_EXCLUSIONS, DEFAULT_IMPORTANT_NOTES, DEFAULT_PAYMENT_POLICY, DEFAULT_VEHICLE_NOTES } from '../utils/standardText';
+import { standardLists, startingLists } from '../utils/masterText';
+import masterTextService from '../services/masterTextService';
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
@@ -131,45 +134,6 @@ const DEFAULT_INCLUSIONS = [
   'Assistance provided by dedicated driver / representative throughout the tour',
   'Transfers & sightseeing by private dedicated AC vehicle',
   'All toll taxes, parking fees, fuel & driver allowances'
-];
-
-const DEFAULT_EXCLUSIONS = [
-  'Any kind of monument / temple entry fees unless specified',
-  'Personal expenses such as laundry, telephone, room service, alcoholic/non-alcoholic beverages',
-  'Early check-in and late check-out charges',
-  'Airfare / Train fare unless explicitly specified',
-  'Cost of optional excursions, rides or services not mentioned in the inclusions',
-  'Travel Insurance and emergency medical expenses'
-];
-
-const DEFAULT_PAYMENT_POLICY = [
-  '25% Token advance payment at the time of booking confirmation.',
-  '50% Second payment installment 30 days prior to travel departure.',
-  '25% Balance final payment at least 15 days prior to arrival date.',
-  '100% full payment required at booking confirmation for flight tickets and peak-season hotels.'
-];
-
-const DEFAULT_CANCELLATION_POLICY = [
-  '30 days or more prior to departure: 10% of total tour cost or token booking fee.',
-  '15 to 29 days prior to departure: 25% of total tour cost.',
-  '07 to 14 days prior to departure: 50% of total tour cost.',
-  'Less than 07 days / No-show: 100% of total tour cost (Non-refundable).',
-  'Flight cancellations and non-refundable hotel rates subject to airline/supplier terms.'
-];
-
-const DEFAULT_VEHICLE_NOTES = [
-  'For airport transfers in case of flight delays exceeding 1 hr, charges apply as per hourly schedule',
-  'Opening & closing kilometers and hours calculated garage to garage',
-  'AC system will be switched off on hilly / ghat sections where applicable',
-  'Extra mileage exceeding package limits will be charged at standard per-km rates',
-  'Local usage beyond 12 hours will be billed on hourly & extra km basis'
-];
-
-const DEFAULT_IMPORTANT_NOTES = [
-  'All guests must carry valid government-issued photo ID (Aadhaar / Passport / Voter ID).',
-  'Hotel check-in time is standard 12:00 PM / 02:00 PM and check-out is 10:00 AM / 11:00 AM.',
-  'Extras and personal incidentals to be settled directly at the hotel upon check-out.',
-  'Quotation rates are subject to availability at the time of final confirmation.'
 ];
 
 const DEFAULT_PRICING_ITEMS = [
@@ -258,6 +222,24 @@ export const QuotationBuilderPage = () => {
     vehicleNotes: [...DEFAULT_VEHICLE_NOTES],
     importantNotes: [...DEFAULT_IMPORTANT_NOTES]
   });
+
+  // The company's own standard Notes and Policy text (the master text), when an Admin has saved one: a new quotation starts with it,
+  // but only in a list nobody has typed in yet, and "Reset Default" goes back to it. Without one the built-in text is used, as before.
+  const [master, setMaster] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    masterTextService
+      .get()
+      .then((res) => {
+        if (cancelled || !res?.success || !res.data) return;
+        setMaster(res.data);
+        if (!isEditMode) setFormData((prev) => ({ ...prev, ...startingLists(prev, res.data) }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isEditMode]);
 
   // Load Initial Data (Guests, Users, Existing Quotation or GuestParam)
   useEffect(() => {
@@ -701,7 +683,7 @@ export const QuotationBuilderPage = () => {
   const handleResetPaymentPolicy = () => {
     setFormData(prev => ({
       ...prev,
-      paymentPolicy: [...DEFAULT_PAYMENT_POLICY]
+      paymentPolicy: standardLists(master).paymentPolicy
     }));
   };
 
@@ -731,7 +713,7 @@ export const QuotationBuilderPage = () => {
   const handleResetCancellationPolicy = () => {
     setFormData(prev => ({
       ...prev,
-      cancellationPolicy: [...DEFAULT_CANCELLATION_POLICY]
+      cancellationPolicy: standardLists(master).cancellationPolicy
     }));
   };
 

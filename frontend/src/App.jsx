@@ -26,6 +26,7 @@ const ConfirmationEditorPage = lazy(() => import('./pages/ConfirmationEditorPage
 const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const RightsPage = lazy(() => import('./pages/RightsPage'));
+const MasterTextPage = lazy(() => import('./pages/MasterTextPage'));
 const MobileScannerPage = lazy(() => import('./pages/MobileScannerPage'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -64,6 +65,7 @@ export function App() {
                     <Route path="/confirmations/:id" element={<ConfirmationEditorPage />} />
                     <Route path="/users" element={<UserManagementPage />} />
                     <Route path="/rights" element={<RightsPage />} />
+                    <Route path="/notes-policies" element={<MasterTextPage />} />
                     <Route path="/profile" element={<ProfilePage />} />
                     <Route path="/scanner" element={<MobileScannerPage />} />
                     <Route path="*" element={<NotFoundPage />} />

@@ -136,12 +136,15 @@ Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No
 - [x] 15.6 All of this is the same for hotel and package confirmations; a quotation (before it is confirmed) prints exactly as it did
 
 ### Step 16: Master editor for Notes and Policy
-- [ ] 16.1 One place where an Admin changes the standard Notes and Policy text that quotations print (so it is not edited quotation by quotation)
+- [x] 16.1 The Master Editor: a screen "Notes & Policies" (Administration, for Admins) where the standard Notes and Policy text is changed once instead of quotation by quotation: five lists (important notes & terms, payment policy, cancellation policy, exclusions, vehicle notes), each line formatted text, with add, remove and move. Saved on the server as one record (`/api/master-text`); until something is saved the built-in text (as before) is used, and "Back to the built-in text" removes the saved record after asking
+- [x] 16.2 A NEW quotation starts with the saved text, only in a list nobody has typed in; "Reset Default" on a quotation's payment and cancellation policy goes back to it. A quotation that was already made keeps its own text (checked on a real database and in the browser), so what a client was sent never changes
+- [x] 16.3 Everyone who reads quotations can read it; only people with the update right on rights (Admins) can change it. Another person who opens the address sees it read-only with a plain note; the server refuses their save. Two Admins editing at once: the second save is refused with "Load the latest version". Formatted text is cleaned on the server like every other quotation list
+- [ ] 16.4 Open: the same editor for the other standard texts (inclusions, the end-of-tour banner) if the client wants them; not asked for now
 
 ### Step 17: Rupee symbol
 - [x] 17.1 Every dollar sign in the interface is now a rupee: the icons on the Dashboard card ("Confirmed & Paid"), the quotation list card and the "5. Pricing" tab (the guest list's unused dollar icon import was removed). Amounts are written "Rs 1,00,000" (Indian grouping) everywhere; the whole source is searched for dollar icons, "$" amounts, USD and US number formats, and a test keeps it that way
 
-(Step 7 to 15 and 17 are complete; Step 16 is in progress; what else remains is waiting on the client, see above.)
+(Steps 7 to 17 are complete; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 
