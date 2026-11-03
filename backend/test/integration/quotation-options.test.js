@@ -140,3 +140,76 @@ test('a hotel inside an option keeps its check-in and check-out dates, rooms and
   assert.equal(String(second.checkInDate).slice(0, 10), '2026-03-10', 'each hotel keeps its own dates');
   assert.equal(String(read.options[1].hotels[0].checkOutDate).slice(0, 10), '2026-03-12');
 });
+
+// ---------------------------------------- the rate tables of a hotel quotation (the client's sheet) ----------------------------------------
+
+const rates = (...rows) => rows.map(([kind, rate, extra = {}]) => ({ kind, label: '', rate, ...extra }));
+const tableStay = (name, rows, over = {}) => stay({ hotelName: name, nights: '3 Nights', noOfRooms: '2 Rooms', checkInDate: '2026-03-07', checkOutDate: '2026-03-10', rates: rates(...rows), ...over });
+
+test('rate tables are saved with each hotel, and the server counts the total of each option itself, whatever the browser says', async () => {
+  const body = await create({
+    quotationType: 'Only Hotel',
+    destination: 'UDAIPUR',
+    options: [
+      option({ name: '3 Star', pricePerPerson: 1, totalPrice: 1, hotels: [tableStay('Hotel Sunrise', [['room', 5000], ['extraBed', 1500]]), tableStay('Hotel Moonlight', [['room', 4000]], { nights: '2 Nights', noOfRooms: '1 Room' })] }),
+      option({ name: '4 Star', pricePerPerson: 999, totalPrice: 123456789, hotels: [tableStay('Hotel Orchid', [['room', 9000, { rooms: 1 }], ['childNoBed', 800, { nights: 2, rooms: 2 }]])] })
+    ]
+  });
+  assert.equal(body.success, true, body.message);
+  const read = (await api(`/${body.data._id}`, { token: admin.token })).body.data;
+  assert.equal(read.options[0].totalPrice, 30000 + 4500 + 8000, 'option 1 = 34,500 + 8,000, counted by the server');
+  assert.equal(read.options[1].totalPrice, 27000 + 3200, 'option 2 = 9,000 x 3 x 1 + 800 x 2 x 2');
+  const [sunrise] = read.options[0].hotels;
+  assert.deepEqual(sunrise.rates.map((r) => [r.kind, r.label, r.rate, r.nights, r.rooms]), [['room', '2 Adults', 5000, null, null], ['extraBed', 'Extra bed', 1500, null, null]], 'the labels default to the client\'s names and nights/rooms stay empty (they follow the stay)');
+  assert.deepEqual(read.options[1].hotels[0].rates.map((r) => [r.kind, r.nights, r.rooms]), [['room', null, 1], ['childNoBed', 2, 2]]);
+});
+
+test('a table that is not valid is refused in plain words and nothing is saved', async () => {
+  const before = (await api('', { token: admin.token })).body.total;
+  const refused = async (rows, expected) => {
+    const r = await api('', { method: 'POST', token: admin.token, json: base({ quotationType: 'Only Hotel', options: [option({ hotels: [tableStay('Hotel X', rows)] }), option({ name: 'B' })] }) });
+    assert.equal(r.body.success, false);
+    assert.match(r.body.message, expected);
+  };
+  await refused([['room', -1]], /rate row 1 of hotel stay 1 must be an amount/);
+  await refused([['room', 100], ['room', 200]], /"2 Adults" row twice/);
+  await refused([['room', 100, { nights: 400 }]], /whole number from 0 to 365/);
+  await refused([['room', 9_000_000, { nights: 300, rooms: 900 }]], /total of option 1 is too large/);
+  assert.equal((await api('', { token: admin.token })).body.total, before);
+});
+
+test('updating a hotel quotation recounts the totals from the tables it is sent', async () => {
+  const made = await create({ quotationType: 'Only Hotel', destination: 'UDAIPUR', options: [option({ hotels: [tableStay('Hotel A', [['room', 1000]])] }), option({ name: 'B', hotels: [tableStay('Hotel B', [['room', 2000]])] })] });
+  assert.equal(made.success, true, made.message);
+  assert.equal(made.data.options[0].totalPrice, 6000);
+  const updated = await api(`/${made.data._id}`, { method: 'PUT', token: admin.token, json: { options: [option({ hotels: [tableStay('Hotel A', [['room', 1000], ['extraBed', 500]])] }), option({ name: 'B', hotels: [tableStay('Hotel B', [['room', 2000]])] })] } });
+  assert.equal(updated.body.success, true, updated.body.message);
+  assert.equal(updated.body.data.options[0].totalPrice, 6000 + 1500);
+  assert.equal(updated.body.data.options[1].totalPrice, 12000);
+});
+
+test('confirming a rate-table option keeps its hotels with their tables and takes the Grand Total as the amount', async () => {
+  const made = await create({ quotationType: 'Only Hotel', destination: 'UDAIPUR', options: [option({ name: '3 Star', hotels: [tableStay('Hotel A', [['room', 5000], ['extraBed', 1500]])] }), option({ name: '4 Star', hotels: [tableStay('Hotel B', [['room', 9000]])] })] });
+  assert.equal(made.success, true, made.message);
+  const res = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: made.data._id, optionIndex: 0 } })).body;
+  assert.equal(res.success, true, res.message);
+  const c = res.data;
+  assert.equal(c.totalAmount ?? c.payment?.totalAmount, 34500);
+  assert.equal(c.optionName, '3 Star');
+  assert.deepEqual(c.quote.options, []);
+  assert.deepEqual(c.quote.packageDetails.hotels[0].rates.map((r) => [r.kind, r.rate]), [['room', 5000], ['extraBed', 1500]]);
+  assert.equal(c.quote.pricing.grandTotal, 34500);
+  assert.equal(c.quote.pricing.totalCostPerPerson, 0);
+  assert.match(c.quote.pricing.totalCostNote, /Grand Total as per the rates/);
+});
+
+test('a quotation made before the tables existed still saves, reads and confirms exactly as it did (price per person)', async () => {
+  const made = await create({ quotationType: 'Only Hotel', destination: 'OLD', options: [option({ name: 'A', pricePerPerson: 25000, totalPrice: 50000 }), option({ name: 'B', pricePerPerson: 40000, totalPrice: 80000 })] });
+  assert.equal(made.success, true, made.message);
+  assert.equal(made.data.options[0].totalPrice, 50000);
+  assert.deepEqual(made.data.options[0].hotels[0].rates, []);
+  const res = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: made.data._id, optionIndex: 1 } })).body;
+  assert.equal(res.success, true, res.message);
+  assert.equal(res.data.quote.pricing.grandTotal, 80000);
+  assert.equal(res.data.quote.pricing.totalCostPerPerson, 40000);
+});

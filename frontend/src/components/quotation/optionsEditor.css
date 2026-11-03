@@ -26,10 +26,13 @@ html[data-theme='dark'] .option-linked { color: #34d399; }
 .option-address { grid-column: 1 / -1; }
 .option-add { display: flex; gap: 8px; flex-wrap: wrap; }
 .option-price { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(140px, 1fr) minmax(220px, 2fr); gap: 12px; align-items: end; padding-top: 10px; border-top: 1px solid var(--border-color); }
+.option-price-tables { grid-template-columns: minmax(200px, 1fr) minmax(220px, 2fr); }
+.option-legacy { grid-column: 1 / -1; }
 .option-total { min-height: 38px; display: flex; align-items: center; font-size: 1.05rem; font-weight: 800; color: var(--text-primary); }
 @media (max-width: 760px) {
   .option-hotel-grid { grid-template-columns: 1fr 1fr; }
   .option-price { grid-template-columns: 1fr 1fr; }
+  .option-price-tables { grid-template-columns: 1fr; }
   .option-note { grid-column: 1 / -1; }
 }
 @media (max-width: 480px) { .option-hotel-grid, .option-price { grid-template-columns: 1fr; } }

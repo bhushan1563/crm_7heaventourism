@@ -64,6 +64,7 @@ import TagInput from '../components/itinerary/TagInput';
 import FormattedLine from '../components/quotation/FormattedLine';
 import OptionsEditor from '../components/quotation/OptionsEditor';
 import { hotelsOfFirstOption, optionsProblem, repriceOptions, startHotelOptions, startOptions } from '../utils/quotationOptions';
+import { startRates } from '../utils/rateTable';
 import VehiclesEditor from '../components/quotation/VehiclesEditor';
 import { isLandService, landServiceProblem, startLandService, vehiclesPayload } from '../utils/landService';
 import VisaEditor from '../components/quotation/VisaEditor';
@@ -563,14 +564,16 @@ export const QuotationBuilderPage = () => {
       const title = retitle ? { destination: hotelDestination(hotel) } : {};
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
+        // In a hotel quotation every hotel carries its rate table, so the room rate row is ready as soon as the hotel is chosen.
+        const withRates = (stay) => (prev.quotationType === 'Only Hotel' && !stay.rates?.length ? { ...stay, rates: startRates() } : stay);
         const options = (prev.options || []).map((option, i) => {
           if (i !== target.option) return option;
           const hotels = [...option.hotels];
-          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(stayFromHotel(hotel, blankStay()));
-          else hotels[target.hotel] = stayFromHotel(hotel, hotels[target.hotel]);
+          if (target.hotel === null || target.hotel === undefined || !hotels[target.hotel]) hotels.push(withRates(stayFromHotel(hotel, blankStay())));
+          else hotels[target.hotel] = withRates(stayFromHotel(hotel, hotels[target.hotel]));
           return { ...option, hotels };
         });
-        return { ...prev, ...title, options };
+        return { ...prev, ...title, options: repriceOptions(options, prev.paxDetails) };
       }
       const hotels = [...(prev.packageDetails?.hotels || [])];
       if (target && target.mode !== 'new' && hotels[target.index]) hotels[target.index] = stayFromHotel(hotel, hotels[target.index]);
@@ -2166,7 +2169,9 @@ export const QuotationBuilderPage = () => {
 
               {(formData.options || []).length > 0 && (
                 <div className="cf-banner" role="note">
-                  <span>This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.</span>
+                  <span>{formData.quotationType === 'Only Hotel'
+                    ? 'This quotation offers hotel options, so each hotel is priced in its own rate table under the options (per room per night, nights and rooms; the Grand Total of each option is counted from them). This price list is for a quotation with a single offer.'
+                    : 'This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.'}</span>
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveTab('package')}>
                     Go to the hotel options
                   </button>

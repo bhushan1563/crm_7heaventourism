@@ -1,6 +1,8 @@
 // Hotel options of a quotation: several choices offered side by side, each with its own hotels and its own price.
 // Pure functions (no network, no React) so every rule can be tested. A quotation with no options is one offer, as before.
 import { nightsBetween } from './hotelStay';
+import { hotelTotal, optionTotal, optionUsesRates } from './hotelRates';
+import { startRates } from './rateTable';
 
 export const OPTION_LIMITS = { options: 6, hotelsPerOption: 10 };
 
@@ -14,10 +16,20 @@ const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
 export const blankOption = (number) => ({ name: `Option ${number}`, recommended: false, hotels: [], pricePerPerson: 0, totalPrice: 0, priceNote: 'Per person' });
 
-/** The total is always the price per person times the guests: it is shown, never typed, so it can never disagree. */
+/**
+ * The total is always counted, never typed, so it can never disagree. An option priced by the rate tables of its hotels (a hotel
+ * quotation) has the Grand Total of the tables, and its price per person is that total shared by the guests; any other option has
+ * the price per person times the guests.
+ */
 export const repriceOptions = (options, paxDetails) => {
   const guests = guestCount(paxDetails);
-  return (options || []).map((o) => ({ ...o, totalPrice: round2(o.pricePerPerson * guests) }));
+  return (options || []).map((o) => {
+    if (optionUsesRates(o)) {
+      const total = optionTotal(o);
+      return { ...o, totalPrice: total, pricePerPerson: round2(total / guests) };
+    }
+    return { ...o, totalPrice: round2(o.pricePerPerson * guests) };
+  });
 };
 
 export const setPrice = (options, index, pricePerPerson, paxDetails) =>
@@ -37,7 +49,7 @@ export const addOption = (options) => (options.length >= OPTION_LIMITS.options ?
 export const duplicateOption = (options, index) => {
   if (options.length >= OPTION_LIMITS.options || !options[index]) return options;
   const source = options[index];
-  const copy = { ...source, name: `${source.name} (copy)`.slice(0, 80), recommended: false, hotels: source.hotels.map((s) => ({ ...s })) };
+  const copy = { ...source, name: `${source.name} (copy)`.slice(0, 80), recommended: false, hotels: source.hotels.map((s) => ({ ...s, ...(s.rates ? { rates: s.rates.map((r) => ({ ...r })) } : {}) })) };
   return [...options.slice(0, index + 1), copy, ...options.slice(index + 1)];
 };
 
@@ -78,7 +90,14 @@ export const optionsProblem = (quotation) => {
     }
     const backwards = option.hotels.findIndex((s) => s.checkInDate && s.checkOutDate && !nightsBetween(s.checkInDate, s.checkOutDate));
     if (backwards >= 0) return `${label}, hotel ${backwards + 1}: the check-out date must be after the check-in date.`;
-    if (!(option.pricePerPerson > 0)) return `Please enter the price per person of ${label}.`;
+    if (optionUsesRates(option)) {
+      // Priced by the tables: every hotel needs its room rate, or the Grand Total would leave a hotel out.
+      for (const [k, stay] of option.hotels.entries()) {
+        const room = (stay.rates || []).find((r) => r.kind === 'room');
+        if (!room || !(Number(room.rate) > 0)) return `${label}, hotel ${k + 1}: please enter the room rate per night.`;
+        if (!(hotelTotal(stay) > 0)) return `${label}, hotel ${k + 1}: the rates give a total of 0. Please check the nights and the number of rooms.`;
+      }
+    } else if (!(option.pricePerPerson > 0)) return `Please enter the price per person of ${label}.`;
   }
   return null;
 };
@@ -91,4 +110,8 @@ export const optionsProblem = (quotation) => {
 export const startHotelOptions = (quotation) =>
   (quotation?.options || []).length
     ? {}
-    : { options: repriceOptions(startOptions(quotation?.packageDetails?.hotels || []), quotation?.paxDetails), packageDetails: { ...(quotation?.packageDetails || {}), hotels: [] } };
+    : {
+        // each hotel starts with its room rate row, the first row of the client's table
+        options: repriceOptions(startOptions((quotation?.packageDetails?.hotels || []).map((s) => ({ ...s, rates: s.rates?.length ? s.rates : startRates() }))), quotation?.paxDetails),
+        packageDetails: { ...(quotation?.packageDetails || {}), hotels: [] }
+      };

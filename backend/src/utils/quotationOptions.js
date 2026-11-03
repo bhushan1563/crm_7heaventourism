@@ -1,6 +1,7 @@
 import { line } from './itineraryInput.js';
 import { richLine } from './quotationText.js';
 import { normalizeQuotationHotels, stayPhotoTokens } from './quotationHotels.js';
+import { optionTotal, optionUsesRates } from './hotelRates.js';
 
 // Hotel options of a quotation: several choices offered side by side, each with its own hotels and its own price.
 // A quotation without options (every older one, and anything the mobile app sends today) is one offer, exactly as before.
@@ -38,8 +39,14 @@ export const normalizeQuotationOptions = (value) => {
     if (stays.value.length > L.hotelsPerOption) return fail(`Option ${n} can have at most ${L.hotelsPerOption} hotels (there are ${stays.value.length}).`);
     const perPerson = price(raw.pricePerPerson, `The price per person of option ${n}`);
     if (!perPerson.ok) return perPerson;
-    const total = price(raw.totalPrice, `The total price of option ${n}`);
+    let total = price(raw.totalPrice, `The total price of option ${n}`);
     if (!total.ok) return total;
+    // An option priced by the rate tables of its hotels has the total the tables give: it is worked out here, never taken as typed.
+    if (optionUsesRates({ hotels: stays.value })) {
+      const counted = optionTotal({ hotels: stays.value });
+      if (counted > L.maxPrice) return fail(`The total of option ${n} is too large (the limit is ${L.maxPrice.toLocaleString('en-IN')}). Please check the rates.`);
+      total = { ok: true, value: counted };
+    }
     const note = richLine(raw.priceNote, `the price note of option ${n}`, L.note); // can be formatted
     if (!note.ok) return note;
     if (raw.recommended !== undefined && raw.recommended !== null && typeof raw.recommended !== 'boolean') return fail(`Whether option ${n} is recommended must be yes or no.`);

@@ -25,6 +25,16 @@ const itineraryDaySchema = new mongoose.Schema({
   photos: { type: [dayPhotoSchema], default: [] }
 }, { _id: false });
 
+// One row of the rate table of a hotel (the client's sheet): the room, an extra bed, a child with a bed or a child with no bed.
+// The nights and the rooms are left null while they follow the stay; a number typed on the row replaces them.
+const rateRowSchema = new mongoose.Schema({
+  kind: { type: String, enum: ['room', 'extraBed', 'childWithBed', 'childNoBed'], default: 'room' },
+  label: { type: String, default: '' },
+  rate: { type: Number, default: 0 }, // per room per night
+  nights: { type: Number, default: null },
+  rooms: { type: Number, default: null }
+}, { _id: false });
+
 const hotelStaySchema = new mongoose.Schema({
   nights: { type: String, default: '1 Night' },
   city: { type: String, default: '' },
@@ -47,7 +57,8 @@ const hotelStaySchema = new mongoose.Schema({
   amenities: { type: [String], default: [] },
   roomOptions: { type: [String], default: [] }, // the room types the hotel offers (suggestions for "Room category")
   checkInTime: { type: String, default: '' },
-  checkOutTime: { type: String, default: '' }
+  checkOutTime: { type: String, default: '' },
+  rates: { type: [rateRowSchema], default: [] } // the rate table of this hotel in a hotel quotation (empty = none)
 }, { _id: false });
 
 // A vehicle of a land service quotation (vehicle only, no hotels): what it is, how many, and the rate for the whole trip.

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import Modal from '../Modal';
 import { guestCount } from '../../utils/quotationOptions';
+import { optionTotal as optionTotalOfTables, optionUsesRates } from '../../utils/hotelRates';
 import { needsOptionChoice } from '../../utils/confirmation';
 import { filledTables, needsPriceTableChoice, tableTotal } from '../../utils/priceTables';
 import './confirmation.css';
@@ -44,7 +45,7 @@ export const ConfirmBookingDialog = ({ quotation, isOpen, onClose, onConfirm, bu
                 <span>
                   <span className="cf-option-name">{o.name || `Option ${i + 1}`}</span>
                   <span className="cf-option-meta" style={{ display: 'block' }}>
-                    {money(o.pricePerPerson)} per person · {money(optionTotal(o, quotation.paxDetails))} in all
+                    {optionUsesRates(o) ? `Grand Total ${money(optionTotalOfTables(o))}` : `${money(o.pricePerPerson)} per person · ${money(optionTotal(o, quotation.paxDetails))} in all`}
                   </span>
                   {(o.hotels || []).length > 0 && (
                     <span className="cf-option-meta" style={{ display: 'block' }}>

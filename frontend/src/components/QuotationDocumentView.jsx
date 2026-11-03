@@ -6,6 +6,7 @@ import { formatDate, formatLongDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { addressLine } from '../utils/hotelStay';
+import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
 import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableTotal } from '../utils/priceTables';
@@ -119,6 +120,7 @@ const HotelStayCard = ({ h }) => {
             {[h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
           </div>
         )}
+        <RateTablePrint stay={h} />
       </div>
     </div>
   );
@@ -332,6 +334,145 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
     </div>
   );
 };
+
+const inr = (n) => (Number(n) || 0).toLocaleString('en-IN');
+
+/**
+ * The rates of one hotel, as the client's sheet: the room, then (only when they were added) an extra bed, a child with a bed and a
+ * child with no bed; for each the rate per room per night, the nights, the rooms and the total. A row with no rate is left out.
+ */
+const RateTablePrint = ({ stay }) => {
+  const rows = (stay.rates || []).filter((r) => Number(r.rate) > 0);
+  if (!rows.length) return null;
+  const cell = { border: '1px solid #cbd5e1', padding: '3px 6px', fontSize: '9.5px', color: '#0f172a' };
+  const head = { ...cell, background: '#f1f5f9', fontWeight: 800, fontSize: '8px', textTransform: 'uppercase', letterSpacing: '0.03em', color: '#475569' };
+  const num = { textAlign: 'right', whiteSpace: 'nowrap' };
+  return (
+    <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '7px' }}>
+      <thead>
+        <tr>
+          <th style={{ ...head, textAlign: 'left' }}>Room</th>
+          <th style={{ ...head, ...num }}>Per room per night (Rs)</th>
+          <th style={{ ...head, ...num }}>No of nights</th>
+          <th style={{ ...head, ...num }}>No of rooms</th>
+          <th style={{ ...head, ...num }}>Total (Rs)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.kind}>
+            <td style={{ ...cell, fontWeight: 700 }}>{r.label || RATE_LABELS[r.kind]}</td>
+            <td style={{ ...cell, ...num }}>{inr(r.rate)}</td>
+            <td style={{ ...cell, ...num }}>{rowNights(stay, r)}</td>
+            <td style={{ ...cell, ...num }}>{rowUnits(stay, r)}</td>
+            <td style={{ ...cell, ...num, fontWeight: 700 }}>{inr(rateRowTotal(stay, r))}</td>
+          </tr>
+        ))}
+      </tbody>
+      {rows.length > 1 && (
+        <tfoot>
+          <tr>
+            <td colSpan={4} style={{ ...cell, textAlign: 'right', fontWeight: 800, background: '#f8fafc' }}>Hotel total</td>
+            <td style={{ ...cell, ...num, fontWeight: 800, background: '#f8fafc' }}>{inr(hotelTotal(stay))}</td>
+          </tr>
+        </tfoot>
+      )}
+    </table>
+  );
+};
+
+/** What one hotel of an option shows: its photo, its name, room category and address, its dates, and its rate table. */
+const HotelProposalBody = ({ h }) => {
+  const cover = h.photos?.[0];
+  return (
+    <div style={{ padding: '8px 10px 9px' }}>
+      <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+        {cover && <img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} width={cover.width} height={cover.height} crossOrigin={photoCrossOrigin} style={{ flex: 'none', display: 'block', width: '112px', height: '76px', objectFit: 'cover', borderRadius: '5px' }} />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</span>
+            {h.starRating && h.starRating !== 'Unrated' && <span style={{ fontSize: '8.5px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '1px 6px', borderRadius: '3px' }}>★ {h.starRating}</span>}
+          </div>
+          {h.roomCategory && <div style={{ fontSize: '10px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>{h.roomCategory}</div>}
+          {(h.address || h.city) && <div style={{ fontSize: '9px', color: '#475569', marginTop: '2px' }}>📍 {addressLine(h)}</div>}
+          {(h.checkInDate || h.checkOutDate) && (
+            <div style={{ fontSize: '9px', color: '#0f172a', marginTop: '3px' }}>
+              {h.checkInDate && <span><strong>Check In:</strong> {formatLongDate(h.checkInDate)}</span>}
+              {h.checkInDate && h.checkOutDate && '   •   '}
+              {h.checkOutDate && <span><strong>Check Out:</strong> {formatLongDate(h.checkOutDate)}</span>}
+            </div>
+          )}
+          <div style={{ fontSize: '8.5px', color: '#334155', marginTop: '2px' }}>{[h.nights, h.noOfRooms, h.mealPlan].filter(Boolean).join('   •   ')}</div>
+          {h.amenities?.length > 0 && <div style={{ fontSize: '8px', color: '#64748b', marginTop: '2px' }}>{amenityLine(h.amenities.slice(0, 5))}</div>}
+        </div>
+      </div>
+      <RateTablePrint stay={h} />
+    </div>
+  );
+};
+
+/**
+ * One option of a HOTEL quotation, laid out as a proposal: a header band (OPTION 1, its name, a ribbon when it is recommended), each
+ * of its hotels with its room, address, dates and rate table, and the Grand Total of the option at the end. Each hotel is its own
+ * block, so a long option can continue on the next page without splitting a table (the blocks are never nested).
+ */
+const OptionProposal = ({ option, number }) => {
+  const name = option.name || `Option ${number}`;
+  const byTables = optionUsesRates(option);
+  const note = option.priceNote && option.priceNote !== 'Per person' ? option.priceNote : '';
+  const blocks = option.hotels.length ? option.hotels : [null];
+  const border = option.recommended ? '#f59e0b' : '#cbd5e1';
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+      {blocks.map((h, k) => {
+        const first = k === 0;
+        const last = k === blocks.length - 1;
+        return (
+          <div key={k} className="quotation-keep" style={{ border: `${option.recommended ? 2 : 1}px solid ${border}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
+            {first ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: '#0f172a', color: '#ffffff', padding: '6px 10px' }}>
+                <div>
+                  <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.14em', color: '#7dd3fc' }}>OPTION {number}</span>
+                  <div style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>{name}</div>
+                </div>
+                {option.recommended && <span style={{ background: '#f59e0b', color: '#ffffff', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', padding: '2px 8px', borderRadius: '3px' }}>★ RECOMMENDED</span>}
+              </div>
+            ) : (
+              <div style={{ background: '#f1f5f9', color: '#475569', fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', textTransform: 'uppercase' }}>Option {number} · {name}</div>
+            )}
+            {h ? <HotelProposalBody h={h} /> : <div style={{ padding: '10px', fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
+            {last && (
+              <div style={{ background: '#e0f2fe', borderTop: '1px solid #bae6fd', padding: '7px 10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                  <span style={{ fontSize: '10.5px', fontWeight: 800, color: '#0c4a6e', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{byTables ? 'Grand Total' : option.pricePerPerson > 0 ? 'Price per person' : 'Price'}</span>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#0c4a6e' }}>{byTables ? `Rs ${inr(optionTotal(option))}` : option.pricePerPerson > 0 ? `Rs ${inr(option.pricePerPerson)}` : 'On request'}</span>
+                </div>
+                {!byTables && option.pricePerPerson > 0 && option.totalPrice > 0 && <div style={{ fontSize: '9px', color: '#0c4a6e', fontWeight: 700, textAlign: 'right' }}>Total: Rs {inr(option.totalPrice)}</div>}
+                {note && <div style={{ fontSize: '8.5px', color: '#0c4a6e', marginTop: '2px' }}><Line value={note} /></div>}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** The options of a hotel quotation, one after the other, each priced by the rate tables of its hotels. */
+const HotelOptionsProposal = ({ options }) => (
+  <div style={{ marginBottom: '10px' }}>
+    <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+      <Building2 size={13} style={{ color: '#0284c7' }} />
+      <span>Hotel Options</span>
+    </div>
+    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>Please choose the option that suits you best. All amounts are in Rs.</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      {options.map((option, i) => (
+        <OptionProposal key={i} option={option} number={i + 1} />
+      ))}
+    </div>
+  </div>
+);
 
 /**
  * Hotel options side by side: one card per option with its hotels and its price per person. The cheapest price is not
@@ -701,7 +842,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
           </div>
           {pricing.grandTotal > 0 && (
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>
-              Total Package: Rs {pricing.grandTotal.toLocaleString('en-IN')}
+              {quotationType === 'Only Hotel' ? 'Grand Total' : 'Total Package'}: Rs {pricing.grandTotal.toLocaleString('en-IN')}
             </div>
           )}
         </div>
@@ -928,7 +1069,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && !isVisaQuotation && hasOptions && <OptionsComparison options={options} paxDetails={quotation.paxDetails} />}
+                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel' ? <HotelOptionsProposal options={options} /> : <OptionsComparison options={options} paxDetails={quotation.paxDetails} />)}
 
                 {/* Hotels Table / Cards Layout */}
                 {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (
