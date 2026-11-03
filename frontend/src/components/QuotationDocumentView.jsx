@@ -2,9 +2,10 @@ import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plane, Check, X, Diamond, Building2, Calendar, MapPin, Phone, Mail, Award, Coffee, Utensils, CreditCard, AlertCircle } from 'lucide-react';
 import logoImg from '../assets/logo.webp';
-import { formatDate } from '../utils/dateHelper';
+import { formatDate, formatLongDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
+import { addressLine } from '../utils/hotelStay';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
 import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableTotal } from '../utils/priceTables';
@@ -72,10 +73,10 @@ const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.c
 const HotelStayCard = ({ h }) => {
   const [cover, ...more] = h.photos || [];
   const facts = [
-    (h.checkInDate || h.checkOutDate) && ['Stay', [h.checkInDate ? formatDate(h.checkInDate) : '', h.checkOutDate ? formatDate(h.checkOutDate) : ''].filter(Boolean).join(' to ')],
+    h.checkInDate && ['Check In', formatLongDate(h.checkInDate)],
+    h.checkOutDate && ['Check Out', formatLongDate(h.checkOutDate)],
     h.nights && ['Nights', h.nights],
     h.noOfRooms && ['Rooms', h.noOfRooms],
-    h.roomCategory && ['Room', h.roomCategory],
     h.mealPlan && ['Meal plan', h.mealPlan],
     timesLine(h) && ['Timings', timesLine(h)]
   ].filter(Boolean);
@@ -92,7 +93,8 @@ const HotelStayCard = ({ h }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</div>
-            {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {[h.address, h.city].filter(Boolean).join(', ')}</div>}
+            {h.roomCategory && <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>{h.roomCategory}</div>}
+            {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {addressLine(h)}</div>}
           </div>
           {h.starRating && h.starRating !== 'Unrated' && (
             <span style={{ flex: 'none', fontSize: '9px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '2px 7px', borderRadius: '3px' }}>★ {h.starRating}</span>
@@ -362,8 +364,16 @@ const OptionsComparison = ({ options, paxDetails }) => {
                     {h.hotelName || 'Hotel'}
                     {h.starRating && h.starRating !== 'Unrated' && <span style={{ marginLeft: '4px', fontSize: '8px', color: '#b45309', fontWeight: 700 }}>★ {h.starRating}</span>}
                   </div>
-                  {h.city && <div style={{ fontSize: '8px', color: '#64748b' }}>📍 {h.city}</div>}
-                  <div style={{ fontSize: '8px', color: '#334155', marginTop: '1px' }}>{[h.nights, h.roomCategory, h.mealPlan, h.noOfRooms].filter(Boolean).join('  •  ')}</div>
+                  {h.roomCategory && <div style={{ fontSize: '8.5px', fontWeight: 700, color: '#0369a1' }}>{h.roomCategory}</div>}
+                  {(h.address || h.city) && <div style={{ fontSize: '8px', color: '#64748b' }}>📍 {addressLine(h)}</div>}
+                  {(h.checkInDate || h.checkOutDate) && (
+                    <div style={{ fontSize: '8px', color: '#0f172a', marginTop: '1px' }}>
+                      {h.checkInDate && <span><strong>Check In:</strong> {formatLongDate(h.checkInDate)}</span>}
+                      {h.checkInDate && h.checkOutDate && '  •  '}
+                      {h.checkOutDate && <span><strong>Check Out:</strong> {formatLongDate(h.checkOutDate)}</span>}
+                    </div>
+                  )}
+                  <div style={{ fontSize: '8px', color: '#334155', marginTop: '1px' }}>{[h.nights, h.mealPlan, h.noOfRooms].filter(Boolean).join('  •  ')}</div>
                   {h.amenities?.length > 0 && <div style={{ fontSize: '7.5px', color: '#64748b', marginTop: '1px' }}>{amenityLine(h.amenities.slice(0, 4))}</div>}
                 </div>
               ))}

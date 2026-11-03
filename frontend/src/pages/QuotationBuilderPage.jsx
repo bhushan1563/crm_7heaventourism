@@ -79,7 +79,7 @@ import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
 import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
-import { blankStay, hotelQuotationProblem, hotelTitle, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
+import { blankStay, hotelDestination, hotelQuotationProblem, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
 import './quotationHotels.css';
 import '../components/confirmation/confirmation.css';
@@ -560,7 +560,7 @@ export const QuotationBuilderPage = () => {
     const target = hotelPicker;
     setFormData((prev) => {
       const retitle = prev.quotationType === 'Only Hotel' && isPlaceholderTitle(prev.destination);
-      const title = retitle ? { destination: hotelTitle(hotel) } : {};
+      const title = retitle ? { destination: hotelDestination(hotel) } : {};
       if (target && target.option !== undefined) {
         // A hotel for one of the options: replace the hotel it was chosen for, or add it to that option.
         const options = (prev.options || []).map((option, i) => {

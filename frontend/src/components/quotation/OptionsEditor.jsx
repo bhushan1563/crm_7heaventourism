@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { ArrowDown, ArrowUp, CheckCircle2, Copy, Hotel, Plus, Star, Trash2, Undo2 } from 'lucide-react';
 import { HOTEL_STAR_RATINGS, MEAL_PLANS } from '../../config';
 import { OPTION_LIMITS, addOption, duplicateOption, guestCount, moveOption, removeOption, setPrice, setRecommended } from '../../utils/quotationOptions';
-import { blankStay } from '../../utils/hotelStay';
+import { blankStay, stayDatePatch } from '../../utils/hotelStay';
+import { toInputDate } from '../../utils/dateHelper';
 import FormattedLine from './FormattedLine';
 import './optionsEditor.css';
 
@@ -129,6 +130,21 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, ca
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div className="option-hotel-grid">
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-in-${i}-${k}`}>Check-in date</label>
+                        <input id={`opt-in-${i}-${k}`} type="date" className="form-input" value={toInputDate(h.checkInDate)} aria-label={`Hotel ${k + 1} check-in date, option ${i + 1}`} onChange={(e) => patchHotel(i, k, stayDatePatch(h, 'checkInDate', e.target.value))} />
+                      </div>
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-out-${i}-${k}`}>Check-out date</label>
+                        <input id={`opt-out-${i}-${k}`} type="date" className="form-input" value={toInputDate(h.checkOutDate)} aria-label={`Hotel ${k + 1} check-out date, option ${i + 1}`} onChange={(e) => patchHotel(i, k, stayDatePatch(h, 'checkOutDate', e.target.value))} />
+                      </div>
+                      <div>
+                        <label className="form-label option-mini" htmlFor={`opt-rooms-count-${i}-${k}`}>No. of rooms</label>
+                        <input id={`opt-rooms-count-${i}-${k}`} type="text" className="form-input" value={h.noOfRooms || ''} placeholder="e.g. 2 Rooms" aria-label={`Hotel ${k + 1} rooms, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { noOfRooms: e.target.value })} />
+                      </div>
+                      <input type="text" className="form-input option-address" value={h.address || ''} maxLength={300} placeholder="Hotel address" aria-label={`Hotel ${k + 1} address, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { address: e.target.value })} />
                     </div>
                   </div>
                 );

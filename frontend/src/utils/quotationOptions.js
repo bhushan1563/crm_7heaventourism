@@ -1,5 +1,6 @@
 // Hotel options of a quotation: several choices offered side by side, each with its own hotels and its own price.
 // Pure functions (no network, no React) so every rule can be tested. A quotation with no options is one offer, as before.
+import { nightsBetween } from './hotelStay';
 
 export const OPTION_LIMITS = { options: 6, hotelsPerOption: 10 };
 
@@ -75,6 +76,8 @@ export const optionsProblem = (quotation) => {
       const typed = option.hotels.findIndex((s) => !s.hotelId);
       if (typed >= 0) return `${label}, hotel ${typed + 1} was typed by hand. A hotel quotation uses hotels from the hotel list: choose it from the list, or add the hotel to the list first.`;
     }
+    const backwards = option.hotels.findIndex((s) => s.checkInDate && s.checkOutDate && !nightsBetween(s.checkInDate, s.checkOutDate));
+    if (backwards >= 0) return `${label}, hotel ${backwards + 1}: the check-out date must be after the check-in date.`;
     if (!(option.pricePerPerson > 0)) return `Please enter the price per person of ${label}.`;
   }
   return null;

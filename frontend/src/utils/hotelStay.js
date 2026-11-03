@@ -25,6 +25,38 @@ export const blankStay = () => ({
   notes: ''
 });
 
+/** The address as printed under a hotel: the address, then the city, unless the address already names the city. */
+export const addressLine = (stay) => {
+  const address = String(stay?.address || '').trim();
+  const city = String(stay?.city || '').trim();
+  if (!city || address.toLowerCase().includes(city.toLowerCase())) return address || city;
+  return [address, city].filter(Boolean).join(', ');
+};
+
+const DAY = 86400000;
+const dayNumber = (value) => {
+  const m = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) / DAY : null;
+};
+
+/** The nights between two dates (YYYY-MM-DD, or saved ISO text): 0 when a date is missing or the check-out is not after the check-in. */
+export const nightsBetween = (checkIn, checkOut) => {
+  const from = dayNumber(checkIn);
+  const to = dayNumber(checkOut);
+  return from === null || to === null || to <= from ? 0 : Math.round(to - from);
+};
+
+export const nightsText = (n) => `${n} ${n === 1 ? 'Night' : 'Nights'}`;
+
+/**
+ * What changes in a stay when one of its dates is typed: the date, and the nights too once both dates make sense (the nights
+ * are still editable by hand afterwards). Until then the nights stay as they were.
+ */
+export const stayDatePatch = (stay, key, value) => {
+  const nights = nightsBetween(key === 'checkInDate' ? value : stay.checkInDate, key === 'checkOutDate' ? value : stay.checkOutDate);
+  return nights > 0 ? { [key]: value, nights: nightsText(nights) } : { [key]: value };
+};
+
 /**
  * The stay with the hotel's details filled in. What belongs to this particular booking (dates, nights, number of rooms,
  * notes) is kept from `current`; what belongs to the hotel is taken from the hotel.
@@ -53,13 +85,16 @@ export const stayFromHotel = (hotel, current = blankStay()) => {
   };
 };
 
-/** The title of a hotel quotation: "THE UBUD RETREAT, UBUD". */
-export const hotelTitle = (hotel) => [hotel.name, hotel.city].filter(Boolean).join(', ').toUpperCase();
+/**
+ * The title on top of a hotel quotation: the DESTINATION ("UBUD"), the way the client wants it; the hotel comes below it with its
+ * room and address. A hotel with no city falls back to its own name, so the title is never empty.
+ */
+export const hotelDestination = (hotel) => String(hotel.city || '').trim().toUpperCase() || String(hotel.name || '').trim().toUpperCase();
 
 /** What a new hotel quotation starts with when it is made straight from a hotel in the list. */
 export const quotationFromHotel = (hotel) => ({
   quotationType: 'Only Hotel',
-  destination: hotelTitle(hotel),
+  destination: hotelDestination(hotel),
   duration: formatDuration(1),
   stay: stayFromHotel(hotel)
 });

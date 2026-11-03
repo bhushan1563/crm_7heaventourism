@@ -118,3 +118,25 @@ test('photos used only inside an option are never treated as unused by the stora
   assert.ok(!orphans.includes(used.token), 'a photo on a hotel inside an option is in use');
   assert.ok(orphans.includes(unused.token));
 });
+
+test('a hotel inside an option keeps its check-in and check-out dates, rooms and address when saved and read again, for a destination typed as the city', async () => {
+  const body = await create({
+    quotationType: 'Only Hotel',
+    destination: 'UDAIPUR',
+    options: [
+      option({ name: '3 Star', hotels: [stay({ hotelName: 'Hotel Sunrise', address: '12 Lake Road, Udaipur', noOfRooms: '2 Rooms', checkInDate: '2026-03-07', checkOutDate: '2026-03-10', nights: '3 Nights' }), stay({ hotelName: 'Hotel Moonlight', checkInDate: '2026-03-10', checkOutDate: '2026-03-12', nights: '2 Nights' })] }),
+      option({ name: '4 Star', hotels: [stay({ hotelName: 'Hotel Orchid', checkInDate: '2026-03-07T00:00:00.000Z', checkOutDate: '2026-03-12T00:00:00.000Z', nights: '5 Nights' })] })
+    ]
+  });
+  assert.equal(body.success, true, body.message);
+  const read = (await api(`/${body.data._id}`, { token: admin.token })).body.data;
+  assert.equal(read.destination, 'UDAIPUR');
+  const [first, second] = read.options[0].hotels;
+  assert.equal(first.address, '12 Lake Road, Udaipur');
+  assert.equal(first.noOfRooms, '2 Rooms');
+  assert.equal(String(first.checkInDate).slice(0, 10), '2026-03-07');
+  assert.equal(String(first.checkOutDate).slice(0, 10), '2026-03-10');
+  assert.equal(first.nights, '3 Nights');
+  assert.equal(String(second.checkInDate).slice(0, 10), '2026-03-10', 'each hotel keeps its own dates');
+  assert.equal(String(read.options[1].hotels[0].checkOutDate).slice(0, 10), '2026-03-12');
+});
