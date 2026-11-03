@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { ToastProvider } from './context/ToastContext';
@@ -7,28 +7,29 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageLoader from './components/PageLoader';
+import { lazyWithReload } from './utils/lazyWithReload';
 
 // Each screen is its own chunk, so the login page and shell load fast and the rest is fetched on first visit.
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const GuestListPage = lazy(() => import('./pages/GuestListPage'));
-const QuotationListPage = lazy(() => import('./pages/QuotationListPage'));
-const QuotationBuilderPage = lazy(() => import('./pages/QuotationBuilderPage'));
-const SupplierListPage = lazy(() => import('./pages/SupplierListPage'));
-const HotelListPage = lazy(() => import('./pages/HotelListPage'));
-const HotelEditorPage = lazy(() => import('./pages/HotelEditorPage'));
-const ItineraryListPage = lazy(() => import('./pages/ItineraryListPage'));
-const ItineraryEditorPage = lazy(() => import('./pages/ItineraryEditorPage'));
-const VisaListPage = lazy(() => import('./pages/VisaListPage'));
-const VisaEditorPage = lazy(() => import('./pages/VisaEditorPage'));
-const ConfirmationListPage = lazy(() => import('./pages/ConfirmationListPage'));
-const ConfirmationEditorPage = lazy(() => import('./pages/ConfirmationEditorPage'));
-const UserManagementPage = lazy(() => import('./pages/UserManagementPage'));
-const ProfilePage = lazy(() => import('./pages/ProfilePage'));
-const RightsPage = lazy(() => import('./pages/RightsPage'));
-const MasterTextPage = lazy(() => import('./pages/MasterTextPage'));
-const MobileScannerPage = lazy(() => import('./pages/MobileScannerPage'));
-const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
+const LoginPage = lazyWithReload(() => import('./pages/LoginPage'));
+const DashboardPage = lazyWithReload(() => import('./pages/DashboardPage'));
+const GuestListPage = lazyWithReload(() => import('./pages/GuestListPage'));
+const QuotationListPage = lazyWithReload(() => import('./pages/QuotationListPage'));
+const QuotationBuilderPage = lazyWithReload(() => import('./pages/QuotationBuilderPage'));
+const SupplierListPage = lazyWithReload(() => import('./pages/SupplierListPage'));
+const HotelListPage = lazyWithReload(() => import('./pages/HotelListPage'));
+const HotelEditorPage = lazyWithReload(() => import('./pages/HotelEditorPage'));
+const ItineraryListPage = lazyWithReload(() => import('./pages/ItineraryListPage'));
+const ItineraryEditorPage = lazyWithReload(() => import('./pages/ItineraryEditorPage'));
+const VisaListPage = lazyWithReload(() => import('./pages/VisaListPage'));
+const VisaEditorPage = lazyWithReload(() => import('./pages/VisaEditorPage'));
+const ConfirmationListPage = lazyWithReload(() => import('./pages/ConfirmationListPage'));
+const ConfirmationEditorPage = lazyWithReload(() => import('./pages/ConfirmationEditorPage'));
+const UserManagementPage = lazyWithReload(() => import('./pages/UserManagementPage'));
+const ProfilePage = lazyWithReload(() => import('./pages/ProfilePage'));
+const RightsPage = lazyWithReload(() => import('./pages/RightsPage'));
+const MasterTextPage = lazyWithReload(() => import('./pages/MasterTextPage'));
+const MobileScannerPage = lazyWithReload(() => import('./pages/MobileScannerPage'));
+const NotFoundPage = lazyWithReload(() => import('./pages/NotFoundPage'));
 
 export function App() {
   return (

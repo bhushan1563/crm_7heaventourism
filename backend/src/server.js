@@ -163,8 +163,9 @@ if (fs.existsSync(path.join(frontendDist, 'index.html'))) {
       }
     })
   );
-  // SPA fallback: non-API, non-static, non-photo GET requests get index.html (client-side routing)
-  app.get(/^\/(?!api(\/|$)|static(\/|$)|media(\/|$)).*/, (req, res) => {
+  // SPA fallback: non-API, non-static, non-photo GET requests get index.html (client-side routing). A file under /assets that does not
+  // exist (a tab left open since before an update asking for a screen of the old version) is a plain 404, not a page of HTML in its place.
+  app.get(/^\/(?!api(\/|$)|static(\/|$)|media(\/|$)|assets(\/|$)).*/, (req, res) => {
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(frontendDist, 'index.html'));
   });
