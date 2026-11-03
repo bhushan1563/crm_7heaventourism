@@ -237,3 +237,42 @@ test('property: whatever is sent as the client\'s contact, it is either refused 
     { numRuns: 300 }
   );
 });
+
+// ---------------------------------------- what each hotel gave once the room was booked ----------------------------------------
+
+test('the details of each hotel are kept in order: its own confirmation number, contact number and times', () => {
+  const d = ok({ hotelBookings: [{ confirmationNo: '  HB-2291  ', contactNumber: '+91 294 242 8800', checkInTime: '14:00', checkOutTime: '11:00' }, { confirmationNo: 'X9' }, {}] });
+  assert.deepEqual(d.hotelBookings, [
+    { confirmationNo: 'HB-2291', contactNumber: '+91 294 242 8800', checkInTime: '14:00', checkOutTime: '11:00' },
+    { confirmationNo: 'X9', contactNumber: '', checkInTime: '', checkOutTime: '' },
+    { confirmationNo: '', contactNumber: '', checkInTime: '', checkOutTime: '' }
+  ]);
+  assert.deepEqual(ok({ hotelBookings: [] }).hotelBookings, []);
+  assert.equal('hotelBookings' in ok({ notes: 'x' }), false, 'a request without them leaves them alone');
+});
+
+test('problems with a hotel\'s details are explained and name the hotel', () => {
+  assert.match(bad({ hotelBookings: 'x' }), /must be a list/);
+  assert.match(bad({ hotelBookings: [1] }), /booking details of hotel 1 are not valid/);
+  assert.match(bad({ hotelBookings: [{}, { confirmationNo: 'x'.repeat(L.hotelNo + 1) }] }), /confirmation number of hotel 2 is too long/);
+  assert.match(bad({ hotelBookings: [{ contactNumber: 'call me' }] }), /contact number of hotel 1 can only have digits/);
+  assert.match(bad({ hotelBookings: [{ checkInTime: '25:00' }] }), /check-in time of hotel 1 must be a time like 14:00/);
+  assert.match(bad({ hotelBookings: [{ checkOutTime: '9am' }] }), /check-out time of hotel 1 must be a time like 14:00/);
+  assert.match(bad({ hotelBookings: [{ checkInTime: 1400 }] }), /must be a time/);
+  assert.match(bad({ hotelBookings: Array.from({ length: L.hotels + 1 }, () => ({})) }), /at most 50 hotels/);
+});
+
+test('property: whatever is sent for the hotels, it never throws, and what is accepted has only the four fields, as text', () => {
+  fc.assert(
+    fc.property(fc.array(fc.anything({ maxDepth: 2 }), { maxLength: 6 }), (hotelBookings) => {
+      const r = normalizeBookingInput({ hotelBookings });
+      if (r.ok) {
+        for (const h of r.data.hotelBookings) {
+          assert.deepEqual(Object.keys(h).sort(), ['checkInTime', 'checkOutTime', 'confirmationNo', 'contactNumber']);
+          assert.ok(Object.values(h).every((v) => typeof v === 'string'));
+        }
+      } else assert.ok(typeof r.message === 'string' && r.message.length > 8);
+    }),
+    { numRuns: 400 }
+  );
+});

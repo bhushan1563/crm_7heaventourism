@@ -66,20 +66,31 @@ const DayPhotos = ({ photos, maxRowHeight = 150 }) => {
 const amenityLine = (amenities) => (amenities || []).join('  •  ');
 const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean).join('  •  ');
 
+/** A date and its time as a confirmation prints them: "07 Mar 2026, Time: 14:00", or "Time: ____" to write in when there is none yet. */
+const whenText = (date, time) => `${formatLongDate(date)}, Time: ${time || '____'}`;
+
+/** Under the destination of a booking confirmation: its number and the day it was confirmed (nothing on a quotation). */
+const ConfirmationLine = ({ info, align = 'left' }) =>
+  info ? (
+    <div style={{ fontSize: '9px', fontWeight: 700, color: info.status === 'Cancelled' ? '#b91c1c' : '#047857', letterSpacing: '0.02em', textTransform: 'none', marginTop: '2px', textAlign: align }}>
+      Confirmation Details: {info.no}{info.confirmedAt ? ` • Confirmed on ${formatLongDate(info.confirmedAt)}` : ''}{info.status === 'Cancelled' ? ' • CANCELLED' : ''}
+    </div>
+  ) : null;
+
 /**
  * One hotel of a HOTEL quotation. A hotel quotation shows more about the hotel than a package does: a large cover photo
  * with a strip of more photos, the address and contact details, the stay, the room and meal plan, the check-in and
  * check-out times and the amenities.
  */
-const HotelStayCard = ({ h }) => {
+const HotelStayCard = ({ h, confirmed = false }) => {
   const [cover, ...more] = h.photos || [];
   const facts = [
-    h.checkInDate && ['Check In', formatLongDate(h.checkInDate)],
-    h.checkOutDate && ['Check Out', formatLongDate(h.checkOutDate)],
+    h.checkInDate && ['Check In', confirmed ? whenText(h.checkInDate, h.checkInTime) : formatLongDate(h.checkInDate)],
+    h.checkOutDate && ['Check Out', confirmed ? whenText(h.checkOutDate, h.checkOutTime) : formatLongDate(h.checkOutDate)],
     h.nights && ['Nights', h.nights],
     h.noOfRooms && ['Rooms', h.noOfRooms],
     h.mealPlan && ['Meal plan', h.mealPlan],
-    timesLine(h) && ['Timings', timesLine(h)]
+    !confirmed && timesLine(h) && ['Timings', timesLine(h)] // a confirmation shows the times after the dates instead
   ].filter(Boolean);
   return (
     <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
@@ -94,8 +105,10 @@ const HotelStayCard = ({ h }) => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
           <div>
             <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', lineHeight: 1.25 }}>{h.hotelName || 'Hotel'}</div>
+            {confirmed && h.bookingNo && <div style={{ fontSize: '10px', color: '#0f172a', marginTop: '1px' }}><strong>Hotel Confirmation No:</strong> {h.bookingNo}</div>}
             {h.roomCategory && <div style={{ fontSize: '10.5px', fontWeight: 700, color: '#0369a1', marginTop: '1px' }}>{h.roomCategory}</div>}
             {(h.city || h.address) && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '2px' }}>📍 {addressLine(h)}</div>}
+            {confirmed && h.contactNumber && <div style={{ fontSize: '9.5px', color: '#475569', marginTop: '1px' }}><strong style={{ color: '#0f172a' }}>Hotel Contact No:</strong> {h.contactNumber}</div>}
           </div>
           {h.starRating && h.starRating !== 'Unrated' && (
             <span style={{ flex: 'none', fontSize: '9px', color: '#b45309', fontWeight: 700, background: '#fef3c7', padding: '2px 7px', borderRadius: '3px' }}>★ {h.starRating}</span>
@@ -115,9 +128,9 @@ const HotelStayCard = ({ h }) => {
             <strong style={{ color: '#0f172a' }}>Amenities:</strong> {amenityLine(h.amenities)}
           </div>
         )}
-        {(h.contactNumber || h.email || h.contactPerson) && (
+        {((!confirmed && h.contactNumber) || h.email || h.contactPerson) && (
           <div style={{ marginTop: '5px', fontSize: '8.5px', color: '#64748b' }}>
-            {[h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
+            {[!confirmed && h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
           </div>
         )}
         <RateTablePrint stay={h} />
@@ -555,7 +568,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const exclusions = quotation.exclusions || [];
   const paymentPolicy = quotation.paymentPolicy || [];
   const cancellationPolicy = quotation.cancellationPolicy || [];
-  const vehicleNotes = quotationType === 'Visa' ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
+  // A booking confirmation carries `confirmationInfo`: it says so under the destination, shows what each hotel gave, and leaves the vehicle notes out.
+  const confirmationInfo = quotation.confirmationInfo || null;
+  const isConfirmation = Boolean(confirmationInfo);
+  const vehicleNotes = quotationType === 'Visa' || isConfirmation ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
   const importantNotes = quotation.importantNotes || [];
 
   // Header Component
@@ -878,6 +894,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               >
                 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
               </h2>
+              <ConfirmationLine info={confirmationInfo} align="center" />
               {quotation.duration && (
                 <div
                   style={{
@@ -1041,6 +1058,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
             >
               <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 📍 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
+                <ConfirmationLine info={confirmationInfo} />
               </div>
               <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
                 Guest: <strong style={{ color: '#0f172a' }}>{quotation.clientName || 'Valued Guest'}</strong>
@@ -1081,7 +1099,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {packageDetails.hotels.map((h, i) => (quotationType === 'Only Hotel' ? (
-                        <HotelStayCard key={i} h={h} />
+                        <HotelStayCard key={i} h={h} confirmed={isConfirmation} />
                       ) : (
                         <div
                           key={i}
@@ -1124,6 +1142,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                             </div>
                           </div>
 
+                          {isConfirmation && h.bookingNo && (
+                            <div style={{ fontSize: '10px', color: '#0f172a', margin: '-1px 0 5px' }}>
+                              <strong>Hotel Confirmation No:</strong> {h.bookingNo}
+                            </div>
+                          )}
+
                           {/* Hotel Sub-grid Attributes: Meal Plan, Dates, Rooms */}
                           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px', fontSize: '9px', color: '#334155' }}>
                             {h.mealPlan && (
@@ -1131,7 +1155,17 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                                 <strong style={{ color: '#0f172a' }}>🍽 Meal Plan:</strong> {h.mealPlan}
                               </div>
                             )}
-                            {(h.checkInDate || h.checkOutDate) && (
+                            {isConfirmation && h.checkInDate && (
+                              <div>
+                                <strong style={{ color: '#0f172a' }}>📅 Check In:</strong> {whenText(h.checkInDate, h.checkInTime)}
+                              </div>
+                            )}
+                            {isConfirmation && h.checkOutDate && (
+                              <div>
+                                <strong style={{ color: '#0f172a' }}>📅 Check Out:</strong> {whenText(h.checkOutDate, h.checkOutTime)}
+                              </div>
+                            )}
+                            {!isConfirmation && (h.checkInDate || h.checkOutDate) && (
                               <div>
                                 <strong style={{ color: '#0f172a' }}>📅 Stay:</strong> {[h.checkInDate ? formatDate(h.checkInDate) : '', h.checkOutDate ? formatDate(h.checkOutDate) : ''].filter(Boolean).join(' to ')}
                               </div>
@@ -1141,7 +1175,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                                 <strong style={{ color: '#0f172a' }}>🚪 Rooms:</strong> {h.noOfRooms}
                               </div>
                             )}
-                            {timesLine(h) && (
+                            {!isConfirmation && timesLine(h) && (
                               <div>
                                 <strong style={{ color: '#0f172a' }}>🕑 Timings:</strong> {timesLine(h)}
                               </div>
@@ -1165,7 +1199,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                               )}
                               {h.contactNumber && (
                                 <div>
-                                  <strong style={{ color: '#334155' }}>Phone:</strong> {h.contactNumber}
+                                  <strong style={{ color: '#334155' }}>{isConfirmation ? 'Hotel Contact No:' : 'Phone:'}</strong> {h.contactNumber}
                                 </div>
                               )}
                               {(h.email || h.contactPerson) && (
@@ -1233,6 +1267,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
             >
               <div style={{ fontSize: '12.5px', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 📍 {quotation.destination || (quotationType === 'Only Hotel' ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE')}
+                <ConfirmationLine info={confirmationInfo} />
               </div>
               <div style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 600 }}>
                 Guest: <strong style={{ color: '#0f172a' }}>{quotation.clientName || 'Valued Guest'}</strong>

@@ -11,7 +11,7 @@ import { bookingView, quotationOf } from '../../utils/confirmation';
 export const ConfirmationPreview = ({ confirmation, form, isOpen, onClose }) => {
   const { can } = useAuth();
   const view = useMemo(() => bookingView(confirmation, form), [confirmation, form]);
-  const quotation = useMemo(() => quotationOf(confirmation), [confirmation]);
+  const quotation = useMemo(() => quotationOf(confirmation, form), [confirmation, form]);
   const before = useCallback((parts) => <BookingPage confirmation={confirmation} view={view} {...parts} />, [confirmation, view]);
   if (!confirmation) return null;
   return <QuotationPreviewModal isOpen={isOpen} onClose={onClose} quotation={quotation} before={before} documentLabel="Confirmation" canDownload={can('confirmations', 'canDownload')} />;

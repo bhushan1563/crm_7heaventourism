@@ -10,10 +10,12 @@ const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 /**
  * The booking information of a confirmation: travel date and travellers, payment, additional details (label + value, for whatever
  * the company wants to record) and notes. `form` is what `formFromConfirmation` returns; `onChange(patch)` receives the parts that
- * changed; `errors` is what `bookingErrors` returns, shown next to the field that needs fixing.
+ * changed; `errors` is what `bookingErrors` returns, shown next to the field that needs fixing. `hotels` are the hotels of the copy of
+ * the quotation (for their names); the form holds one entry of details for each.
  */
-export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false }) => {
-  const setTraveller = (index, patch) => onChange({ travellers: form.travellers.map((t, i) => (i === index ? { ...t, ...patch } : t)) });
+export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, hotels = [] }) => {
+  const setHotel = (index, patch) => onChange({ hotelBookings: form.hotelBookings.map((h, i) => (i === index ? { ...h, ...patch } : h)) });
+  const setTraveller =(index, patch) => onChange({ travellers: form.travellers.map((t, i) => (i === index ? { ...t, ...patch } : t)) });
   const setDetail = (index, patch) => onChange({ customFields: form.customFields.map((d, i) => (i === index ? { ...d, ...patch } : d)) });
   const setPayment = (patch) => onChange({ payment: { ...form.payment, ...patch } });
   const balance = balanceOf(form.payment);
@@ -68,6 +70,48 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false })
           ))}
         </div>
       </section>
+
+      {form.hotelBookings.length > 0 && (
+        <section className="glass-panel edit-section" aria-labelledby="be-hotels">
+          <h3 id="be-hotels" className="edit-section-title">Hotels <span className="edit-count">({form.hotelBookings.length})</span></h3>
+          <p className="edit-hint">What each hotel gave once the room was booked. They are printed on the confirmation: the hotel's confirmation number under its name, its contact number after the address, and the times after the check-in and check-out dates. The contact number and times start from the hotel list.</p>
+          <div className="be-rows">
+            {form.hotelBookings.map((h, i) => {
+              const stay = hotels[i] || {};
+              return (
+                <div className="be-hotel" key={i} role="group" aria-label={`Hotel ${i + 1}: ${stay.hotelName || 'hotel'}`}>
+                  <div className="be-hotel-name">
+                    {stay.hotelName || `Hotel ${i + 1}`}
+                    {stay.city ? <small> · {stay.city}</small> : null}
+                  </div>
+                  <div className="be-hotel-grid">
+                    <div>
+                      <label className="form-label" htmlFor={`hotel-${i}-no`}>Hotel confirmation number</label>
+                      <input id={`hotel-${i}-no`} type="text" className="form-input" value={h.confirmationNo} maxLength={L.hotelNo + 20} disabled={readOnly} placeholder="As given by the hotel" onChange={(e) => setHotel(i, { confirmationNo: e.target.value })} {...invalid(`hotel-${i}-no`)} />
+                      {error(`hotel-${i}-no`)}
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor={`hotel-${i}-phone`}>Hotel contact number</label>
+                      <input id={`hotel-${i}-phone`} type="text" className="form-input" value={h.contactNumber} maxLength={L.hotelPhone + 20} disabled={readOnly} placeholder="e.g. +91 294 242 8800" onChange={(e) => setHotel(i, { contactNumber: e.target.value })} {...invalid(`hotel-${i}-phone`)} />
+                      {error(`hotel-${i}-phone`)}
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor={`hotel-${i}-in`}>Check-in time</label>
+                      <input id={`hotel-${i}-in`} type="time" className="form-input" value={h.checkInTime} disabled={readOnly} onChange={(e) => setHotel(i, { checkInTime: e.target.value })} {...invalid(`hotel-${i}-in`)} />
+                      {error(`hotel-${i}-in`)}
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor={`hotel-${i}-out`}>Check-out time</label>
+                      <input id={`hotel-${i}-out`} type="time" className="form-input" value={h.checkOutTime} disabled={readOnly} onChange={(e) => setHotel(i, { checkOutTime: e.target.value })} {...invalid(`hotel-${i}-out`)} />
+                      {error(`hotel-${i}-out`)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       <section className="glass-panel edit-section" aria-labelledby="be-payment">
         <h3 id="be-payment" className="edit-section-title">Payment</h3>

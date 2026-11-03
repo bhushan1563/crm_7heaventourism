@@ -8,6 +8,10 @@
 .be-note { grid-column: 1 / -1; }
 .be-detail { display: grid; grid-template-columns: minmax(150px, 1fr) minmax(200px, 2fr) 36px; gap: 8px 10px; align-items: start; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
 .be-detail .be-remove { margin-top: 22px; }
+.be-hotel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.be-hotel-name { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); }
+.be-hotel-name small { font-weight: 500; color: var(--text-muted); }
+.be-hotel-grid { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(110px, 1fr); gap: 8px 10px; align-items: start; }
 .cf-cancel-btn:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .be-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .be-pay-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
@@ -55,6 +59,7 @@
   .be-traveller { grid-template-columns: 1fr 1fr; }
   .be-name { grid-column: 1 / -1; }
   .be-detail { grid-template-columns: 1fr; }
+  .be-hotel-grid { grid-template-columns: 1fr 1fr; }
   .be-detail .be-remove { margin-top: 0; justify-self: end; }
   .be-pay-grid { grid-template-columns: 1fr; }
 }
