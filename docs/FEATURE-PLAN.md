@@ -144,7 +144,13 @@ Source: the client's WhatsApp chat (pricing sheet image "Per room Per Night / No
 ### Step 17: Rupee symbol
 - [x] 17.1 Every dollar sign in the interface is now a rupee: the icons on the Dashboard card ("Confirmed & Paid"), the quotation list card and the "5. Pricing" tab (the guest list's unused dollar icon import was removed). Amounts are written "Rs 1,00,000" (Indian grouping) everywhere; the whole source is searched for dollar icons, "$" amounts, USD and US number formats, and a test keeps it that way
 
-(Steps 7 to 17 are complete; what else remains is waiting on the client, see above.)
+### Step 18: Paste a copied picture into any photo gallery (added 2026-11-04, from the user's message with the "Photos of the destination" screenshot)
+- [x] 18.1 In every photo gallery (itinerary, hotel, quotation days): copy a picture on Google or any page (right-click, "Copy image") or take a screenshot, point at the gallery (or click inside it) and press Ctrl+V. The picture is prepared and uploaded like any chosen photo, named "Pasted photo 1.png" (a real file name is kept). Tested with the real clipboard in a real browser
+- [x] 18.2 A "Paste a picture" tile next to "Add photos" for people who do not know the shortcut (asks the browser for what was copied; if the browser will not allow it, says to click once and press Ctrl+V), and a tip line under the gallery
+- [x] 18.3 Also taken: a picture copied together with its web page, a copied picture address (even without ".jpg" at the end, fetched when the site allows it, with a "Getting the picture…" tile), and a picture dragged from a web page onto the box. Other kinds of picture (GIF, AVIF, BMP) are converted to PNG
+- [x] 18.4 Plain words when it cannot work: no picture in what was copied, a site that does not allow copying (what to do instead), a link that is not a picture, the gallery full. Ordinary text is never taken: pasting words, or text into a caption box, behaves as before. A page with several galleries (the days of an itinerary) pastes only into the one the pointer or keyboard is on
+
+(Steps 7 to 18 are complete; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 
