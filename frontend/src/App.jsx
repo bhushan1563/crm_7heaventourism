@@ -18,6 +18,8 @@ const QuotationBuilderPage = lazyWithReload(() => import('./pages/QuotationBuild
 const SupplierListPage = lazyWithReload(() => import('./pages/SupplierListPage'));
 const HotelListPage = lazyWithReload(() => import('./pages/HotelListPage'));
 const HotelEditorPage = lazyWithReload(() => import('./pages/HotelEditorPage'));
+const HotelFinderPage = lazyWithReload(() => import('./pages/HotelFinderPage'));
+const FoundHotelPage = lazyWithReload(() => import('./pages/FoundHotelPage'));
 const ItineraryListPage = lazyWithReload(() => import('./pages/ItineraryListPage'));
 const ItineraryEditorPage = lazyWithReload(() => import('./pages/ItineraryEditorPage'));
 const VisaListPage = lazyWithReload(() => import('./pages/VisaListPage'));
@@ -55,6 +57,8 @@ export function App() {
                     <Route path="/suppliers" element={<SupplierListPage />} />
                     <Route path="/hotels" element={<HotelListPage />} />
                     <Route path="/hotels/new" element={<HotelEditorPage />} />
+                    <Route path="/hotels/find" element={<HotelFinderPage />} />
+                    <Route path="/hotels/found/:id" element={<FoundHotelPage />} />
                     <Route path="/hotels/:id/edit" element={<HotelEditorPage />} />
                     <Route path="/visas" element={<VisaListPage />} />
                     <Route path="/visas/new" element={<VisaEditorPage />} />

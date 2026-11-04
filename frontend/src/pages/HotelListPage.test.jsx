@@ -14,9 +14,11 @@ vi.mock('../context/AuthContext', () => ({
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => h.navigate }));
 vi.mock('../services/hotelService', () => ({ default: { list: vi.fn(), cities: vi.fn(), update: vi.fn(), remove: vi.fn() } }));
+vi.mock('../services/hotelFinderService', () => ({ default: { list: vi.fn() } }));
 vi.mock('../services/mediaService', () => ({ mediaUrl: (t, v = 'full') => `/media/${t}${v === 'thumb' ? '/thumb' : ''}` }));
 
 import hotelService from '../services/hotelService';
+import hotelFinderService from '../services/hotelFinderService';
 import HotelListPage from './HotelListPage';
 
 const hotel = (n, over = {}) => ({ _id: `id${n}`, name: `Hotel ${n}`, city: 'Ubud', country: 'Indonesia', area: 'Centre', starRating: '5 star', tags: ['beach'], status: 'Active', roomTypeCount: 3, photoCount: 4, phone: '+62 361 123', cover: { token: `tok${n}`, width: 1, height: 1 }, updatedAt: '2026-10-30T10:00:00.000Z', updatedByName: 'Asha Rao', ...over });
@@ -26,6 +28,8 @@ const show = () => render(<MemoryRouter><HotelListPage /></MemoryRouter>);
 beforeEach(() => {
   Object.values(hotelService).forEach((fn) => fn.mockReset());
   hotelService.cities.mockResolvedValue({ success: true, data: [{ city: 'Goa', count: 2 }, { city: 'Ubud', count: 1 }] });
+  hotelFinderService.list.mockReset();
+  hotelFinderService.list.mockResolvedValue({ success: true, data: [], total: 3, page: 1, limit: 12, pages: 1 });
   h.showToast.mockReset();
   h.navigate.mockReset();
   Object.assign(h.perms, { create: true, delete: true, edit: true, quote: true });
@@ -181,5 +185,48 @@ describe('HotelListPage', () => {
     await screen.findByText('Hotel 1');
     expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Archive Hotel 1' })).toBeNull();
+  });
+});
+
+describe('HotelListPage: two sections and the hotel finder', () => {
+  const foundRow = { _id: 'f1', name: 'Found Resort', propertyType: 'Resort', starRating: '4 star', address: { locality: 'Goa', country: 'India' }, status: 'Saved', sourceSite: 'foundresort.com', source: 'website', foundAt: '2026-11-03T10:00:00Z', createdByName: 'Asha Rao', photoCount: 0, completeness: { score: 50 } };
+
+  it('has a "Find hotel info" button next to "Add hotel", for people who may add hotels', async () => {
+    hotelService.list.mockResolvedValue(page([hotel(1)]));
+    show();
+    await screen.findByText('Hotel 1');
+    await userEvent.click(screen.getByRole('button', { name: /find hotel info/i }));
+    expect(h.navigate).toHaveBeenCalledWith('/hotels/find');
+    expect(screen.getByRole('button', { name: /add hotel/i })).toBeInTheDocument();
+    h.perms.create = false;
+    cleanup();
+    show();
+    await screen.findByText('Hotel 1');
+    expect(screen.queryByRole('button', { name: /find hotel info/i })).toBeNull();
+  });
+
+  it('shows the hotels first and the found hotels in a second section of the same page, with their count', async () => {
+    hotelService.list.mockResolvedValue(page([hotel(1)]));
+    show();
+    await screen.findByText('Hotel 1');
+    const tabs = screen.getByRole('tablist', { name: 'Sections of the hotel list' });
+    expect(within(tabs).getByRole('tab', { name: 'Hotels' })).toHaveAttribute('aria-selected', 'true');
+    await waitFor(() => expect(within(tabs).getByRole('tab', { name: 'Found hotels (3)' })).toBeInTheDocument());
+    hotelFinderService.list.mockResolvedValue({ success: true, data: [foundRow], total: 3, page: 1, limit: 12, pages: 1 });
+    await userEvent.click(within(tabs).getByRole('tab', { name: /found hotels/i }));
+    expect(await screen.findByText('Found Resort')).toBeInTheDocument();
+    expect(screen.queryByText('Hotel 1')).toBeNull();
+    expect(screen.queryByLabelText('Search hotels')).toBeNull();
+    expect(screen.getByLabelText('Search found hotels')).toBeInTheDocument();
+    expect(screen.getByText('3 found')).toBeInTheDocument();
+    await userEvent.click(within(tabs).getByRole('tab', { name: 'Hotels' }));
+    expect(await screen.findByText('Hotel 1')).toBeInTheDocument();
+  });
+
+  it('opens straight on the found hotels when the address says so', async () => {
+    hotelFinderService.list.mockResolvedValue({ success: true, data: [foundRow], total: 1, page: 1, limit: 12, pages: 1 });
+    render(<MemoryRouter initialEntries={['/hotels?tab=found']}><HotelListPage /></MemoryRouter>);
+    expect(await screen.findByText('Found Resort')).toBeInTheDocument();
+    expect(hotelService.list).not.toHaveBeenCalled();
   });
 });

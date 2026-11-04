@@ -1,6 +1,6 @@
 // xlsx and jspdf are large; they are loaded only when someone actually exports, so they stay out of the initial bundle.
 
-const download = (blob, filename) => {
+export const download = (blob, filename) => {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);

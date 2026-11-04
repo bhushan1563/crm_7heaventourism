@@ -175,7 +175,24 @@ How the message was read: **Only Hotel** is priced with the first sheet (Sr No, 
 - [x] 21.3 A request for a file under /assets that does not exist is now a plain 404 instead of the home page's HTML.
 - [x] 21.4 Checked in a real browser with a simulated update (every file renamed): the tab reloads once and opens the Visa list; with the file really gone it reloads once, shows the message and stops.
 
-(Steps 7 to 21 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
+### Step 22: "Find hotel info": read a hotel's website and collect its details (added 2026-11-04, from the user's message with the Hotel List screenshot)
+What was asked: next to "Add hotel", a "Find hotel info" button opens a page where a hotel website address is pasted; the system reads the site (sitemap, page structure, embedded data) and shows the basics: description, rating, contact, location, rates if shown, amenities, rooms, pictures; with strong validation and plain error messages; fast; download as Word, PDF and CSV; save the find inside the app, in a second section of the Hotel List next to the hotels; a saved find can be edited, downloaded, deleted, and added to the main hotel list through a form where the missing required details are filled in. Tested at every level.
+Decisions taken (so the build can go on; each can be changed):
+- The reader behaves like a polite visitor, not like a way round a site's protection: an honest user agent, it obeys robots.txt, it does not solve captchas, log in, use disguised browsers or proxies. When a site refuses (robots.txt, 401/403, captcha page, a page drawn only by scripts) the screen says so plainly and offers "Paste the page's text" (the person copies it in their own browser; the same reader then extracts from it).
+- It never reaches into the company's own network or the server's: every address (and every redirect, and every address a name resolves to at connection time) is checked; local, private, link-local, cloud-metadata and reserved addresses are refused. Only http/https on the usual ports. Page size, time, redirects, pages per find, and finds per person per hour are capped.
+- Rates: only what the hotel's own pages print ("from Rs 7,500 per night", structured price ranges and offers), labelled "as printed on the site, check before quoting". Booking portals are not scraped for prices (their terms forbid it and they block automatic readers); if one of their pages is pasted it is read like any other page and may be refused.
+- No headless browser (too heavy for the server): the reader works on the page as delivered, plus the data scripts embed in it (JSON-LD, microdata, OpenGraph, Next/Nuxt state). A site that draws everything with scripts gives less, and says so.
+- Pictures: shown through the server (the page's security rules forbid other sites' pictures), only JPEG/PNG/WebP, only addresses the reader itself found (signed, short-lived), and only copied into the app when the person saves, shrunk in the browser exactly like uploaded photos.
+- Rights: the `hotels` module (finding needs create, saved finds need read/update/delete, downloads need download).
+- [x] 22.1 The safe web reader: address checks, DNS pinned at connect time, redirects re-checked, size/time/redirect caps, compression, content-type, robots.txt, sitemap reading
+- [x] 22.2 The extractors (pure, tested on fixture pages): structured data, meta tags, page text (contact, address, rating, times, amenities, rooms, rates), pictures, link ranking
+- [x] 22.3 The pipeline: crawl plan and time budget, merging with a source and a confidence for every field, cleaning and validation, completeness score, plain messages for every failure, pasted-text fallback
+- [x] 22.4 The API: find, find from pasted text, signed picture proxy, saved finds (list, read, update, delete), rate and concurrency limits, rights, audit tags
+- [x] 22.5 The "Find hotel info" page (CRM theme): address box with checks, progress, results with confidence marks, picture picker, edit before saving, Word / PDF / CSV, Save to the app
+- [x] 22.6 Hotel List with two sections (Hotels, Found hotels); the saved-find page (view, edit, download, delete); "Add to the hotel list" with a form prefilled from the find and the missing required details asked for
+- [x] 22.7 Tests at every level: unit and property-based on the reader and extractors, integration against local pretend hotel sites (redirects, robots, sitemaps, slow, huge, compressed, hostile), scenario tests of the whole flow, interface tests, a real-browser walkthrough; security checks (address tricks, DNS rebinding, redirects to private addresses, decompression bombs)
+
+(Steps 7 to 22 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

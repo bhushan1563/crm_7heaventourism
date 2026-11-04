@@ -17,6 +17,7 @@ vi.mock('react-router-dom', async (orig) => {
   return { ...real, useNavigate: () => { const go = real.useNavigate(); return (to, opts) => (String(to).startsWith('/quotations') ? h.navigate(to) : go(to, opts)); } };
 });
 vi.mock('../services/hotelService', () => ({ default: { get: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() } }));
+vi.mock('../services/hotelFinderService', () => ({ default: { get: vi.fn(), markAdded: vi.fn() } }));
 // The real editor and gallery have their own tests; here they are simple stand-ins so this file tests the page's logic.
 vi.mock('../components/LazyRichTextEditor', () => ({
   default: ({ value, onChange, ariaLabel }) => <textarea aria-label={ariaLabel} value={value} onChange={(e) => onChange(e.target.value)} />
@@ -31,6 +32,7 @@ vi.mock('../components/PhotoGallery', () => ({
 }));
 
 import hotelService from '../services/hotelService';
+import hotelFinderService from '../services/hotelFinderService';
 import HotelEditorPage from './HotelEditorPage';
 
 const stored = (over = {}) => ({
@@ -327,5 +329,75 @@ describe('editing a hotel', () => {
     await userEvent.click(within(dialog).getByRole('button', { name: 'Delete hotel' }));
     await waitFor(() => expect(hotelService.remove).toHaveBeenCalledWith('abc123'));
     expect(await screen.findByText('LIST')).toBeInTheDocument();
+  });
+});
+
+describe('HotelEditorPage: adding a found hotel to the hotel list', () => {
+  const found = (over = {}) => ({
+    _id: 'f1', name: 'Palm Grove Resort', starRating: '4 star', description: 'A beachside resort.\n\nTwo pools.', address: { full: '12 Candolim Beach Road, Candolim, Goa, India', street: '12 Candolim Beach Road', locality: 'Candolim', region: 'Goa', postalCode: '', country: 'India' },
+    phones: ['+91 832 227 5599'], emails: ['stay@palmgrove.com'], website: 'https://palmgrove.com', checkIn: '15:00', checkOut: '10:00', amenities: ['Pool', 'Spa'], sourceUrl: 'https://palmgrove.com/', rates: null,
+    policies: { cancellation: 'Free until 7 days before.' }, photos: [{ token: 'P'.repeat(24), width: 10, height: 10, caption: 'Front' }], status: 'Saved', ...over
+  });
+
+  beforeEach(() => {
+    hotelFinderService.get.mockReset();
+    hotelFinderService.markAdded.mockReset();
+    hotelFinderService.markAdded.mockResolvedValue({ success: true });
+  });
+
+  it('starts from what was found, says so, and keeps what the find did not give empty for the person to fill', async () => {
+    hotelFinderService.get.mockResolvedValue({ success: true, data: found({ address: { full: '', street: '', locality: '', region: '', postalCode: '', country: '' } }) });
+    open('/hotels/new?fromFound=f1');
+    expect(await screen.findByTestId('found-banner')).toHaveTextContent('Filled in from the found hotel Palm Grove Resort');
+    expect(screen.getByTestId('found-banner')).toHaveTextContent('fill in what the find did not give: the city');
+    expect(nameField()).toHaveValue('Palm Grove Resort');
+    expect(cityField()).toHaveValue('');
+    expect(screen.getByLabelText('Phone')).toHaveValue('+91 832 227 5599');
+    expect(screen.getByLabelText('Check-in time')).toHaveValue('15:00');
+    expect(screen.getByText('Gallery: 1')).toBeInTheDocument();
+    expect(hotelService.get).not.toHaveBeenCalled();
+    await waitFor(() => expect(cityField()).toHaveFocus());
+    // the city is required: saving without it is refused in words
+    await userEvent.click(screen.getByRole('button', { name: /add hotel/i }));
+    expect(await screen.findByText('Please enter the city.')).toBeInTheDocument();
+    expect(hotelService.create).not.toHaveBeenCalled();
+  });
+
+  it('saving adds the hotel with the found details and marks the found hotel as added', async () => {
+    hotelFinderService.get.mockResolvedValue({ success: true, data: found() });
+    hotelService.create.mockImplementation(async (payload) => ({ success: true, data: stored({ ...payload, _id: 'newhotel' }) }));
+    open('/hotels/new?fromFound=f1');
+    await screen.findByTestId('found-banner');
+    expect(cityField()).toHaveValue('Candolim');
+    await userEvent.click(screen.getByRole('button', { name: /add hotel/i }));
+    await waitFor(() => expect(hotelService.create).toHaveBeenCalledTimes(1));
+    const payload = hotelService.create.mock.calls[0][0];
+    expect(payload).toMatchObject({ name: 'Palm Grove Resort', city: 'Candolim', country: 'India', phone: '+91 832 227 5599', email: 'stay@palmgrove.com', checkInTime: '15:00', checkOutTime: '10:00', starRating: '4 star' });
+    expect(payload.photos).toEqual([{ token: 'P'.repeat(24), caption: 'Front' }]);
+    expect(payload.description).toBe('<p>A beachside resort.</p><p>Two pools.</p>');
+    await waitFor(() => expect(hotelFinderService.markAdded).toHaveBeenCalledWith('f1', 'newhotel'));
+  });
+
+  it('a found hotel that is already in the list is not added twice, and one that cannot be opened leaves the form empty with the reason', async () => {
+    hotelFinderService.get.mockResolvedValue({ success: true, data: found({ status: 'Added', hotelId: 'h1' }) });
+    open('/hotels/new?fromFound=f1');
+    expect(await screen.findByText('This found hotel is already in the hotel list.')).toBeInTheDocument();
+    expect(nameField()).toHaveValue('');
+    cleanup();
+    hotelFinderService.get.mockResolvedValue({ success: false, message: 'This found hotel could not be found. It may have been removed.' });
+    open('/hotels/new?fromFound=zz');
+    expect(await screen.findByText('This found hotel could not be found. It may have been removed.')).toBeInTheDocument();
+    expect(nameField()).toHaveValue('');
+  });
+
+  it('a note that could not be saved on the found hotel is mentioned, but the hotel is still added', async () => {
+    hotelFinderService.get.mockResolvedValue({ success: true, data: found() });
+    hotelFinderService.markAdded.mockResolvedValue({ success: false, message: 'x' });
+    hotelService.create.mockImplementation(async (payload) => ({ success: true, data: stored({ ...payload, _id: 'newhotel' }) }));
+    open('/hotels/new?fromFound=f1');
+    await screen.findByTestId('found-banner');
+    await userEvent.click(screen.getByRole('button', { name: /add hotel/i }));
+    await waitFor(() => expect(h.showToast).toHaveBeenCalledWith('The hotel was added, but the found hotel could not be marked as added.', 'warning'));
+    expect(h.showToast).toHaveBeenCalledWith('Hotel added to the list.', 'success');
   });
 });

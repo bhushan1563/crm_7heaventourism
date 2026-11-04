@@ -71,6 +71,14 @@ export const mediaUploadLimiter = limiter({
 });
 
 /** Public photo URLs: a page, a PDF or a Word export may load dozens at once, repeat views come from the browser cache. */
+/** The hotel finder reads other people's websites, so it is limited per person: a few finds an hour, not a crawler. */
+export const finderLimiter = limiter({
+  windowMs: 60 * 60 * 1000,
+  limit: 30,
+  message: 'You have used the hotel finder 30 times in the last hour. Please try again a little later.',
+  keyGenerator: (req) => (req.user?._id ? `user:${req.user._id}` : ipKeyGenerator(req.ip))
+});
+
 export const mediaServeLimiter = limiter({
   windowMs: 60 * 1000,
   limit: 600,

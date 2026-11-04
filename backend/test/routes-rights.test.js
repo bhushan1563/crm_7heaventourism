@@ -18,6 +18,7 @@ const ROUTERS = {
   media: () => import('../src/routes/mediaRoutes.js'),
   itineraries: () => import('../src/routes/itineraryRoutes.js'),
   hotels: () => import('../src/routes/hotelRoutes.js'),
+  hotelFinder: () => import('../src/routes/hotelFinderRoutes.js'),
   visas: () => import('../src/routes/visaRoutes.js'),
   confirmations: () => import('../src/routes/confirmationRoutes.js'),
   masterText: () => import('../src/routes/masterTextRoutes.js')

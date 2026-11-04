@@ -44,7 +44,7 @@ export const checkRecordOwnership = (recordFinder) => {
     if (req.baseUrl.includes('guests')) moduleName = 'guest_list';
     else if (req.baseUrl.includes('suppliers')) moduleName = 'supplier_list';
     else if (req.baseUrl.includes('quotations')) moduleName = 'quotations';
-    else if (req.baseUrl.includes('hotels')) moduleName = 'hotels';
+    else if (req.baseUrl.includes('hotels') || req.baseUrl.includes('hotel-finder')) moduleName = 'hotels';
     else if (req.baseUrl.includes('visas')) moduleName = 'visas';
     else if (req.baseUrl.includes('itineraries')) moduleName = 'itineraries';
     else if (req.baseUrl.includes('confirmations')) moduleName = 'confirmations';
