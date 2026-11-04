@@ -1,5 +1,5 @@
 /* The travel calendar. Colours come from the app's tokens, so light and dark mode both work; each trip takes the colour of its kind in --cal. */
-.cal-page kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--border-color); border-bottom-width: 2px; border-radius: 4px; background: var(--surface-2); color: var(--text-secondary); font: 600 0.72rem/1.5 inherit; text-align: center; }
+.cal-page kbd { display: inline-block; min-width: 18px; padding: 0 5px; border: 1px solid var(--border-color); border-bottom-width: 2px; border-radius: 4px; background: var(--surface-2); color: var(--text-secondary); font-family: inherit; font-weight: 600; font-size: 0.72rem; line-height: 1.5; text-align: center; }
 
 .cal-layout { display: grid; grid-template-columns: 262px minmax(0, 1fr); gap: 16px; align-items: start; }
 .cal-side { display: flex; flex-direction: column; gap: 14px; padding: 14px; position: sticky; top: 8px; }

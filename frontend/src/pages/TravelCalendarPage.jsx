@@ -8,6 +8,7 @@ import {
   KINDS, KIND_ORDER, VIEWS, buildIcs, filterEvents, isIso, peopleOf, startOfMonth, stepAnchor, titleOf, todayIso, viewRange
 } from '../utils/calendarGrid';
 import { AgendaView, DayView, EventDialog, MiniMonth, MonthView, WeekView } from '../components/calendar/CalendarViews';
+import './itineraries.css';
 import '../components/calendar/calendar.css';
 
 const STORE = 'crm.calendar';
