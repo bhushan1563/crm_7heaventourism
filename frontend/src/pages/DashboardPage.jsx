@@ -122,7 +122,7 @@ export const DashboardPage = () => {
         <StatCard
           title="Confirmed & Paid"
           value={guestStats?.confirmedAndPaid || 0}
-          subtitle="Ready for operations execution"
+          subtitle={`Fully paid · ${guestStats?.confirmed || 0} confirmed, awaiting payment`}
           icon={IndianRupee}
           color="#12B76A"
         />
