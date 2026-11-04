@@ -44,13 +44,14 @@ describe('FormattedLine', () => {
     // The editor is a big lazily loaded library; the first load inside a busy full-suite run has taken 7 to 8 seconds, so allow far more than that.
     const toolbar = await screen.findByRole('toolbar', { name: 'Text formatting' }, { timeout: 15000 });
     for (const label of ['Bold', 'Font size', 'Text colour', 'Highlight']) expect(toolbar.querySelector(`[aria-label="${label}"]`), label).not.toBeNull();
-    expect(screen.getByRole('textbox', { name: 'Inclusion 1' })).toBeInTheDocument();
+    // The textbox aria-label is set by the editor after it finishes mounting, so wait for it too.
+    await screen.findByRole('textbox', { name: 'Inclusion 1' }, { timeout: 15000 });
   });
 
   it('turns text with no formatting back into plain text when the user leaves the line', async () => {
     const { onChange } = line({ value: '<p>Hello there</p>' });
     await userEvent.click(screen.getByRole('button', { name: /Press to edit and format/ }));
-    await screen.findByRole('toolbar');
+    await screen.findByRole('textbox', { name: 'Inclusion 1' }, { timeout: 15000 });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Inclusion 1' }), { key: 'Escape' });
     expect(onChange).toHaveBeenCalledWith('Hello there');
     expect(screen.queryByRole('toolbar')).toBeNull();
@@ -59,14 +60,14 @@ describe('FormattedLine', () => {
   it('leaves formatted text, and text that is already plain, untouched when the user leaves the line', async () => {
     const formatted = line({ value: '<p><strong>Bold</strong></p>' });
     await userEvent.click(screen.getByRole('button', { name: /Press to edit and format/ }));
-    await screen.findByRole('toolbar');
+    await screen.findByRole('textbox', { name: 'Inclusion 1' }, { timeout: 15000 });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Inclusion 1' }), { key: 'Escape' });
     expect(formatted.onChange).not.toHaveBeenCalled();
     cleanup();
 
     const plain = line({ value: 'Plain text' });
     await userEvent.click(screen.getByRole('button', { name: /Press to edit and format/ }));
-    await screen.findByRole('toolbar');
+    await screen.findByRole('textbox', { name: 'Inclusion 1' }, { timeout: 15000 });
     fireEvent.keyDown(screen.getByRole('textbox', { name: 'Inclusion 1' }), { key: 'Escape' });
     expect(plain.onChange).not.toHaveBeenCalled();
   });
