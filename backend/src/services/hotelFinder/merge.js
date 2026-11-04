@@ -191,6 +191,16 @@ export const mergeCandidates = ({ candidates, pageKinds = new Map(), site = '', 
       }
     }
   }
+  // A locality that is just the region name (e.g. "Maharashtra") after postal stripping is a data quality problem
+  // common on corporate chain homepages whose JSON-LD carries the head-office address. Clear it so the UI does not
+  // show the state as the city.
+  if (address.locality && address.region) {
+    const norm = (s) => s.toLowerCase().replace(/\s+/g, '');
+    if (norm(address.locality) === norm(address.region) || norm(address.locality).startsWith(norm(address.region))) {
+      address.locality = '';
+      delete addressInfo.locality;
+    }
+  }
   hotel.address = address;
   fieldInfo.address = fullInfo || info(rank([...by('address.locality'), ...by('address.street')].map((c) => ({ ...c, value: cleanDisplay(c.value) })), keyText, pageKinds)[0]);
   fieldInfo.addressParts = addressInfo;
