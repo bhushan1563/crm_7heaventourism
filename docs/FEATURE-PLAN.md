@@ -188,11 +188,11 @@ Decisions taken (so the build can go on; each can be changed):
 - [x] 22.2 The extractors (pure, tested on fixture pages): structured data, meta tags, page text (contact, address, rating, times, amenities, rooms, rates), pictures, link ranking
 - [x] 22.3 The pipeline: crawl plan and time budget, merging with a source and a confidence for every field, cleaning and validation, completeness score, plain messages for every failure, pasted-text fallback
 - [x] 22.4 The API: find, find from pasted text, signed picture proxy, saved finds (list, read, update, delete), rate and concurrency limits, rights, audit tags
-- [ ] 22.5 The "Find hotel info" page (CRM theme): address box with checks, progress, results with confidence marks, picture picker, edit before saving, Word / PDF / CSV, Save to the app
-- [ ] 22.6 Hotel List with two sections (Hotels, Found hotels); the saved-find page (view, edit, download, delete); "Add to the hotel list" with a form prefilled from the find and the missing required details asked for
-- [ ] 22.7 Tests at every level: unit and property-based on the reader and extractors, integration against local pretend hotel sites (redirects, robots, sitemaps, slow, huge, compressed, hostile), scenario tests of the whole flow, interface tests, a real-browser walkthrough; security checks (address tricks, DNS rebinding, redirects to private addresses, decompression bombs)
+- [x] 22.5 The "Find hotel info" page (CRM theme): address box with checks, progress, results with confidence marks, picture picker, edit before saving, Word / PDF / CSV, Save to the app
+- [x] 22.6 Hotel List with two sections (Hotels, Found hotels); the saved-find page (view, edit, download, delete); "Add to the hotel list" with a form prefilled from the find and the missing required details asked for
+- [x] 22.7 Tests at every level: unit and property-based on the reader and extractors, integration against local pretend hotel sites (redirects, robots, sitemaps, slow, huge, compressed, hostile), scenario tests of the whole flow, interface tests, a real-browser walkthrough; security checks (address tricks, DNS rebinding, redirects to private addresses, decompression bombs)
 
-(Steps 7 to 21 are complete except 19.4 and 20.7, step 22 is in progress; what else remains is waiting on the client, see above.)
+(Steps 7 to 22 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

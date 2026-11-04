@@ -1,9 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, Archive, ArchiveRestore, ArrowLeft, FileText, Lock, RefreshCw, Save, Trash2 } from 'lucide-react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { AlertCircle, Archive, ArchiveRestore, ArrowLeft, FileText, Lock, RefreshCw, Save, Sparkles, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hotelService from '../services/hotelService';
+import hotelFinderService from '../services/hotelFinderService';
+import { foundToHotelForm, missingForHotel } from '../utils/hotelFinder';
 import { getErrorMessage } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import PageLoader from '../components/PageLoader';
@@ -38,6 +40,12 @@ export const HotelEditorPage = () => {
   const [conflict, setConflict] = useState(false);
   const [confirm, setConfirm] = useState(null); // { type: 'leave' | 'delete' | 'reload' }
   const heldId = useRef(null); // the record this page already holds (so it is not downloaded again)
+  // "Add to the hotel list" from a found hotel: the form starts from what was found, and the person fills in what the find lacked.
+  const [searchParams] = useSearchParams();
+  const fromFound = !isEdit ? searchParams.get('fromFound') : null;
+  const [foundSource, setFoundSource] = useState(null);
+  const [foundError, setFoundError] = useState('');
+  const prefilled = useRef(null);
 
   const apply = useCallback((data) => {
     heldId.current = data._id;
@@ -67,6 +75,23 @@ export const HotelEditorPage = () => {
   useEffect(() => {
     if (isEdit && heldId.current !== id) loadRecord();
   }, [isEdit, id, loadRecord]);
+
+  useEffect(() => {
+    if (!fromFound || prefilled.current === fromFound) return;
+    prefilled.current = fromFound;
+    setFoundError('');
+    hotelFinderService
+      .get(fromFound)
+      .then((res) => {
+        if (!res.success) return setFoundError(res.message || 'The found hotel could not be opened, so the form is empty.');
+        if (res.data.status === 'Added' && res.data.hotelId) return setFoundError('This found hotel is already in the hotel list.');
+        const next = foundToHotelForm(res.data, emptyHotel());
+        setFoundSource(res.data);
+        setForm(next);
+        if (missingForHotel(next).length) setTimeout(() => document.getElementById(`field-${missingForHotel(next)[0].key}`)?.focus(), 150);
+      })
+      .catch((err) => setFoundError(getErrorMessage(err, 'The found hotel could not be opened, so the form is empty.')));
+  }, [fromFound]);
 
   const dirty = useMemo(() => JSON.stringify(toPayload(form)) !== snapshot, [form, snapshot]);
 
@@ -107,6 +132,10 @@ export const HotelEditorPage = () => {
       const res = isEdit ? await hotelService.update(id, { ...payload, updatedAt: record.updatedAt }) : await hotelService.create(payload);
       if (res.success) {
         showToast(isEdit ? 'Hotel saved.' : 'Hotel added to the list.', 'success');
+        if (!isEdit && foundSource) {
+          // The found hotel is now a hotel of the list; if this note fails the hotel is still saved, so it is only mentioned.
+          hotelFinderService.markAdded(foundSource._id, res.data._id).then((r) => !r.success && showToast('The hotel was added, but the found hotel could not be marked as added.', 'warning')).catch(() => showToast('The hotel was added, but the found hotel could not be marked as added.', 'warning'));
+        }
         apply(res.data);
         if (!isEdit) navigate(`/hotels/${res.data._id}/edit`, { replace: true });
       } else {
@@ -231,6 +260,19 @@ export const HotelEditorPage = () => {
         <div className="itin-alert" role="status">
           <Lock size={16} aria-hidden="true" />
           <span>{isEdit ? 'You can view this hotel but not change it. Ask an administrator or the person who added it.' : 'You do not have permission to add hotels.'}</span>
+        </div>
+      )}
+      {foundError && (
+        <div className="itin-alert is-error" role="alert"><AlertCircle size={16} aria-hidden="true" /><span>{foundError}</span></div>
+      )}
+      {foundSource && (
+        <div className="itin-alert" role="status" data-testid="found-banner">
+          <Sparkles size={16} aria-hidden="true" />
+          <span>
+            Filled in from the found hotel <strong>{foundSource.name}</strong>. Please check every detail
+            {missingForHotel(form).length > 0 ? <> and fill in what the find did not give: <strong>{missingForHotel(form).map((m) => m.label).join(' and ')}</strong>.</> : '.'}
+            {' '}Saving adds it to the hotel list.
+          </span>
         </div>
       )}
       {serverError && (

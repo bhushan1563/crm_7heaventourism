@@ -128,7 +128,7 @@ test('structured data: a palace hotel with JSON-LD gives everything it says, at 
   assert.equal(best(r, 'address.locality'), 'Udaipur');
   assert.equal(best(r, 'address.region'), 'Rajasthan');
   assert.equal(best(r, 'address.postalCode'), '313001');
-  assert.equal(best(r, 'address.country'), 'IN');
+  assert.equal(best(r, 'address.country'), 'India', 'a country code is made into the name');
   assert.deepEqual(best(r, 'geo'), { lat: 24.5754, lng: 73.6803 });
   assert.equal(best(r, 'phone').key, '2942428800');
   assert.equal(best(r, 'email'), 'reservations@grandlakepalace.example');

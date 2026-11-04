@@ -1,6 +1,7 @@
 import { siteOf } from './addressGuard.js';
 import { addressParts } from './extract/contact.js';
 import { cleanDisplay } from './extract/dom.js';
+import { countryName } from './extract/normalize.js';
 
 // Many pages and many methods each give their own candidates for "the name", "the phone number" ...; this chooses the best of each and
 // says how sure it is. Sources that agree make a fact more certain (two independent sources are more believable than one); a single
@@ -71,24 +72,7 @@ export const cleanName = (value) => {
   return name;
 };
 
-const COUNTRY_NAMES = (() => {
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'region' });
-  } catch {
-    return null;
-  }
-})();
-
-export const countryName = (value) => {
-  const text = cleanDisplay(value);
-  if (/^[A-Za-z]{2}$/.test(text) && COUNTRY_NAMES) {
-    try {
-      const name = COUNTRY_NAMES.of(text.toUpperCase());
-      if (name && name !== text.toUpperCase() && name !== 'Unknown Region') return name;
-    } catch { /* not a region code */ }
-  }
-  return text;
-};
+export { countryName };
 
 const mapStars = (n) => (n >= 2 && n <= 5 ? `${n} star` : 'Unrated');
 

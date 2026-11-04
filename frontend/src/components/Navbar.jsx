@@ -11,6 +11,8 @@ const PAGES = [
   ['/guests', 'Sales', 'Guest Inquiries & Leads'],
   ['/quotations', 'Sales', 'Quotations & Itineraries'],
   ['/confirmations', 'Sales', 'Booking Confirmations'],
+  ['/hotels/find', 'Sales', 'Find Hotel Info'],
+  ['/hotels/found', 'Sales', 'Found Hotel'],
   ['/hotels', 'Sales', 'Hotel List'],
   ['/visas', 'Sales', 'Visa List'],
   ['/itineraries', 'Sales', 'Itinerary Library'],

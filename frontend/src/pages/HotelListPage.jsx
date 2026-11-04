@@ -1,14 +1,16 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Star, Trash2 } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Archive, ArchiveRestore, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Hotel, ImageOff, Images, Lock, MapPin, Phone, Plus, RefreshCw, Search, Sparkles, Star, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import hotelService from '../services/hotelService';
+import hotelFinderService from '../services/hotelFinderService';
 import { mediaUrl } from '../services/mediaService';
 import { getErrorMessage } from '../services/api';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { STAR_OPTIONS, starLabel } from '../utils/hotel';
 import { formatDate } from '../utils/dateHelper';
+import FoundHotelsSection from '../components/hotelFinder/FoundHotelsSection';
 // The hotel screens share the look of the itinerary library (cards, filters, editor sections), so they use its stylesheet.
 import './itineraries.css';
 import './hotels.css';
@@ -28,8 +30,13 @@ const NO_FILTERS = { search: '', city: '', star: '', status: 'Active', sort: 'up
 
 export const HotelListPage = () => {
   const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const { can, canEditRecord } = useAuth();
   const { showToast } = useToast();
+  // Two sections on one page: the hotel list, and the hotels found with the hotel finder that are saved but not (yet) in the list.
+  const tab = params.get('tab') === 'found' ? 'found' : 'hotels';
+  const [foundCount, setFoundCount] = useState(null);
+  const showTab = (next) => setParams(next === 'found' ? { tab: 'found' } : {}, { replace: true });
 
   const [filters, setFilters] = useState(NO_FILTERS);
   const [searchText, setSearchText] = useState('');
@@ -60,11 +67,15 @@ export const HotelListPage = () => {
   }, [filters]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (tab === 'hotels') load(); // the found hotels have their own list; the hotel list is read only when it is the one shown
+  }, [load, tab]);
 
   useEffect(() => {
     hotelService.cities().then((res) => res.success && setCities(res.data)).catch(() => {});
+  }, []);
+  // How many found hotels there are, for the tab (a failure just leaves the number out).
+  useEffect(() => {
+    hotelFinderService.list({ limit: 1 }).then((res) => res.success && setFoundCount(res.total)).catch(() => {});
   }, []);
 
   // Search as you type, but only ask the server once the typing pauses.
@@ -119,11 +130,16 @@ export const HotelListPage = () => {
         <div className="page-header-text">
           <div className="page-title-row">
             <h2 className="page-title">Hotel List</h2>
-            <span className="count-chip">{total} {total === 1 ? 'hotel' : 'hotels'}</span>
+            {tab === 'hotels' ? <span className="count-chip">{total} {total === 1 ? 'hotel' : 'hotels'}</span> : foundCount !== null && <span className="count-chip">{foundCount} found</span>}
           </div>
-          <p className="page-subtitle">Every hotel you work with, saved once with its photos, rooms and contact details, and ready to use in quotations.</p>
+          <p className="page-subtitle">{tab === 'hotels' ? 'Every hotel you work with, saved once with its photos, rooms and contact details, and ready to use in quotations.' : 'Hotels found on their own websites with "Find hotel info" and saved here. Check them, then add the ones you work with to the hotel list.'}</p>
         </div>
         <div className="page-actions">
+          {can('hotels', 'canCreate') && (
+            <button type="button" className="btn btn-outline" onClick={() => navigate('/hotels/find')} title="Paste a hotel's website address and collect its details">
+              <Sparkles size={16} /> <span>Find hotel info</span>
+            </button>
+          )}
           {can('hotels', 'canCreate') ? (
             <button type="button" className="btn btn-primary" onClick={() => navigate('/hotels/new')}>
               <Plus size={16} /> <span>Add hotel</span>
@@ -139,6 +155,15 @@ export const HotelListPage = () => {
         </div>
       </div>
 
+      <div className="fh-tabs" role="tablist" aria-label="Sections of the hotel list">
+        <button type="button" role="tab" aria-selected={tab === 'hotels'} className={tab === 'hotels' ? 'is-active' : ''} onClick={() => showTab('hotels')}>Hotels</button>
+        <button type="button" role="tab" aria-selected={tab === 'found'} className={tab === 'found' ? 'is-active' : ''} onClick={() => showTab('found')}>Found hotels{foundCount !== null && foundCount > 0 ? ` (${foundCount})` : ''}</button>
+      </div>
+
+      {tab === 'found' ? (
+        <FoundHotelsSection onCount={setFoundCount} />
+      ) : (
+      <>
       <div className="glass-panel itin-filters">
         <div className="itin-search">
           <Search size={16} aria-hidden="true" />
@@ -285,6 +310,9 @@ export const HotelListPage = () => {
             Next <ChevronRight size={14} />
           </button>
         </nav>
+      )}
+
+      </>
       )}
 
       <ConfirmDialog

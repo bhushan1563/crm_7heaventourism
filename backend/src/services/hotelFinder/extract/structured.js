@@ -1,5 +1,5 @@
 import { attr, elements, plainText, rawText, resolveUrl, squash, where } from './dom.js';
-import { nameFromTitle, normalizeEmail, normalizePhone, normalizeTime, parsePriceRange, starsFromText } from './normalize.js';
+import { countryName, nameFromTitle, normalizeEmail, normalizePhone, normalizeTime, parsePriceRange, starsFromText } from './normalize.js';
 
 // The data a page states about itself on purpose: JSON-LD, microdata, and meta tags. This is the most reliable source (the hotel
 // wrote it for programs to read), so its candidates carry the highest confidence. A candidate is
@@ -97,7 +97,7 @@ const addressCandidates = (raw, source, confidence, byId) => {
     locality: label(address.addressLocality),
     region: label(address.addressRegion),
     postalCode: label(address.postalCode),
-    country: label(address.addressCountry)
+    country: countryName(label(address.addressCountry))
   };
   for (const [key, value] of Object.entries(parts)) if (value) out.push(cand(`address.${key}`, value, source, confidence));
   const full = [parts.street, parts.locality, parts.region, parts.postalCode, parts.country].filter(Boolean).join(', ');

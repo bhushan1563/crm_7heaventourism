@@ -1,4 +1,4 @@
-import { squash } from './dom.js';
+import { cleanDisplay, squash } from './dom.js';
 
 // Turning the odd ways websites write things (times, phone numbers, prices, star ratings, e-mail addresses) into one clean form.
 // Pure functions with no page in sight, so each rule is tested on its own.
@@ -156,4 +156,26 @@ export const nameFromTitle = (title) => {
   const generic = /^(?:home(?:page)?|welcome(?:\s+to)?|official(?:\s+(?:site|website))?|book(?:\s+now)?|best\s+.*|luxury\s+hotels?\s+in\s+.*|hotels?\s+in\s+.*|top\s+.*|index|untitled)$/i;
   const chosen = parts.find((p) => !generic.test(p)) || parts[0] || '';
   return chosen.replace(/^welcome\s+to\s+/i, '').replace(/\s*,\s*[^,]{2,40}$/, (tail) => (/\b(?:hotel|resort|palace|inn|lodge|villa|suites?)\b/i.test(chosen.replace(tail, '')) ? '' : tail)).slice(0, 150).trim();
+};
+
+// ---- countries ----
+
+const REGION_NAMES = (() => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' });
+  } catch {
+    return null;
+  }
+})();
+
+/** "IN" -> "India", "us" -> "United States"; anything else (a name already, or not a country code) as it is, tidied. */
+export const countryName = (value) => {
+  const text = cleanDisplay(value);
+  if (/^[A-Za-z]{2}$/.test(text) && REGION_NAMES) {
+    try {
+      const name = REGION_NAMES.of(text.toUpperCase());
+      if (name && name !== text.toUpperCase() && name !== 'Unknown Region') return name;
+    } catch { /* not a region code */ }
+  }
+  return text;
 };
