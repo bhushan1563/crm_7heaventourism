@@ -135,3 +135,14 @@ describe('property', () => {
     );
   });
 });
+
+describe('durationText', () => {
+  it('reads a bare number as nights and leaves written durations alone', async () => {
+    const { durationText } = await import('./confirmation');
+    expect(durationText('7')).toBe('7 Nights');
+    expect(durationText(' 1 ')).toBe('1 Night');
+    expect(durationText('4 Nights / 5 Days')).toBe('4 Nights / 5 Days');
+    expect(durationText(undefined)).toBe('');
+    expect(quotationOf({ quote: { duration: '7' } }).duration).toBe('7 Nights');
+  });
+});

@@ -7,6 +7,7 @@ import hotelFinderService from '../../services/hotelFinderService';
 import { mediaUrl } from '../../services/mediaService';
 import { getErrorMessage } from '../../services/api';
 import ConfirmDialog from '../ConfirmDialog';
+import { addFoundToHotelList } from '../../utils/addFoundToHotels';
 import { starLabel } from '../../utils/hotel';
 import { statusLabel } from '../../utils/hotelFinder';
 import { formatDate } from '../../utils/dateHelper';
@@ -75,6 +76,28 @@ export const FoundHotelsSection = ({ onCount }) => {
     }
   };
 
+  const [adding, setAdding] = useState('');
+  // One click: the found hotel goes into the main hotel list. If the find lacks the name or city, the hotel form opens to complete it.
+  const addToList = async (item) => {
+    setAdding(item._id);
+    try {
+      const full = await hotelFinderService.get(item._id);
+      if (!full.success) return showToast(full.message || 'The found hotel could not be opened.', 'error');
+      const r = await addFoundToHotelList(full.data);
+      if (r.ok) {
+        showToast(r.marked ? `${item.name} was added to the hotel list.` : `${item.name} was added to the hotel list, but could not be marked as added here.`, r.marked ? 'success' : 'warning');
+        await load();
+      } else if (r.needsForm) {
+        showToast('Some required details are missing. Please complete them, then save.', 'warning');
+        navigate(`/hotels/new?fromFound=${item._id}`);
+      } else showToast(r.message, 'error');
+    } catch (err) {
+      showToast(getErrorMessage(err, 'The hotel could not be added to the hotel list.'), 'error');
+    } finally {
+      setAdding('');
+    }
+  };
+
   const { data, pages, total } = result;
   const hasFilters = Boolean(filters.search || filters.status);
 
@@ -135,7 +158,7 @@ export const FoundHotelsSection = ({ onCount }) => {
               <div className="itin-actions">
                 <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/hotels/found/${item._id}`)}><Edit2 size={13} /> Open</button>
                 {item.status === 'Saved' && can('hotels', 'canCreate') && (
-                  <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/hotels/new?fromFound=${item._id}`)} title="Add this hotel to the hotel list"><Hotel size={13} /> Add to list</button>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={() => addToList(item)} disabled={adding === item._id} title="Save this hotel into the main hotel list"><Hotel size={13} /> {adding === item._id ? 'Adding…' : 'Save to hotel list'}</button>
                 )}
                 {item.status === 'Added' && item.hotelId && <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/hotels/${item.hotelId}/edit`)}><Eye size={13} /> Hotel</button>}
                 {can('hotels', 'canDelete') && <button type="button" className="btn-icon btn-outline itin-danger" onClick={() => setToDelete(item)} title="Remove" aria-label={`Remove ${item.name}`}><Trash2 size={14} /></button>}

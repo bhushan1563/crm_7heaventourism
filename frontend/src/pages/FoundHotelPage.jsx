@@ -12,6 +12,7 @@ import TagInput from '../components/itinerary/TagInput';
 import { Level } from '../components/hotelFinder/FindResult';
 import { STAR_OPTIONS } from '../utils/hotel';
 import { statusLabel } from '../utils/hotelFinder';
+import { addFoundToHotelList } from '../utils/addFoundToHotels';
 import { exportFoundCsv, exportFoundDocx, exportFoundPdf } from '../utils/hotelFinderExport';
 import { formatDate } from '../utils/dateHelper';
 import './itineraries.css';
@@ -180,6 +181,19 @@ export const FoundHotelPage = () => {
     setConfirm(null);
   };
 
+  const [adding, setAdding] = useState(false);
+  const addToList = async () => {
+    setAdding(true);
+    const r = await addFoundToHotelList({ ...record, ...toPayload(form), _id: record._id });
+    setAdding(false);
+    if (r.ok) {
+      showToast('Added to the hotel list.', 'success');
+      load();
+    } else if (r.needsForm) {
+      navigate(`/hotels/new?fromFound=${id}`);
+    } else showToast(r.message, 'error');
+  };
+
   const download = async (kind) => {
     setDownloading(kind);
     try {
@@ -237,7 +251,7 @@ export const FoundHotelPage = () => {
           {record.status === 'Added' && record.hotelId ? (
             <button type="button" className="btn btn-primary" onClick={() => navigate(`/hotels/${record.hotelId}/edit`)}><Hotel size={15} /> Open in the hotel list</button>
           ) : (
-            can('hotels', 'canCreate') && <button type="button" className="btn btn-primary" onClick={() => navigate(`/hotels/new?fromFound=${id}`)} disabled={dirty} title={dirty ? 'Save your changes first' : undefined}><Plus size={15} /> Add to the hotel list</button>
+            can('hotels', 'canCreate') && <button type="button" className="btn btn-primary" onClick={addToList} disabled={dirty || adding} title={dirty ? 'Save your changes first' : 'Save this hotel into the main hotel list'}>{adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} Save to hotel list</button>
           )}
           <button type="button" className="btn btn-outline" onClick={() => download('docx')} disabled={Boolean(downloading)}>{downloading === 'docx' ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} Word</button>
           <button type="button" className="btn btn-outline" onClick={() => download('pdf')} disabled={Boolean(downloading)}>{downloading === 'pdf' ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} PDF</button>

@@ -356,3 +356,22 @@ test('an address that has the whole address in its street line is not said twice
   const full = extractPage({ html, url: 'https://palace.example/' }).candidates.find((c) => c.field === 'address.full');
   assert.equal(full.value, 'Palace Road, Jaipur 302006, Rajasthan, India');
 });
+
+test('a phone number printed right before an e-mail address is not made part of the address', () => {
+  const html = '<html><body><h1>Taj Hotels</h1><p>Call 1-800-111-825reservations@ihcltata.com or write to contactus@tajhotels.com</p></body></html>';
+  const emails = extractPage({ url: 'https://www.tajhotels.com/', html }).candidates.filter((x) => x.field === 'email').map((x) => x.value);
+  assert.ok(emails.includes('reservations@ihcltata.com'), emails.join(','));
+  assert.ok(emails.includes('contactus@tajhotels.com'));
+  assert.ok(!emails.some((e) => /^\d/.test(e)), emails.join(','));
+});
+
+test('the DOM extractor reads the name, address, phone and amenities of an ordinary hotel page', () => {
+  const html = `<html><head><title>Hotel Sea Breeze | Goa</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Hotel Sea Breeze","telephone":"+91 832 222 3344","address":{"@type":"PostalAddress","streetAddress":"12 Beach Road","addressLocality":"Calangute","addressRegion":"Goa","postalCode":"403516","addressCountry":"IN"}}</script></head>
+  <body><h1>Hotel Sea Breeze</h1><ul class="amenities"><li>Swimming pool</li><li>Free WiFi</li></ul></body></html>`;
+  const { candidates } = extractPage({ url: 'https://seabreeze.example/', html });
+  const get = (f) => candidates.filter((x) => x.field === f).map((x) => x.value);
+  assert.ok(get('name').includes('Hotel Sea Breeze'));
+  assert.ok(get('address.locality').includes('Calangute'));
+  assert.ok(get('address.postalCode').includes('403516'));
+  assert.ok(get('phone').some((p) => String(p.digits).endsWith('8322223344')));
+});

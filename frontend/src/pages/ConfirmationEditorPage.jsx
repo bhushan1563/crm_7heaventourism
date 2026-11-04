@@ -11,8 +11,9 @@ import BookingEditor from '../components/confirmation/BookingEditor';
 import CancelBookingDialog from '../components/confirmation/CancelBookingDialog';
 import ConfirmationPreview from '../components/confirmation/ConfirmationPreview';
 import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
-import { balanceOf, bookingErrors, bookingPayload, firstErrorKey, formFromConfirmation, hotelsOfQuote } from '../utils/confirmation';
+import { balanceOf, bookingErrors, bookingPayload, firstErrorKey, durationText, formFromConfirmation, hotelsOfQuote } from '../utils/confirmation';
 import { formatDate } from '../utils/dateHelper';
+import { addressLine } from '../utils/hotelStay';
 import './itineraries.css';
 import '../components/confirmation/confirmation.css';
 
@@ -223,6 +224,8 @@ export const ConfirmationEditorPage = () => {
         <div><dt>Client</dt><dd>{record.clientName}</dd></div>
         <div><dt>Guests</dt><dd>{record.paxDetails || '–'}</dd></div>
         <div><dt>Destination</dt><dd>{record.destination}{record.optionName ? ` (${record.optionName})` : ''}</dd></div>
+        {record.duration && <div><dt>Duration</dt><dd>{durationText(record.duration)}</dd></div>}
+        <div><dt>Travel date</dt><dd>{form.travelDate ? formatDate(form.travelDate) : 'Not set'}</dd></div>
         <div><dt>Quotation</dt><dd>{can('quotations', 'canRead') ? <Link to={`/quotations/${record.quotationId}/edit`}>{record.quotationNo}</Link> : record.quotationNo}</dd></div>
         <div><dt>Total</dt><dd>{money(form.payment.totalAmount)}</dd></div>
         <div><dt>Received</dt><dd>{money(form.payment.received)}</dd></div>
@@ -242,7 +245,6 @@ export const ConfirmationEditorPage = () => {
               {record.quote.pricing.totalCostPerPerson > 0 && <div><dt>Per person</dt><dd>{money(record.quote.pricing.totalCostPerPerson)}</dd></div>}
               <div><dt>Grand total</dt><dd>{money(record.quote.pricing.grandTotal)}</dd></div>
               {record.quote.paxDetails && <div><dt>Pax</dt><dd>{record.quote.paxDetails}</dd></div>}
-              {record.quote.duration && <div><dt>Duration</dt><dd>{record.quote.duration}</dd></div>}
             </dl>
           )}
           {hotelsOfQuote(record.quote).length > 0 && (
@@ -258,9 +260,9 @@ export const ConfirmationEditorPage = () => {
                     {stay.nights && <span>🌙 {stay.nights}</span>}
                     {stay.roomCategory && <span>🛏 {stay.roomCategory}</span>}
                     {stay.mealPlan && <span>🍽 {stay.mealPlan}</span>}
-                    {stay.checkInDate && <span>In: {new Date(stay.checkInDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
-                    {stay.checkOutDate && <span>Out: {new Date(stay.checkOutDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
-                    {stay.address && <span>📍 {stay.address}{stay.city && !stay.address.includes(stay.city) ? `, ${stay.city}` : ''}</span>}
+                    {stay.checkInDate && <span>In: {formatDate(stay.checkInDate)}</span>}
+                    {stay.checkOutDate && <span>Out: {formatDate(stay.checkOutDate)}</span>}
+                    {addressLine(stay) && <span>📍 {addressLine(stay)}</span>}
                   </div>
                 </div>
               ))}

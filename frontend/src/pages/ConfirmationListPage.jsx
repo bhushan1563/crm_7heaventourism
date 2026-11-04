@@ -9,6 +9,7 @@ import ConfirmationPreview from '../components/confirmation/ConfirmationPreview'
 import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
 import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDate } from '../utils/dateHelper';
+import { durationText } from '../utils/confirmation';
 import './itineraries.css';
 import '../components/confirmation/confirmation.css';
 
@@ -222,7 +223,7 @@ export const ConfirmationListPage = () => {
                     </td>
                     <td data-label="Destination">
                       <div style={{ fontWeight: 600 }}>{item.destination}</div>
-                      <div className="cf-sub">{[item.duration, item.travelDate ? formatDate(item.travelDate) : 'Travel date not set'].filter(Boolean).join(' · ')}</div>
+                      <div className="cf-sub">{[durationText(item.duration), item.travelDate ? formatDate(item.travelDate) : 'Travel date not set'].filter(Boolean).join(' · ')}</div>
                     </td>
                     <td data-label="Payment">
                       <div style={{ fontWeight: 700 }}>{money(item.payment?.totalAmount)}</div>

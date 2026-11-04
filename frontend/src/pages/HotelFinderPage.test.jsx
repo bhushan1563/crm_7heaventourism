@@ -4,12 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true } }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true }, addFound: vi.fn() }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ can: (m, a) => (a === 'canCreate' ? h.perms.create : true) }) }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => h.navigate }));
 vi.mock('../services/api', () => ({ API_ORIGIN: '', getErrorMessage: (e, fallback) => e?.message || fallback, default: {} }));
 vi.mock('../services/hotelFinderService', () => ({ default: { find: vi.fn(), findText: vi.fn(), create: vi.fn() } }));
+vi.mock('../utils/addFoundToHotels', () => ({ addFoundToHotelList: (...a) => h.addFound(...a) }));
 vi.mock('../services/mediaService', () => ({ uploadPhoto: vi.fn() }));
 vi.mock('../utils/pastedImages', () => ({ fileFromUrl: vi.fn() }));
 vi.mock('../utils/hotelFinderExport', () => ({ exportFoundCsv: vi.fn(async () => ({ ok: true })), exportFoundDocx: vi.fn(async () => ({})), exportFoundPdf: vi.fn(async () => ({})), loadPictures: vi.fn(async () => []) }));
@@ -252,12 +253,22 @@ describe('saving and what to do with a find', () => {
     expect(screen.queryByText(/is saved in Found hotels/)).toBeNull();
   });
 
-  it('"Add to the hotel list" saves first and then opens the hotel form filled in from the find', async () => {
+  it('"Save to hotel list" saves the find first, then puts the hotel straight into the hotel list', async () => {
     hotelFinderService.create.mockImplementation(async (payload) => ({ success: true, data: { ...payload, _id: 'saved9' } }));
+    h.addFound.mockResolvedValueOnce({ ok: true, hotel: { _id: 'hot1' }, marked: true });
     await found();
-    await userEvent.click(screen.getByRole('button', { name: /add to the hotel list/i }));
-    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=saved9'));
+    await userEvent.click(screen.getByRole('button', { name: /save to hotel list/i }));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/hotels/hot1/edit'));
     expect(hotelFinderService.create).toHaveBeenCalledTimes(1);
+    expect(h.addFound).toHaveBeenCalledWith(expect.objectContaining({ _id: 'saved9' }));
+  });
+
+  it('"Save to hotel list" opens the hotel form when the find lacks what the hotel list requires', async () => {
+    hotelFinderService.create.mockImplementation(async (payload) => ({ success: true, data: { ...payload, _id: 'saved8' } }));
+    h.addFound.mockResolvedValueOnce({ ok: false, needsForm: true });
+    await found();
+    await userEvent.click(screen.getByRole('button', { name: /save to hotel list/i }));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=saved8'));
   });
 
   it('Word, PDF and CSV are made from the find, and a failure is said in words', async () => {

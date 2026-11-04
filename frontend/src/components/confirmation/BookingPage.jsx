@@ -1,6 +1,7 @@
 import React from 'react';
 import { toDisplayHtml } from '../../utils/richText';
 import { formatDate } from '../../utils/dateHelper';
+import { durationText } from '../../utils/confirmation';
 
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
@@ -21,7 +22,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
     ['Confirmation no', confirmation.confirmationNo],
     ['Client', confirmation.clientName],
     ['Destination', confirmation.destination],
-    ['Duration', confirmation.duration],
+    ['Duration', durationText(confirmation.duration)],
     ['Travel date', view.travelDate ? formatDate(view.travelDate) : ''],
     ['Guests', confirmation.paxDetails],
     ['Hotel option', confirmation.optionName],

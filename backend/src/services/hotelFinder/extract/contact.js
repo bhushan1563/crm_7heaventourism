@@ -70,7 +70,9 @@ export const emailCandidates = (doc, lines) => {
   for (const line of lines) {
     if (found >= 10 || line.text.length > 600) continue;
     for (const match of line.text.matchAll(EMAIL_SPAN)) {
-      const e = normalizeEmail(match[0]);
+      // a phone number printed right before an address ("1-800-111-825reservations@x.com") is not part of it
+      const glued = match[0].replace(/^\+?[\d\-.()]{7,}(?=[A-Za-z])/, (m) => (m.replace(/\D/g, '').length >= 7 ? '' : m));
+      const e = normalizeEmail(glued);
       if (e) {
         out.push(cand('email', e, 'text', 0.6));
         found += 1;

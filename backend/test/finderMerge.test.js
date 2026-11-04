@@ -272,3 +272,15 @@ test('the postal code is not left on the end of the town', () => {
   assert.equal(a.locality, 'Udaipur');
   assert.equal(a.postalCode, '313 001');
 });
+
+test('a "town" that is really the state and postal code is replaced by the town of the printed address (corporate chain pages)', () => {
+  const r = merge([
+    c('name', 'Taj Mahal Palace', 'json-ld', 0.9),
+    c('address.full', '9th Floor Express Towers, Barrister Rajni Patel Marg Nariman Point, Mumbai, Maharashtra 400 021, India', 'json-ld', 0.9),
+    c('address.locality', 'Maharashtra 400 021', 'json-ld', 0.9),
+    c('address.region', 'Maharashtra', 'json-ld', 0.9),
+    c('address.postalCode', '400005', 'json-ld', 0.9)
+  ]);
+  assert.equal(r.hotel.address.locality, 'Mumbai');
+  assert.equal(r.hotel.address.region, 'Maharashtra');
+});

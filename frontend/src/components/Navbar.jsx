@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ScanLine, Menu, Sun, Moon, ChevronDown, UserRound, LogOut } from 'lucide-react';
+import { ArrowLeft, ScanLine, Menu, Sun, Moon, ChevronDown, UserRound, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import Avatar from './Avatar';
@@ -23,6 +23,9 @@ const PAGES = [
   ['/notes-policies', 'Administration', 'Notes & Policies'],
   ['/profile', 'Account', 'My Profile']
 ];
+
+// Pages that already have their own "back" link (they ask before leaving unsaved work), and the home page, show no extra Back button.
+const HAS_OWN_BACK = /^\/(dashboard|login)?$|\/new$|\/edit$|^\/hotels\/(find|found\/)|^\/confirmations\/[^/]+$/;
 
 export const Navbar = ({ onToggleSidebar, isMenuOpen = false }) => {
   const { user, logout } = useAuth();
@@ -54,6 +57,9 @@ export const Navbar = ({ onToggleSidebar, isMenuOpen = false }) => {
     };
   }, [menuOpen]);
 
+  const showBack = !HAS_OWN_BACK.test(location.pathname);
+  const goBack = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/dashboard'));
+
   return (
     <header className="app-navbar">
       {/* Left side: the one menu button + page title */}
@@ -68,6 +74,12 @@ export const Navbar = ({ onToggleSidebar, isMenuOpen = false }) => {
         >
           <Menu size={20} />
         </button>
+
+        {showBack && (
+          <button type="button" onClick={goBack} className="navbar-icon-btn" aria-label="Go back" title="Go back">
+            <ArrowLeft size={18} />
+          </button>
+        )}
 
         <div className="navbar-title">
           <div className="navbar-crumb">{section}</div>

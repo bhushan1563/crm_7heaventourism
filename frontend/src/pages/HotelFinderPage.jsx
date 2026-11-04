@@ -8,6 +8,7 @@ import { API_ORIGIN, getErrorMessage } from '../services/api';
 import { uploadPhoto } from '../services/mediaService';
 import { fileFromUrl } from '../utils/pastedImages';
 import { FIND_STEPS, checkAddress, foundFromFind } from '../utils/hotelFinder';
+import { addFoundToHotelList } from '../utils/addFoundToHotels';
 import { exportFoundCsv, exportFoundDocx, exportFoundPdf, loadPictures } from '../utils/hotelFinderExport';
 import FindResult from '../components/hotelFinder/FindResult';
 import './itineraries.css';
@@ -197,7 +198,15 @@ export const HotelFinderPage = () => {
 
   const addToList = async () => {
     const record = await save();
-    if (record) navigate(`/hotels/new?fromFound=${record._id}`);
+    if (!record) return;
+    setSaving('Adding to the hotel list…');
+    const r = await addFoundToHotelList(record);
+    setSaving('');
+    if (r.ok) {
+      showToast('Added to the hotel list.', 'success');
+      navigate(`/hotels/${r.hotel._id}/edit`);
+    } else if (r.needsForm) navigate(`/hotels/new?fromFound=${record._id}`);
+    else showToast(r.message, 'error');
   };
 
   const submitMorePaste = async (e) => {
@@ -323,7 +332,7 @@ export const HotelFinderPage = () => {
               <button type="button" className="btn btn-primary" onClick={save} disabled={busy || Boolean(saved)}>
                 {saving ? <Loader2 size={15} className="animate-spin" /> : saved ? <Check size={15} /> : <Save size={15} />} <span>{saving || (saved ? 'Saved' : 'Save to the app')}</span>
               </button>
-              <button type="button" className="btn btn-outline" onClick={addToList} disabled={busy || !can('hotels', 'canCreate')}><Hotel size={15} /> Add to the hotel list</button>
+              <button type="button" className="btn btn-outline" onClick={addToList} disabled={busy || !can('hotels', 'canCreate')}><Hotel size={15} /> Save to hotel list</button>
               <button type="button" className="btn btn-outline" onClick={() => download('docx')} disabled={busy || Boolean(downloading)}>{downloading === 'docx' ? <Loader2 size={15} className="animate-spin" /> : <FileText size={15} />} Word</button>
               <button type="button" className="btn btn-outline" onClick={() => download('pdf')} disabled={busy || Boolean(downloading)}>{downloading === 'pdf' ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />} PDF</button>
               <button type="button" className="btn btn-outline" onClick={() => download('csv')} disabled={busy || Boolean(downloading)}>{downloading === 'csv' ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />} CSV</button>

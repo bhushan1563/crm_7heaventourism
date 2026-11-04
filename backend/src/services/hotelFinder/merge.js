@@ -194,11 +194,18 @@ export const mergeCandidates = ({ candidates, pageKinds = new Map(), site = '', 
   // A locality that is just the region name (e.g. "Maharashtra") after postal stripping is a data quality problem
   // common on corporate chain homepages whose JSON-LD carries the head-office address. Clear it so the UI does not
   // show the state as the city.
-  if (address.locality && address.region) {
-    const norm = (s) => s.toLowerCase().replace(/\s+/g, '');
-    if (norm(address.locality) === norm(address.region) || norm(address.locality).startsWith(norm(address.region))) {
-      address.locality = '';
-      delete addressInfo.locality;
+  if (address.locality) {
+    const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+    // a postal code left on the end of the town (even one that differs from the chosen code) is not part of the town's name
+    const trimmed = address.locality.replace(/[\s,-]*\d[\d\s-]{2,8}$/, '').trim();
+    if (trimmed.length >= 3) address.locality = trimmed;
+    const split = address.full ? addressParts(address.full) : {};
+    const isRegion = [address.region, split.region].some((r) => r && norm(r) === norm(address.locality));
+    if (isRegion) {
+      // the "town" is really the state: take the town from the printed address instead (the part before the state), or leave it empty
+      address.locality = split.locality && norm(split.locality) !== norm(address.locality) ? split.locality : '';
+      if (address.locality) addressInfo.locality = fullInfo ? { ...fullInfo, confidence: round3(fullInfo.confidence * 0.7), level: levelOf(fullInfo.confidence * 0.7) } : addressInfo.locality;
+      else delete addressInfo.locality;
     }
   }
   hotel.address = address;

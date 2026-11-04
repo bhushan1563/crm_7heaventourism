@@ -5,13 +5,14 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import userEvent from '@testing-library/user-event';
 import fc from 'fast-check';
 
-const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true, delete: true, edit: true } }));
+const h = vi.hoisted(() => ({ showToast: vi.fn(), navigate: vi.fn(), perms: { create: true, delete: true, edit: true }, addFound: vi.fn() }));
 vi.mock('../context/AuthContext', () => ({
   useAuth: () => ({ can: (m, a) => (a === 'canCreate' ? h.perms.create : a === 'canDelete' ? h.perms.delete : true), canEditRecord: () => h.perms.edit })
 }));
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }));
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig()), useNavigate: () => h.navigate }));
 vi.mock('../services/hotelFinderService', () => ({ default: { list: vi.fn(), get: vi.fn(), update: vi.fn(), remove: vi.fn() } }));
+vi.mock('../utils/addFoundToHotels', () => ({ addFoundToHotelList: (...a) => h.addFound(...a) }));
 vi.mock('../services/mediaService', () => ({ mediaUrl: (t, v = 'full') => `/media/${t}${v === 'thumb' ? '/thumb' : ''}` }));
 vi.mock('../components/PhotoGallery', () => ({ default: ({ photos, label }) => <div>{label}: {photos.length}</div> }));
 vi.mock('../utils/hotelFinderExport', () => ({ exportFoundCsv: vi.fn(async () => ({ ok: true })), exportFoundDocx: vi.fn(async () => ({})), exportFoundPdf: vi.fn(async () => ({})) }));
@@ -71,9 +72,16 @@ describe('Found hotels (the second section of the hotel list)', () => {
     const [a, b] = screen.getAllByRole('article');
     await userEvent.click(within(a).getByRole('button', { name: /^Open Found 1$/ }));
     expect(h.navigate).toHaveBeenCalledWith('/hotels/found/f1');
-    await userEvent.click(within(a).getByRole('button', { name: /add to list/i }));
-    expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=f1');
-    expect(within(b).queryByRole('button', { name: /add to list/i })).toBeNull();
+    hotelFinderService.get.mockResolvedValue({ success: true, data: { _id: 'f1', name: 'Found 1' } });
+    h.addFound.mockResolvedValueOnce({ ok: true, hotel: { _id: 'h1' }, marked: true });
+    await userEvent.click(within(a).getByRole('button', { name: /save to hotel list/i }));
+    await waitFor(() => expect(h.addFound).toHaveBeenCalledWith({ _id: 'f1', name: 'Found 1' }));
+    await waitFor(() => expect(h.showToast).toHaveBeenCalledWith('Found 1 was added to the hotel list.', 'success'));
+    expect(h.navigate).not.toHaveBeenCalledWith('/hotels/new?fromFound=f1');
+    h.addFound.mockResolvedValueOnce({ ok: false, needsForm: true });
+    await userEvent.click(within(a).getByRole('button', { name: /save to hotel list/i }));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=f1')); // required details missing: the form opens
+    expect(within(b).queryByRole('button', { name: /save to hotel list/i })).toBeNull();
     await userEvent.click(within(b).getByRole('button', { name: /^hotel$/i }));
     expect(h.navigate).toHaveBeenCalledWith('/hotels/h9/edit');
   });
@@ -166,7 +174,7 @@ describe('a saved find: view, edit, download, add, remove', () => {
     await userEvent.type(screen.getByLabelText('Phone number 2'), '+91 98290 12345');
     await userEvent.click(screen.getByRole('button', { name: /add a room type/i })); // a blank row is dropped when saving
     expect(screen.getByText('Unsaved changes')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /add to the hotel list/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save to hotel list/i })).toBeDisabled();
     await userEvent.click(screen.getByRole('button', { name: /save changes/i }));
     await waitFor(() => expect(hotelFinderService.update).toHaveBeenCalledTimes(1));
     const [id, payload] = hotelFinderService.update.mock.calls[0];
@@ -224,13 +232,14 @@ describe('a saved find: view, edit, download, add, remove', () => {
   it('adds the hotel to the hotel list, or opens the hotel it already became', async () => {
     hotelFinderService.get.mockResolvedValue({ success: true, data: record() });
     open();
-    await userEvent.click(await screen.findByRole('button', { name: /add to the hotel list/i }));
-    expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=f1');
+    h.addFound.mockResolvedValueOnce({ ok: false, needsForm: true });
+    await userEvent.click(await screen.findByRole('button', { name: /save to hotel list/i }));
+    await waitFor(() => expect(h.navigate).toHaveBeenCalledWith('/hotels/new?fromFound=f1'));
     cleanup();
     hotelFinderService.get.mockResolvedValue({ success: true, data: record({ status: 'Added', hotelId: 'h77' }) });
     open();
     expect(await screen.findByText('In the hotel list')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /add to the hotel list/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /save to hotel list/i })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: /open in the hotel list/i }));
     expect(h.navigate).toHaveBeenCalledWith('/hotels/h77/edit');
   });

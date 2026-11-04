@@ -32,6 +32,14 @@ export const hotelBookingsOf = (confirmation) =>
       : { confirmationNo: '', contactNumber: stay?.contactNumber || '', checkInTime: stay?.checkInTime || '', checkOutTime: stay?.checkOutTime || '' };
   });
 
+/** A duration as people read it: a bare number ("7") is the nights, like the pricing tables take it; text such as "4 Nights / 5 Days" is kept. */
+export const durationText = (duration) => {
+  const text = String(duration ?? '').trim();
+  if (!/^\d+$/.test(text)) return text;
+  const n = Number(text);
+  return `${n} ${n === 1 ? 'Night' : 'Nights'}`;
+};
+
 /** A stored date as the value of a date input (yyyy-mm-dd), or ''. */
 export const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
 
@@ -138,6 +146,7 @@ export const quotationOf = (confirmation, form) => {
   const travelDate = form ? form.travelDate || '' : confirmation?.travelDate ?? quote.travelDate;
   return {
     ...quote,
+    ...(quote.duration ? { duration: durationText(quote.duration) } : {}),
     travelDate,
     quotationNo: confirmation?.confirmationNo || quote.quotationNo || '',
     packageDetails: { ...(quote.packageDetails || {}), hotels },

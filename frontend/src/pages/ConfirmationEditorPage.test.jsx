@@ -57,6 +57,27 @@ describe('ConfirmationEditorPage', () => {
     expect(screen.getByRole('button', { name: /Save changes/ })).toBeDisabled();
   });
 
+  it('opens an old booking with a bare duration, no option, no hotels and no travellers, without blanks or crashes', async () => {
+    confirmationService.get.mockResolvedValue({ success: true, data: stored({ duration: '7', optionName: '', travellers: [], travelDate: null, hotelBookings: undefined, quote: { duration: '7' } }) });
+    show();
+    await screen.findByRole('heading', { name: '7H-CF-2026-001' });
+    const summary = document.querySelector('.cf-summary');
+    expect(summary).toHaveTextContent('7 Nights');
+    expect(summary).toHaveTextContent('Not set');
+    expect(document.body).not.toHaveTextContent(/undefined|NaN|Invalid Date/);
+  });
+
+  it('shows the hotels of the sold option with their address, city and dates', async () => {
+    const stay = { hotelName: 'Hotel One', city: 'Udaipur', address: 'Lake Road', checkInDate: '2027-04-10', checkOutDate: 'not-a-date' };
+    confirmationService.get.mockResolvedValue({ success: true, data: stored({ quote: { packageDetails: { hotels: [stay] }, pricing: { grandTotal: 5000 } } }) });
+    show();
+    await screen.findByRole('heading', { name: '7H-CF-2026-001' });
+    const snap = document.querySelector('.cf-quote-snapshot');
+    expect(snap).toHaveTextContent('Lake Road, Udaipur');
+    expect(snap).toHaveTextContent('In: 10-04-2027');
+    expect(snap).not.toHaveTextContent('Invalid Date');
+  });
+
   it('saves only what changed in the booking, with the version it was loaded at, and shows the new balance', async () => {
     confirmationService.get.mockResolvedValue({ success: true, data: stored() });
     confirmationService.update.mockResolvedValue({ success: true, message: 'Booking details saved.', data: stored({ payment: { totalAmount: 120000, received: 90000, balanceDueDate: '2027-03-01T00:00:00.000Z', note: '' }, updatedAt: '2026-11-01T11:00:00.000Z' }) });
