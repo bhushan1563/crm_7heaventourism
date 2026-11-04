@@ -144,16 +144,20 @@ const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 /**
  * The PRICING of a hotel or package quotation, laid out like the company's sheets: a box titled PRICING, then for each option its name,
- * a table and the Grand Total. A hotel quotation has the first sheet (Sr No, Package, Airfare, Visa, TCS, Total, PAX, Final Price; a row
- * for Adult, Extra bed, CWB, CNB ...); a package has the second (Room, Per room per night, No of nights, No of rooms, Total; a row for
- * For 2 Adults, Extra bed, Child With bed, Child No Bed). Empty cells stay empty, as on the sheets. Every total is worked out here from
- * the figures, so they always agree.
+ * a table and the Grand Total.
+ * - Only Hotel: Sr No, Package, Total, PAX, Final Price (Airfare / Visa / TCS are not part of a hotel-only quotation).
+ * - Package: Room, Per room per night, No of nights, No of rooms, Total (the client's "rooms" sheet).
+ * Empty cells stay empty, as on the sheets. Every total is worked out from the figures so they always agree.
  */
 const PriceTablesSection = ({ tables, quotation }) => {
   const border = '1px solid #0f172a';
   const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
+  // Only Hotel shows only the Package amount; Airfare, Visa and TCS are not part of a hotel-only quotation.
+  const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
+  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
+  const sheetColSpan = 2 + sheetCols.length + 1; // Sr No + amounts + PAX + Final Price → colSpan for Grand Total
   return (
     <div style={{ marginBottom: '14px' }}>
       <div className="quotation-keep" style={{ border: '1.5px solid #0f172a', textAlign: 'center', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', padding: '4px 0', color: '#0f172a' }}>PRICING</div>
@@ -195,11 +199,11 @@ const PriceTablesSection = ({ tables, quotation }) => {
           <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th colSpan={8} style={{ ...head, fontSize: '10.5px', borderBottom: 'none' }}>{table.name || `Option ${i + 1}`}</th>
+                <th colSpan={sheetColSpan} style={{ ...head, fontSize: '10.5px', borderBottom: 'none' }}>{table.name || `Option ${i + 1}`}</th>
               </tr>
               <tr>
-                {['Sr No', ...AMOUNT_COLUMNS.map(([, title]) => title), 'Total', 'PAX', 'Final Price'].map((title, c) => (
-                  <th key={title} style={{ ...head, width: c === 0 ? '14%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
+                {['Sr No', ...sheetCols.map(([, title]) => title), 'Total', 'PAX', 'Final Price'].map((title, c) => (
+                  <th key={title} style={{ ...head, width: c === 0 ? '20%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
                 ))}
               </tr>
             </thead>
@@ -207,17 +211,28 @@ const PriceTablesSection = ({ tables, quotation }) => {
               {(table.rows || []).map((row, r) => (
                 <tr key={r}>
                   <td style={{ ...cell, textAlign: 'left', fontWeight: 800 }}>{row.label}</td>
-                  {AMOUNT_COLUMNS.map(([key]) => (
+                  {sheetCols.map(([key]) => (
                     <td key={key} style={cell}>{cellText(row[key])}</td>
                   ))}
-                  <td style={cell}>{cellText(rowTotal(row))}</td>
-                  <td style={{ ...cell, textAlign: 'center' }}>{Number(row.pax) > 0 ? Number(row.pax) : ''}</td>
-                  <td style={{ ...cell, fontWeight: 800 }}>{cellText(rowFinal(row))}</td>
+                  {(() => {
+                    // For Only Hotel: Total = Package only; Final Price = Package × PAX (Airfare/Visa/TCS excluded)
+                    const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
+                    const final = Math.round(tot * (Number(row.pax) || 0) * 100) / 100;
+                    return (<>
+                      <td style={cell}>{cellText(tot)}</td>
+                      <td style={{ ...cell, textAlign: 'center' }}>{Number(row.pax) > 0 ? Number(row.pax) : ''}</td>
+                      <td style={{ ...cell, fontWeight: 800 }}>{cellText(final)}</td>
+                    </>);
+                  })()}
                 </tr>
               ))}
               <tr>
-                <td colSpan={7} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
+                <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
+                  {rs(isHotelOnly
+                    ? Math.round((table.rows || []).reduce((sum, r) => sum + Math.round((Number(r.package) || 0) * (Number(r.pax) || 0) * 100) / 100, 0) * 100) / 100
+                    : tableTotal(table, quotation))}
+                </td>
               </tr>
             </tbody>
           </table>
@@ -592,7 +607,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
   const company = quotation.companyDetails || {
     name: '7Heaven Tourism',
-    tagline: 'Travel with the Trust',
+    tagline: 'Travel with Trust',
     description: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings',
     address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
     phone: '+91 7862829178',
@@ -657,7 +672,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 marginTop: '2px'
               }}
             >
-              {company.tagline || 'Travel with the Trust'}
+              {company.tagline || 'Travel with Trust'}
             </div>
           </div>
         </div>
@@ -844,6 +859,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
+    // For Only Hotel with options the pricing was already rendered inline below the options; don't render it again here.
+    if (hasPriceTables && hasOptions && quotationType === 'Only Hotel') return null;
     if (hasPriceTables) return <PriceTablesSection tables={priceTables} quotation={quotation} />;
     if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
     return (
@@ -1129,7 +1146,13 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel' ? <HotelOptionsProposal options={options} priced={hasPriceTables} /> : <OptionsComparison options={options} paxDetails={quotation.paxDetails} priced={hasPriceTables} />)}
+                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel'
+                  ? <>
+                      <HotelOptionsProposal options={options} priced={hasPriceTables} />
+                      {/* For Only Hotel the pricing sits directly below the options so the two can be compared at a glance. */}
+                      {hasPriceTables && <PriceTablesSection tables={priceTables} quotation={quotation} />}
+                    </>
+                  : <OptionsComparison options={options} paxDetails={quotation.paxDetails} priced={hasPriceTables} />)}
 
                 {/* Hotels Table / Cards Layout */}
                 {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (

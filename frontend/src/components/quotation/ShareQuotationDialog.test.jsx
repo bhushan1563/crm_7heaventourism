@@ -241,9 +241,12 @@ describe('PDF or Word', () => {
     expect(screen.getByLabelText('Message')).toHaveValue('My own words');
   });
 
-  it('offers Word for visa quotations only', () => {
-    show({ quotation: quote({ quotationType: 'Package' }) });
-    expect(screen.getByRole('radio', { name: /Word/ })).toBeDisabled();
+  it('offers Word for all quotation types (hotel, package and visa)', () => {
+    for (const type of ['Package', 'Only Hotel', 'Visa']) {
+      show({ quotation: quote({ quotationType: type }) });
+      expect(screen.getByRole('radio', { name: /Word/ })).not.toBeDisabled();
+      cleanup();
+    }
   });
 
   it('can just download the file', async () => {

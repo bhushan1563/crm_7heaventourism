@@ -55,9 +55,12 @@ export const useQuotationFiles = () => {
   );
 
   const docx = useCallback(async (quotation) => {
-    if (quotation?.quotationType !== 'Visa') throw sayable('A Word file is available for visa quotations.');
-    const { generateVisaQuotationDocx } = await import('../utils/quotationDocx');
-    return generateVisaQuotationDocx(quotation);
+    if (quotation?.quotationType === 'Visa') {
+      const { generateVisaQuotationDocx } = await import('../utils/quotationDocx');
+      return generateVisaQuotationDocx(quotation);
+    }
+    const { generateQuotationDocx } = await import('../utils/quotationDocx');
+    return generateQuotationDocx(quotation);
   }, []);
 
   const host = pending ? (
