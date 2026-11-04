@@ -10,12 +10,30 @@ import { readUrl } from './webReader.js';
 // the reading itself is in webReader, the facts are in extract/, the choosing between facts is in merge.
 
 export const FINDER_LIMITS = {
-  extraPages: 5, // pages read besides the one that was typed
+  extraPages: 8, // pages read besides the one that was typed
   budgetMs: 22_000, // for the whole find
   pageTimeoutMs: 7000,
   concurrency: 3,
   pastedChars: 300_000
 };
+
+// UTM and other ad-platform tracking parameters — strip them so the page fetch is clean and robots.txt path checks are accurate.
+const TRACKING_PARAM = /^(?:utm_|mc_|_ga$|gclid$|gclsrc$|fbclid$|msclkid$|twclid$|li_fat_id$|dclid$)/i;
+
+const cleanStartUrl = (input) => {
+  const s = String(input || '').trim();
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
+    for (const key of [...u.searchParams.keys()]) if (TRACKING_PARAM.test(key)) u.searchParams.delete(key);
+    if ([...u.searchParams.keys()].length === 0) u.search = '';
+    return u.toString();
+  } catch {
+    return s;
+  }
+};
+
+// A URL path that belongs to a campaign or promotion page rather than the hotel's main content.
+const PROMO_PATH = /\/(?:promotions?|deals?|offers?|campaigns?|packages?|specials?|limited[-_]?time|book[-_]?now|book[-_]?online)(?:\/|$)/i;
 
 const fail = (code, message, extra = {}) => ({ ok: false, code, message, canPaste: false, ...extra });
 
@@ -110,21 +128,31 @@ export const findHotel = async (input, options = {}) => {
 
   // 3. Which other pages are worth reading (from the links on the page and the sitemap), and only those robots.txt allows.
   const sitemap = remaining() > 3000 ? await d.loadSitemapUrls(finalTarget.origin, robots.sitemaps || [], readOptions({ timeoutMs: Math.min(4500, remaining()) })) : { urls: [], files: [] };
-  const plan = rankPages({ start: first.url, links: startPage.extraction.links, sitemap: sitemap.urls, limit: FINDER_LIMITS.extraPages + 3 })
-    .filter((p) => {
-      const ok = isPathAllowed(robots, pathOf(p.url));
-      if (!ok) notes.skipped.push({ url: p.url, reason: 'robots.txt asks not to read it' });
-      return ok;
-    })
-    .slice(0, FINDER_LIMITS.extraPages);
 
-  // 4. Read them, a few at a time, within the time budget.
-  const queue = [...plan];
+  // Track seen URLs so multi-round link discovery never revisits a page.
+  const seenUrls = new Set([first.url]);
+  const makePlan = (allLinks, alreadyQueued) => {
+    const queuedUrls = new Set(alreadyQueued.map((p) => p.url));
+    return rankPages({ start: first.url, links: allLinks, sitemap: sitemap.urls, limit: FINDER_LIMITS.extraPages + 3 })
+      .filter((p) => {
+        if (seenUrls.has(p.url) || queuedUrls.has(p.url)) return false;
+        const ok = isPathAllowed(robots, pathOf(p.url));
+        if (!ok) notes.skipped.push({ url: p.url, reason: 'robots.txt asks not to read it' });
+        return ok;
+      });
+  };
+
+  const initialPlan = makePlan(startPage.extraction.links, []).slice(0, FINDER_LIMITS.extraPages);
+  initialPlan.forEach((p) => seenUrls.add(p.url));
+
+  // 4. Read pages in batches; after each batch, collect new links from all pages read so far for a second discovery round.
+  const queue = [...initialPlan];
+  let pagesRead = 0;
   const worker = async () => {
     while (queue.length) {
       const item = queue.shift();
-      if (remaining() < 1800) {
-        notes.skipped.push({ url: item.url, reason: 'out of time' });
+      if (pagesRead >= FINDER_LIMITS.extraPages || remaining() < 1800) {
+        notes.skipped.push({ url: item.url, reason: remaining() < 1800 ? 'out of time' : 'page limit reached' });
         continue;
       }
       const result = await d.readUrl(item.url, readOptions());
@@ -132,7 +160,16 @@ export const findHotel = async (input, options = {}) => {
         notes.skipped.push({ url: item.url, reason: result.ok ? 'the page asks visitors to prove they are not a robot' : result.message });
         continue;
       }
-      pages.push({ url: result.url, kind: item.kind, status: result.status, extraction: extractPage({ url: result.url, html: result.text }) });
+      const page = { url: result.url, kind: item.kind, status: result.status, extraction: extractPage({ url: result.url, html: result.text }) };
+      pages.push(page);
+      pagesRead += 1;
+      seenUrls.add(result.url);
+      // After the first couple of pages, run a second link-discovery pass using all links gathered so far.
+      if (pagesRead === Math.ceil(FINDER_LIMITS.extraPages / 3) && pagesRead < FINDER_LIMITS.extraPages) {
+        const allLinks = pages.flatMap((p) => p.extraction.links);
+        const extra = makePlan(allLinks, queue).slice(0, FINDER_LIMITS.extraPages - pagesRead - queue.length);
+        extra.forEach((p) => { seenUrls.add(p.url); queue.push(p); });
+      }
     }
   };
   await Promise.all(Array.from({ length: Math.min(FINDER_LIMITS.concurrency, queue.length) }, worker));

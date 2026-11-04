@@ -11,6 +11,8 @@
 .be-hotel { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
 .be-hotel-name { font-weight: 800; font-size: 0.9rem; color: var(--text-primary); }
 .be-hotel-name small { font-weight: 500; color: var(--text-muted); }
+.be-hotel-info { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 4px 12px; font-size: 0.78rem; color: var(--text-secondary); padding: 6px 0; border-top: 1px solid var(--border-color); }
+.be-hotel-info span strong { color: var(--text-primary); font-weight: 600; }
 .be-hotel-grid { display: grid; grid-template-columns: minmax(160px, 2fr) minmax(160px, 2fr) minmax(110px, 1fr) minmax(110px, 1fr); gap: 8px 10px; align-items: start; }
 .cf-cancel-btn:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .be-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
@@ -31,6 +33,18 @@
 .cf-badge.is-cancelled { color: #b91c1c; background: #fee2e2; }
 .cf-owing { color: #b45309; }
 .cf-clear { color: #047857; }
+
+/* Quotation snapshot: read-only overview on the confirmation editor page */
+.cf-quote-snapshot { display: flex; flex-direction: column; gap: 12px; padding: 14px 18px; }
+.cf-quote-snapshot-head { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 16px; }
+.cf-quote-pricing { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px 14px; padding: 10px 12px; background: var(--surface-2); border-radius: 8px; }
+.cf-quote-pricing dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.cf-quote-pricing dd { margin: 2px 0 0; font-size: 0.95rem; font-weight: 800; color: var(--primary-text); }
+.cf-quote-hotels { display: flex; flex-direction: column; gap: 8px; }
+.cf-quote-hotel { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-2); }
+.cf-quote-hotel-name { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); margin-bottom: 4px; }
+.cf-quote-hotel-name small { font-weight: 500; color: var(--text-muted); }
+.cf-quote-hotel-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; color: var(--text-secondary); }
 
 /* The list: rows on a wide screen, stacked cards on a phone. */
 .cf-table { width: 100%; }

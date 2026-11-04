@@ -230,6 +230,45 @@ export const ConfirmationEditorPage = () => {
         <div><dt>Confirmed</dt><dd>{record.confirmedAt ? formatDate(record.confirmedAt) : '–'}{record.createdByName ? ` by ${record.createdByName}` : ''}</dd></div>
       </dl>
 
+      {/* Quotation snapshot: read-only overview of what was sold so team can see it while filling booking details */}
+      {record.quote && (hotelsOfQuote(record.quote).length > 0 || record.quote.pricing?.grandTotal > 0) && (
+        <section className="glass-panel cf-quote-snapshot">
+          <div className="cf-quote-snapshot-head">
+            <h3 className="edit-section-title">Quotation snapshot</h3>
+            <span className="edit-hint" style={{ margin: 0 }}>Read-only: what was sold — hotels, pricing and package details from the original quotation.</span>
+          </div>
+          {record.quote.pricing?.grandTotal > 0 && (
+            <dl className="cf-quote-pricing">
+              {record.quote.pricing.totalCostPerPerson > 0 && <div><dt>Per person</dt><dd>{money(record.quote.pricing.totalCostPerPerson)}</dd></div>}
+              <div><dt>Grand total</dt><dd>{money(record.quote.pricing.grandTotal)}</dd></div>
+              {record.quote.paxDetails && <div><dt>Pax</dt><dd>{record.quote.paxDetails}</dd></div>}
+              {record.quote.duration && <div><dt>Duration</dt><dd>{record.quote.duration}</dd></div>}
+            </dl>
+          )}
+          {hotelsOfQuote(record.quote).length > 0 && (
+            <div className="cf-quote-hotels">
+              {hotelsOfQuote(record.quote).map((stay, i) => (
+                <div className="cf-quote-hotel" key={i}>
+                  <div className="cf-quote-hotel-name">
+                    {stay.hotelName || `Hotel ${i + 1}`}
+                    {stay.starRating && <small> · {stay.starRating}</small>}
+                    {stay.city && <small> · {stay.city}</small>}
+                  </div>
+                  <div className="cf-quote-hotel-meta">
+                    {stay.nights && <span>🌙 {stay.nights}</span>}
+                    {stay.roomCategory && <span>🛏 {stay.roomCategory}</span>}
+                    {stay.mealPlan && <span>🍽 {stay.mealPlan}</span>}
+                    {stay.checkInDate && <span>In: {new Date(stay.checkInDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+                    {stay.checkOutDate && <span>Out: {new Date(stay.checkOutDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>}
+                    {stay.address && <span>📍 {stay.address}{stay.city && !stay.address.includes(stay.city) ? `, ${stay.city}` : ''}</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
       <BookingEditor form={form} errors={errors} onChange={set} readOnly={readOnly} hotels={hotelsOfQuote(record.quote)} />
 
       <div className="edit-bar" role="region" aria-label="Save">
