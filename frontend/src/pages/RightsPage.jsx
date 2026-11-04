@@ -57,7 +57,9 @@ export const RightsPage = () => {
   const [permissions, setPermissions] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [senderInput, setSenderInput] = useState(''); // the sender number of the selected person, as typed
+  // What was typed in the sender number box; null until somebody types, when the box shows the saved number of the selected person.
+  const [senderDraft, setSenderInput] = useState(null);
+  const senderInput = senderDraft ?? (selectedUser?.senderNumber || '');
   const [senderError, setSenderError] = useState('');
   const [savingSender, setSavingSender] = useState(false);
 
@@ -67,7 +69,7 @@ export const RightsPage = () => {
 
   // The box shows the saved sender number of whoever is selected.
   useEffect(() => {
-    setSenderInput(selectedUser?.senderNumber || '');
+    setSenderInput(null);
     setSenderError('');
   }, [selectedUser?._id, selectedUser?.senderNumber]);
 
@@ -214,7 +216,7 @@ export const RightsPage = () => {
         const saved = res.data?.senderNumber || '';
         setUsers((list) => list.map((u) => (u._id === selectedUser._id ? { ...u, senderNumber: saved } : u)));
         setSelectedUser((u) => ({ ...u, senderNumber: saved }));
-        setSenderInput(saved); // the box shows the number as it was stored, even when it is the one that was already there
+        setSenderInput(null); // the box shows the number as it was stored, even when it is the one that was already there
         showToast(res.message || 'The sender number was saved.', 'success');
       } else {
         setSenderError(res.message || 'The sender number could not be saved.');
