@@ -145,9 +145,12 @@ export const findHotel = async (input, options = {}) => {
   const initialPlan = makePlan(startPage.extraction.links, []).slice(0, FINDER_LIMITS.extraPages);
   initialPlan.forEach((p) => seenUrls.add(p.url));
 
-  // 4. Read pages in batches; after each batch, collect new links from all pages read so far for a second discovery round.
+  // 4. Read pages concurrently; after the first third is read, re-scan all collected links for a second discovery pass.
+  // `totalPlanned` tracks every URL committed to the queue (read or still queued) so we never exceed extraPages.
   const queue = [...initialPlan];
   let pagesRead = 0;
+  let totalPlanned = initialPlan.length;
+  let secondDiscoveryDone = false;
   const worker = async () => {
     while (queue.length) {
       const item = queue.shift();
@@ -164,11 +167,17 @@ export const findHotel = async (input, options = {}) => {
       pages.push(page);
       pagesRead += 1;
       seenUrls.add(result.url);
-      // After the first couple of pages, run a second link-discovery pass using all links gathered so far.
-      if (pagesRead === Math.ceil(FINDER_LIMITS.extraPages / 3) && pagesRead < FINDER_LIMITS.extraPages) {
-        const allLinks = pages.flatMap((p) => p.extraction.links);
-        const extra = makePlan(allLinks, queue).slice(0, FINDER_LIMITS.extraPages - pagesRead - queue.length);
-        extra.forEach((p) => { seenUrls.add(p.url); queue.push(p); });
+      // After reading roughly the first third, enrich the queue with links found on all pages so far.
+      // The `secondDiscoveryDone` flag is set synchronously (before any await) so only one worker ever runs this.
+      if (!secondDiscoveryDone && pagesRead >= Math.ceil(FINDER_LIMITS.extraPages / 3)) {
+        secondDiscoveryDone = true;
+        const canAdd = FINDER_LIMITS.extraPages - totalPlanned;
+        if (canAdd > 0) {
+          const allLinks = pages.flatMap((p) => p.extraction.links);
+          const extra = makePlan(allLinks, queue).slice(0, canAdd);
+          totalPlanned += extra.length;
+          extra.forEach((p) => { seenUrls.add(p.url); queue.push(p); });
+        }
       }
     }
   };
