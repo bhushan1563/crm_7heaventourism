@@ -92,23 +92,21 @@ describe('hotel options when the pricing tables carry the prices', () => {
     { name: '4 Star', hotels: [stay('Hotel Three')], pricePerPerson: 0, totalPrice: 0, priceNote: 'Per person' }
   ];
 
-  it('a hotel quotation: every hotel of every option is shown, with no price bar and no "On request"', () => {
+  it('a hotel quotation: every hotel of every option is shown, with the price table inline and no separate PRICING section', () => {
     const sheet = [{ name: '3 Star', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }];
     const { container } = show(packageQuotation({ quotationType: 'Only Hotel', options: options(), priceTables: sheet }));
     for (const name of ['Hotel One', 'Hotel Two', 'Hotel Three']) expect(container).toHaveTextContent(name);
     expect(container).not.toHaveTextContent('On request');
     expect(container).not.toHaveTextContent('Price per person');
-    expect(container).toHaveTextContent('The price of each option is in the pricing table below');
-    expect(screen.getByText('PRICING')).toBeInTheDocument();
+    expect(screen.queryByText('PRICING')).toBeNull(); // price tables are now inline below each option
     expect(container).toHaveTextContent('Rs 2,000');
   });
 
-  it('a package: the option cards show the hotels only, the prices are in the PRICING table', () => {
+  it('a package: the option cards show hotels and their inline price tables, no separate PRICING section', () => {
     const { container } = show(packageQuotation({ options: options() }));
     for (const name of ['Hotel One', 'Hotel Two', 'Hotel Three']) expect(container).toHaveTextContent(name);
     expect(container).not.toHaveTextContent('On request');
-    expect(container).toHaveTextContent('The price of each option is in the pricing table below');
-    expect(screen.getAllByRole('table')).toHaveLength(2);
+    expect(screen.getAllByRole('table')).toHaveLength(2); // two inline price tables, one per option
   });
 
   it('options without tables are priced as before', () => {
