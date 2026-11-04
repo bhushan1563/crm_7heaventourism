@@ -57,6 +57,12 @@ export const visibleLines = (root, { maxChars = 400_000 } = {}) => {
     }
     if (SKIP.has(node.name)) return;
     if (node.attribs?.hidden !== undefined || node.attribs?.['aria-hidden'] === 'true' || (node.attribs?.style && HIDDEN_STYLE.test(node.attribs.style))) return;
+    // Skip accessibility "skip to content" anchors — their text is never the hotel's name or useful body content
+    if (node.name === 'a') {
+      const href = (node.attribs?.href || '').trim();
+      const cls = (node.attribs?.class || '').toLowerCase();
+      if (href.startsWith('#') && (/skip/i.test(cls) || /^#(?:main(?:-content)?|content|maincontent|skip|primary)$/i.test(href))) return;
+    }
     const block = BLOCK.has(node.name);
     const heading = /^h[1-6]$/.test(node.name);
     if (block) flush();

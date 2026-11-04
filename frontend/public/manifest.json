@@ -1,0 +1,13 @@
+{
+  "name": "7Heaven Tourism CRM",
+  "short_name": "7Heaven",
+  "description": "7Heaven Luxury Travel CRM — quotations, confirmations, hotels and itineraries",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    { "src": "/logo.webp", "sizes": "512x512", "type": "image/webp", "purpose": "any maskable" }
+  ]
+}

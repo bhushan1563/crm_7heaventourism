@@ -27,7 +27,8 @@ const DANGEROUS = /^(?:javascript|data|file|ftp|mailto|tel|blob|about|view-sourc
  * refuses private and reserved addresses). Returns { ok: true, url } or { ok: false, message }.
  */
 export const checkAddress = (input) => {
-  const text = String(input ?? '').trim();
+  let text;
+  try { text = String(input ?? '').trim(); } catch { text = ''; }
   if (!text) return { ok: false, message: "Please paste the hotel's website address." };
   if (text.length > 2048) return { ok: false, message: "That address is too long. Paste the hotel's home page address instead." };
   if (/\s/.test(text)) return { ok: false, message: 'The address has a space in it. Paste just one web address, for example https://www.example-hotel.com' };

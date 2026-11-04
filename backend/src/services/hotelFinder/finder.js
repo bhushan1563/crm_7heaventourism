@@ -152,6 +152,8 @@ const looksLikeHtml = (text) => /<\s*(?:html|body|div|p|h[1-6]|section|article|u
 const escapeHtml = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 const SECTION_WORDS = /^(?:rooms?(?:\s*(?:&|and)\s*\w+)?|suites?|accommodations?|amenities|facilities|services|features|contact(?:\s+us)?|about(?:\s+us)?|location|policies|policy|dining|gallery|rates|tariff|offers?|reviews?|how to reach|address|activities|experiences)$/i;
+// Nav / accessibility UI lines that appear at the top of pasted page text but carry no hotel information
+const NAV_LINE = /^(?:skip(?:\s+to(?:\s+(?:main\s+)?content)?)?(?:\s+navigation)?|cookie\s+(?:settings?|notice|preferences?|consent|policy)|accept(?:\s+all)?\s+cookies?|decline\s+cookies?|privacy\s+settings?|toggle\s+(?:nav(?:igation)?|menu)|site\s+navigation|main\s+menu|enable\s+javascript|javascript\s+(?:is\s+)?required|loading\.\.\.|powered\s+by\s+\w+)$/i;
 
 /** Turns plain pasted text into simple HTML so the same readers can work on it: short lines followed by longer text are headings. */
 export const textToHtml = (text) => {
@@ -160,6 +162,7 @@ export const textToHtml = (text) => {
   const firstLine = lines.findIndex(Boolean);
   lines.forEach((line, i) => {
     if (!line) return;
+    if (NAV_LINE.test(line)) return; // skip accessibility / nav UI text that is never hotel content
     const next = lines.slice(i + 1).find(Boolean) || '';
     const shape = line.length <= 60 && /^[\p{Lu}\d]/u.test(line) && !/[.!?,:;]$/.test(line) && !/@|https?:|\d{5,}/.test(line) && line.split(' ').length <= 8;
     // The first line is the title; a known section word is a heading; so is a short line followed by a real sentence or paragraph.

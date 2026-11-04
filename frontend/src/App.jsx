@@ -7,6 +7,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import PageLoader from './components/PageLoader';
+import InstallPrompt from './components/InstallPrompt';
 import { lazyWithReload } from './utils/lazyWithReload';
 
 // Each screen is its own chunk, so the login page and shell load fast and the rest is fetched on first visit.
@@ -40,6 +41,7 @@ export function App() {
       <ToastProvider>
         <AuthProvider>
           <ErrorBoundary>
+            <InstallPrompt />
             <Suspense fallback={<PageLoader fullScreen />}>
               <Routes>
                 {/* Public Login Route */}

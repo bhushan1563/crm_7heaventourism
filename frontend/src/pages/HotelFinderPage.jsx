@@ -16,6 +16,40 @@ import '../components/hotelFinder/hotelFinder.css';
 const KEEP_BY_DEFAULT = 8;
 const PARALLEL = 3;
 
+const isNameSuspicious = (name) => !name || /^skip\s+to/i.test(name) || /^(?:home|menu|navigation|cookie|loading)$/i.test(name);
+
+/** Merges a second paste result into the first, keeping existing non-empty values and adding new ones. */
+const mergeHotelData = (base, extra) => {
+  const h1 = base.hotel || {};
+  const h2 = extra.hotel || {};
+  const merged = { ...h1 };
+  for (const key of ['name', 'description', 'propertyType', 'starRating', 'tagline', 'website', 'checkIn', 'checkOut', 'priceLevel']) {
+    if (!h1[key] && h2[key]) merged[key] = h2[key];
+  }
+  if (!h1.rates && h2.rates) merged.rates = h2.rates;
+  if (!h1.guestRating && h2.guestRating) merged.guestRating = h2.guestRating;
+  if (!h1.geo && h2.geo) merged.geo = h2.geo;
+  const a1 = h1.address || {};
+  const a2 = h2.address || {};
+  const mergedAddr = { ...a2 };
+  for (const k of ['full', 'street', 'locality', 'region', 'postalCode', 'country']) if (a1[k]) mergedAddr[k] = a1[k];
+  merged.address = mergedAddr;
+  const union = (a, b, key) => { const seen = new Set((a || []).map((x) => (key ? x[key] : x)?.toLowerCase?.())); return [...(a || []), ...(b || []).filter((x) => !seen.has((key ? x[key] : x)?.toLowerCase?.()))]; };
+  merged.amenities = union(h1.amenities, h2.amenities);
+  merged.phones = union(h1.phones, h2.phones);
+  merged.emails = union(h1.emails, h2.emails);
+  merged.rooms = union(h1.rooms, h2.rooms, 'name');
+  merged.images = union(h1.images, h2.images, 'url');
+  const fi1 = base.fieldInfo || {};
+  const fi2 = extra.fieldInfo || {};
+  const fieldInfo = { ...fi2 };
+  for (const k of Object.keys(fi1)) {
+    if (!fi2[k] || (fi1[k]?.confidence ?? 0) >= (fi2[k]?.confidence ?? 0)) fieldInfo[k] = fi1[k];
+  }
+  const missing = [...new Set([...(extra.completeness?.missing || []), ...(base.completeness?.missing || [])].filter((f) => !Object.keys(merged).includes(f) || !merged[f]))];
+  return { ...base, hotel: merged, fieldInfo, pages: [...(base.pages || []), ...(extra.pages || [])], warnings: [...new Set([...(base.warnings || []), ...(extra.warnings || [])])], completeness: { ...extra.completeness, missing } };
+};
+
 /** Copies the chosen pictures into the app's photo storage (shrunk in the browser, like any uploaded photo). Skips the ones that fail. */
 export const copyPictures = async (images, onProgress) => {
   const photos = new Array(images.length).fill(null);
@@ -58,6 +92,10 @@ export const HotelFinderPage = () => {
   const [saving, setSaving] = useState('');
   const [saved, setSaved] = useState(null);
   const [downloading, setDownloading] = useState('');
+  const [morePasteOpen, setMorePasteOpen] = useState(false);
+  const [morePasteText, setMorePasteText] = useState('');
+  const [morePasteError, setMorePasteError] = useState('');
+  const [merging, setMerging] = useState(false);
   const latest = useRef(0);
   const timer = useRef(null);
 
@@ -162,6 +200,32 @@ export const HotelFinderPage = () => {
     if (record) navigate(`/hotels/new?fromFound=${record._id}`);
   };
 
+  const submitMorePaste = async (e) => {
+    e?.preventDefault();
+    if (!morePasteText.trim()) {
+      setMorePasteError('Paste the other page\'s text first.');
+      return;
+    }
+    setMorePasteError('');
+    setMerging(true);
+    try {
+      const typed = address.trim() && checkAddress(address).ok ? address.trim() : '';
+      const res = await hotelFinderService.findText(morePasteText, typed);
+      if (res.success) {
+        setData((prev) => mergeHotelData(prev, res.data));
+        setMorePasteText('');
+        setMorePasteOpen(false);
+        showToast('Extra page added — details merged in.', 'success');
+      } else {
+        setMorePasteError(res.message || 'Could not read that page.');
+      }
+    } catch (err) {
+      setMorePasteError(getErrorMessage(err, 'Could not read that page. Please try again.'));
+    } finally {
+      setMerging(false);
+    }
+  };
+
   const download = async (kind) => {
     setDownloading(kind);
     try {
@@ -180,7 +244,7 @@ export const HotelFinderPage = () => {
   };
 
   const loading = phase === 'loading';
-  const busy = loading || Boolean(saving);
+  const busy = loading || Boolean(saving) || merging;
 
   if (!allowed) {
     return (
@@ -273,6 +337,25 @@ export const HotelFinderPage = () => {
               <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate('/hotels?tab=found')}>See Found hotels</button>
             </div>
           )}
+          {isNameSuspicious(data.hotel.name) && (
+            <div className="fh-error" role="alert" style={{ background: 'var(--color-warning-bg, #fefce8)', borderColor: 'var(--color-warning, #ca8a04)' }}>
+              <p><AlertCircle size={16} aria-hidden="true" style={{ verticalAlign: '-3px' }} /> The hotel name could not be found automatically. Please type the correct name in the form below before saving, or use <strong>Add details from another page</strong> to paste the About or Contact page.</p>
+            </div>
+          )}
+          <div className="glass-panel fh-box" style={{ marginTop: 12 }}>
+            <p className="fh-hint" style={{ marginBottom: 6 }}>
+              <button type="button" className="fh-link-btn" onClick={() => setMorePasteOpen((o) => !o)} aria-expanded={morePasteOpen}>{morePasteOpen ? 'Hide' : 'Add details from another page'}</button>
+              {' '}— paste the Contact, About or Rooms page to fill in missing details.
+            </p>
+            {morePasteOpen && (
+              <form className="fh-paste" onSubmit={submitMorePaste} noValidate>
+                <label className="form-label" htmlFor="finder-more-paste">Another page's text</label>
+                <textarea id="finder-more-paste" className="form-input" value={morePasteText} onChange={(e) => { setMorePasteText(e.target.value); setMorePasteError(''); }} placeholder="Open the Contact or About page, press Ctrl+A, then Ctrl+C, and paste here." disabled={merging} aria-invalid={Boolean(morePasteError)} />
+                {morePasteError && <p className="field-error" role="alert">{morePasteError}</p>}
+                <button type="submit" className="btn btn-outline" disabled={merging}>{merging ? <><Loader2 size={15} className="animate-spin" /> Adding…</> : <><ClipboardPaste size={15} /> Add details from this page</>}</button>
+              </form>
+            )}
+          </div>
           <FindResult data={data} selected={selected} onToggleImage={toggleImage} onSelectAll={() => setSelected(new Set(data.hotel.images.map((i) => i.url)))} onSelectNone={() => setSelected(new Set())} />
         </>
       )}

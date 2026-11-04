@@ -814,6 +814,37 @@ html.app-shell-active body {
   margin-top: 8px;
 }
 
+/* ---------- PWA install banner ---------- */
+.pwa-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--color-primary, #2563eb);
+  color: #fff;
+  font-size: 0.875rem;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.25);
+}
+.pwa-banner span { flex: 1; }
+.pwa-banner-close {
+  background: none;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.75;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+}
+.pwa-banner-close:hover { opacity: 1; }
+/* Only show on mobile viewports */
+@media (min-width: 768px) { .pwa-banner { display: none; } }
+
 /* ---------- Toasts ---------- */
 /* Bottom-right (not top): a toast must never sit on top of the header buttons (theme, account menu). */
 .toast-stack {
