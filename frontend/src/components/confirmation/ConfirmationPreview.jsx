@@ -14,7 +14,7 @@ export const ConfirmationPreview = ({ confirmation, form, isOpen, onClose }) => 
   const quotation = useMemo(() => quotationOf(confirmation, form), [confirmation, form]);
   const before = useCallback((parts) => <BookingPage confirmation={confirmation} view={view} {...parts} />, [confirmation, view]);
   if (!confirmation) return null;
-  return <QuotationPreviewModal isOpen={isOpen} onClose={onClose} quotation={quotation} before={before} documentLabel="Confirmation" canDownload={can('confirmations', 'canDownload')} />;
+  return <QuotationPreviewModal isOpen={isOpen} onClose={onClose} quotation={quotation} before={before} documentLabel="Confirmation" canDownload={can('confirmations', 'canDownload')} confirmationRecord={confirmation} confirmationView={view} />;
 };
 
 export default ConfirmationPreview;

@@ -28,7 +28,7 @@ const fitZoom = () => {
 // `before` adds pages ahead of the quotation and `documentLabel` names the document (a booking confirmation uses both).
 // `canDownload` is the person's Download right: without it the document can be looked at but not printed or saved as a PDF.
 // `onShare` (optional) adds a "Send to client" button, which hands the quotation to the caller to open its share window.
-export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true, onShare = null }) => {
+export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = null, documentLabel = 'Quotation', canDownload = true, onShare = null, confirmationRecord = null, confirmationView = null }) => {
   const { showToast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -67,7 +67,10 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
     try {
       setIsWordGenerating(true);
       let result;
-      if (quotation?.quotationType === 'Visa') {
+      if (confirmationView && confirmationRecord) {
+        const { generateConfirmationDocx } = await import('../utils/quotationDocx');
+        result = await generateConfirmationDocx(quotation, confirmationView, confirmationRecord);
+      } else if (quotation?.quotationType === 'Visa') {
         const { generateVisaQuotationDocx } = await import('../utils/quotationDocx');
         result = await generateVisaQuotationDocx(quotation);
       } else {

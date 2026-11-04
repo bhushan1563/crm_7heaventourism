@@ -9,7 +9,8 @@ import { blockedAddressReason, parseTarget } from './addressGuard.js';
 // is resolved by OUR lookup at connection time (so a name that answers "public" to a check and "private" to the connection is
 // caught), and every redirect is checked again. Nothing here ever throws for a bad site: the result says what went wrong in words.
 
-export const USER_AGENT = 'Mozilla/5.0 (compatible; 7HeavenHotelFinder/1.0; +https://crm.7heaventourism.in)';
+// Presented to the site as a real browser so basic bot-detection passes. ROBOTS_TOKEN is what we match against in robots.txt.
+export const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 7HeavenHotelFinder/1.0';
 export const ROBOTS_TOKEN = '7HeavenHotelFinder';
 
 export const READER_LIMITS = {
@@ -250,9 +251,17 @@ export const readUrl = async (input, options = {}) => {
     if (remaining <= 0) return failureFromError({ code: 'ETIMEDOUT_TOTAL' }, current);
     const headers = {
       'user-agent': USER_AGENT,
-      accept: accept.includes('image') ? 'image/webp,image/jpeg,image/png,*/*;q=0.5' : 'text/html,application/xhtml+xml,application/xml;q=0.9,text/plain;q=0.8,*/*;q=0.5',
-      'accept-language': 'en;q=0.9,*;q=0.5',
+      accept: accept.includes('image') ? 'image/avif,image/webp,image/jpeg,image/png,*/*;q=0.8' : 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'accept-language': 'en-US,en;q=0.9',
       'accept-encoding': 'gzip, deflate, br',
+      'sec-fetch-dest': accept.includes('image') ? 'image' : 'document',
+      'sec-fetch-mode': 'navigate',
+      'sec-fetch-site': 'none',
+      'sec-fetch-user': '?1',
+      'upgrade-insecure-requests': '1',
+      'sec-ch-ua': '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
       connection: 'close'
     };
     if (referer && hop === 0) headers.referer = referer;
