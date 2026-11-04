@@ -9,10 +9,12 @@ import { cand } from './structured.js';
 // ---- the hotel's own name, from the page's main heading ----
 
 const GENERIC_HEADING = /^(?:home|welcome|welcome to|rooms?|about|about us|contact|contact us|gallery|offers?|menu|book now|search|login|facilities|amenities)$/i;
+// Accessibility / nav UI text that sometimes appears as the page's first heading (skip links, cookie banners, toggle labels)
+const NAV_HEADING = /^skip(?:\s+to(?:\s+(?:main\s+)?content)?)?(?:\s+navigation)?|^cookie\s+(?:settings?|notice|preferences?|consent|policy)|^accept(?:\s+all)?\s+cookies?|^(?:toggle|open|close)\s+(?:nav(?:igation)?|menu)|^site\s+(?:nav|navigation)|^main\s+menu|^primary\s+navigation/i;
 
 export const headingNameCandidates = (lines) => {
   const first = lines.find((l) => l.heading);
-  if (!first || first.text.length < 3 || first.text.length > 80 || GENERIC_HEADING.test(first.text) || /[.!?]$/.test(first.text)) return [];
+  if (!first || first.text.length < 3 || first.text.length > 80 || GENERIC_HEADING.test(first.text) || NAV_HEADING.test(first.text) || /[.!?]$/.test(first.text)) return [];
   return [cand('name', first.text.replace(/^welcome\s+to\s+/i, ''), 'h1', 0.42)];
 };
 

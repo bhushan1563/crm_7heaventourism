@@ -62,12 +62,14 @@ const info = (g) => (g ? { source: g.sources[0], sources: g.sources, confidence:
 // ---- cleaning ----
 
 const GENERIC_NAME = /^(?:home|homepage|welcome|index|untitled|official site|official website|hotel|hotels|resort|book now|rooms?|about(?: us)?|contact(?: us)?|just a moment\.*|access denied|404|not found|error)$/i;
+// Accessibility / nav UI text that should never be treated as a hotel name
+const NAV_UI_NAME = /^skip(?:\s+to(?:\s+(?:main\s+)?content)?)?(?:\s+navigation)?(?:\s+.*)?$|^cookie\s+(?:settings?|notice|preferences?|consent)|^accept(?:\s+all)?\s+cookies?|^toggle\s+(?:nav|menu)|^main\s+menu|^site\s+navigation/i;
 
 /** A hotel name that can be trusted: not a slogan, not a web address, not a generic word. */
 export const cleanName = (value) => {
   let name = cleanDisplay(value).replace(/\s*[|–—•]\s*(?:official\s+(?:web)?site|home|welcome|book\s+now).*$/i, '').replace(/\s{2,}/g, ' ').trim();
   name = name.replace(/^["'“”‘’]+|["'“”‘’]+$/g, '');
-  if (name.length < 2 || name.length > 150 || GENERIC_NAME.test(name) || /^https?:\/\//i.test(name) || /^[\w-]+(?:\.[\w-]+)+$/.test(name)) return '';
+  if (name.length < 2 || name.length > 150 || GENERIC_NAME.test(name) || NAV_UI_NAME.test(name) || /^https?:\/\//i.test(name) || /^[\w-]+(?:\.[\w-]+)+$/.test(name)) return '';
   if (/\b(?:best|top|cheap|book|deals?|offers?)\b.*\b(?:hotels?|stays?)\b.*\b(?:in|near)\b/i.test(name) && name.length > 40) return '';
   return name;
 };
