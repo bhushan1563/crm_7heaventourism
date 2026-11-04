@@ -2,11 +2,16 @@
 // visa, the documents the applicants must bring, the fees with their total, what is included, and the terms and policies. The library
 // is loaded only when someone asks for the Word file. Formatting of the lines (bold, colour, lists...) becomes real Word formatting.
 import { COMPANY } from '../config';
-import { formatDate } from './dateHelper';
-import { richBlocks } from './itineraryDoc';
+import { formatDate, formatLongDate } from './dateHelper';
+import { dayMeta, richBlocks } from './itineraryDoc';
 import { toDocxColor, toHalfPoints } from './itineraryDocx';
 import { shareFileName } from './shareContact';
 import { feeAmount, visaFeeTotal } from './visa';
+import { addressLine } from './hotelStay';
+import * as H from './hotelRates';
+import * as L from './landService';
+import * as P from './priceTables';
+import * as R from './roomTables';
 
 const PAGE = { width: 11906, height: 16838, margin: 1020 }; // A4 in twips; margins about 1.8 cm
 const CONTENT = PAGE.width - PAGE.margin * 2;
@@ -25,6 +30,64 @@ const styleOf = (element) => {
   }
   return out;
 };
+
+/** Formatted text (bold, colour, highlight, size, lists) -> Word runs and paragraphs, for the quotation's lines and day texts. */
+const richKit = (d) => {
+  const parser = new DOMParser();
+  const htmlNodes = (html) => parser.parseFromString(`<body>${html}</body>`, 'text/html').body.childNodes;
+  const runsFrom = (nodes, format = {}) => {
+    const runs = [];
+    for (const node of Array.from(nodes)) {
+      if (node.nodeType === 3) {
+        if (node.textContent) runs.push(new d.TextRun({ text: xmlSafe(node.textContent), ...format }));
+      } else if (node.nodeType === 1) {
+        const tag = node.tagName.toLowerCase();
+        if (tag === 'br') {
+          runs.push(new d.TextRun({ break: 1 }));
+          continue;
+        }
+        const next = { ...format };
+        if (tag === 'strong' || tag === 'b') next.bold = true;
+        if (tag === 'em' || tag === 'i') next.italics = true;
+        if (tag === 'u') next.underline = { type: d.UnderlineType.SINGLE };
+        if (tag === 's') next.strike = true;
+        if (tag === 'span' || tag === 'mark') {
+          const style = styleOf(node);
+          const color = toDocxColor(style.color);
+          const fill = toDocxColor(style['background-color']);
+          const size = toHalfPoints(style['font-size']);
+          if (color) next.color = color;
+          if (fill) next.shading = { type: d.ShadingType.CLEAR, fill, color: 'auto' };
+          if (size) next.size = size;
+        }
+        runs.push(...runsFrom(node.childNodes, next));
+      }
+    }
+    return runs;
+  };
+  const lineRuns = (value, format) => {
+    const blocks = richBlocks(value);
+    return blocks.length ? blocks.flatMap((b, i) => [...(i ? [new d.TextRun({ break: 1 })] : []), ...runsFrom(htmlNodes(b.tag === 'p' ? b.html : b.html.replace(/<\/?(ul|ol|li)[^>]*>/g, ' ')), format)]) : [];
+  };
+  const paragraphs = (value, { after = 60, format } = {}) => {
+    const out = [];
+    for (const b of richBlocks(value)) {
+      if (b.tag === 'p') {
+        out.push(new d.Paragraph({ spacing: { after }, children: runsFrom(htmlNodes(b.html), format) }));
+      } else {
+        const items = Array.from(htmlNodes(b.html)[0]?.childNodes || []).filter((n) => n.nodeType === 1 && n.tagName === 'LI');
+        items.forEach((li, i) => out.push(new d.Paragraph({
+          spacing: { after: 30 },
+          ...(b.tag === 'ul' ? { bullet: { level: 0 } } : { indent: { left: 360, hanging: 360 } }),
+          children: [...(b.tag === 'ol' ? [new d.TextRun({ text: `${i + 1}.  ` })] : []), ...runsFrom(li.childNodes, format)]
+        })));
+      }
+    }
+    return out;
+  };
+  return { runsFrom, lineRuns, paragraphs };
+};
+
 
 /**
  * @param {object} quotation a visa quotation as the API returns it (or as the builder holds it)
@@ -515,160 +578,248 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
 };
 
 /**
- * Hotel or Package quotation → Word (.docx). Mirrors what the PDF shows: client details, hotel options, inclusions, pricing
- * (Only Hotel: Package / Total / PAX / Final Price only; Package: Room / Per night / Nights / Rooms / Total), and policies.
+ * Hotel, Package, Event or Land Service quotation → Word (.docx). Says what the PDF says, in the same order: the trip, the itinerary, the
+ * hotels (each option with its own price table right below it), room allocation, inclusions, flights, the price (the pricing tables, or
+ * the older price list of quotations made before them), the terms, the policies, the exclusions and the vehicle notes. Formatted text
+ * (bold, colour, lists) becomes real Word formatting; a quotation made years ago prints as fully as one made today.
  * @param {object} quotation  as the API returns it (or as the builder holds it)
  * @param {{ company?: object }} [options]
  * @returns {Promise<{ blob: Blob, filename: string }>}
  */
 export const generateQuotationDocx = async (quotation, { company = quotation?.companyDetails?.name ? quotation.companyDetails : COMPANY } = {}) => {
   const d = await import('docx');
-  const { AMOUNT_COLUMNS, LAYOUT_OF_TYPE, tableLayout, tableTotal, tablesOf, tableHasData, rowTotal, rowFinal } = await import('./priceTables');
-  const { roomTableTotal, roomDefaults } = await import('./roomTables');
+  const { lineRuns, paragraphs } = richKit(d);
   const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
   const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-  const xmlSafe = (value) => String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '');
   const text = (value, format = {}) => new d.TextRun({ text: xmlSafe(String(value ?? '')), ...format });
+  const plainOf = (value) => String(value ?? '').replace(/<[^>]*>/g, '').trim();
+  const filled = (list) => (Array.isArray(list) ? list : []).filter((x) => plainOf(x));
   const lineBorder = { style: d.BorderStyle.SINGLE, size: 4, color: 'CBD5E1' };
   const borders = { top: lineBorder, bottom: lineBorder, left: lineBorder, right: lineBorder };
-  const noBorder = { style: d.BorderStyle.NONE, size: 0, color: 'FFFFFF' };
-  const noBorders = { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder };
   const heading = (t, level = d.HeadingLevel.HEADING_2) => new d.Paragraph({ heading: level, keepNext: true, spacing: { before: 220, after: 80 }, children: [text(t)] });
-  const bullets = (items) => items.filter((x) => String(x || '').trim()).map((item) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 50 }, children: [text(String(item).replace(/<[^>]*>/g, ''))] }));
-  const numbered = (items, start = 1) => items.filter((x) => String(x || '').trim()).map((item, i) => new d.Paragraph({ spacing: { after: 60 }, indent: { left: 360, hanging: 360 }, children: [text(`${start + i}.  ${String(item).replace(/<[^>]*>/g, '')}`)] }));
+  const sub = (t, color = '0F172A') => new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 50 }, children: [text(t, { bold: true, color })] });
+  const bullets = (items) => filled(items).map((item) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 50 }, children: lineRuns(item) }));
+  const numbered = (items) => filled(items).map((item, i) => new d.Paragraph({ spacing: { after: 60 }, indent: { left: 360, hanging: 360 }, children: [text(new RegExp(`^\\s*${i + 1}\\.`).test(plainOf(item)) ? '' : `${i + 1}.  `), ...lineRuns(item)] }));
   const CELL_M = { top: 55, bottom: 55, left: 90, right: 90 };
-  const cell = (children, { width, fill, align } = {}) => new d.TableCell({ width: width ? { size: width, type: d.WidthType.DXA } : undefined, borders, margins: CELL_M, ...(fill ? { shading: { type: d.ShadingType.CLEAR, fill, color: 'auto' } } : {}), children: [new d.Paragraph({ alignment: align || d.AlignmentType.LEFT, children })] });
+  const cell = (children, { width, fill, align, span } = {}) =>
+    new d.TableCell({ width: width ? { size: width, type: d.WidthType.DXA } : undefined, columnSpan: span, borders, margins: CELL_M, ...(fill ? { shading: { type: d.ShadingType.CLEAR, fill, color: 'auto' } } : {}), children: [new d.Paragraph({ alignment: align || d.AlignmentType.LEFT, children })] });
   const table = (rows, colWidths) => new d.Table({ width: { size: CONTENT, type: d.WidthType.DXA }, columnWidths: colWidths, rows });
   const tableRow = (cells, { header = false } = {}) => new d.TableRow({ tableHeader: header, cantSplit: true, children: cells });
-  const hcell = (label, w, fill = '0F172A') => cell([text(label, { bold: true, color: 'FFFFFF', size: 18 })], { width: w, fill, align: d.AlignmentType.CENTER });
+  const hcell = (label, w, align) => cell([text(label, { bold: true, color: 'FFFFFF', size: 18 })], { width: w, fill: '0F172A', align: align || d.AlignmentType.CENTER });
   const rcell = (value, w, fmt = {}) => cell([text(value, fmt)], { width: w, align: d.AlignmentType.RIGHT });
+  const widthsOf = (shares) => {
+    const w = shares.map((s) => Math.round(CONTENT * s));
+    w[w.length - 1] = CONTENT - w.slice(0, -1).reduce((a, b) => a + b, 0);
+    return w;
+  };
+  const totalRow = (label, value, widths, fill = 'FEF9C3') =>
+    tableRow([cell([text(label, { bold: true })], { width: widths.slice(0, -1).reduce((a, b) => a + b, 0), fill, span: widths.length - 1 }), rcell(value, widths[widths.length - 1], { bold: true, size: 24 })]);
+  const factsTable = (rows) => {
+    const widths = widthsOf([0.3, 0.7]);
+    return table(rows.map(([label, value]) => tableRow([cell([text(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })])), widths);
+  };
 
   const quotationType = quotation.quotationType || 'Package';
   const isHotelOnly = quotationType === 'Only Hotel';
+  const isLand = quotationType === 'Land Service';
   const packageDetails = quotation.packageDetails || {};
   const hotels = packageDetails.hotels || [];
   const options = quotation.options || [];
-  const inclusions = (packageDetails.inclusions || []).filter((x) => String(x || '').trim());
-  const priceTables = tablesOf(quotation).filter(tableHasData);
-  const defaults = roomDefaults(quotation);
+  const hasOptions = options.length > 0;
+  const inclusions = filled(packageDetails.inclusions);
+  const priceTables = P.tablesOf(quotation).filter(P.tableHasData);
+  const defaults = R.roomDefaults(quotation);
+  const pricing = quotation.pricing || {};
+  const pricingItems = (pricing.items || []).filter((item) => item.isIncluded !== false);
+  const hasLegacyPricing = (pricing.items || []).length > 0 || pricing.packageCostPerPerson > 0 || pricing.airfareCostPerPerson > 0 || pricing.otherCostPerPerson > 0 || pricing.totalCostPerPerson > 0 || pricing.grandTotal > 0 || Boolean(pricing.totalCostNote);
+  const flights = quotation.flightDetails || [];
+  const hasFlights = Boolean(quotation.asPerFlightTicket) || flights.length > 0;
 
-  const formatDate2 = (s) => {
-    if (!s) return '';
-    const d2 = new Date(s);
-    if (isNaN(d2.getTime())) return '';
-    return d2.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  const TITLES = { 'Only Hotel': 'HOTEL QUOTATION', 'Land Service': 'LAND SERVICE QUOTATION', 'Events / Corporate': 'EVENT QUOTATION' };
+  const SECTION = { 'Only Hotel': 'Hotel & Accommodation Details', 'Events / Corporate': 'Venue, Hotel & Inclusions', 'Land Service': 'Vehicle & Rates' };
 
   const children = [];
 
   // ---- header ----
   children.push(new d.Paragraph({ spacing: { after: 20 }, children: [text(company.name, { bold: true, size: 30, color: BRAND }), text(`   ${company.tagline || 'Travel with Trust'}`, { size: 18, color: '64748B' })] }));
-  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '475569' }), text(`     Date: ${formatDate2(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '475569' }), text(`     Type: ${quotationType}`, { size: 18, color: '475569' })] }));
-  children.push(new d.Paragraph({ heading: d.HeadingLevel.TITLE, spacing: { after: 40 }, children: [text(`${isHotelOnly ? 'HOTEL' : 'PACKAGE'} QUOTATION`)] }));
-  children.push(new d.Paragraph({ spacing: { after: 160 }, children: [text(quotation.destination || '', { bold: true, size: 28, color: '0F172A' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '475569' }), text(`     Date: ${formatDate(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '475569' }), text(`     Type: ${quotationType}`, { size: 18, color: '475569' })] }));
+  children.push(new d.Paragraph({ heading: d.HeadingLevel.TITLE, spacing: { after: 40 }, children: [text(TITLES[quotationType] || 'PACKAGE QUOTATION')] }));
+  children.push(new d.Paragraph({ spacing: { after: 160 }, children: [text(quotation.destination || (isHotelOnly ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE'), { bold: true, size: 28, color: '0F172A' })] }));
 
   // ---- trip details ----
   const tripRows = [
-    ['Client', quotation.clientName], ['Pax', quotation.paxDetails], ['Travel date', formatDate2(quotation.travelDate)],
-    ['Duration', quotation.duration], ['Valid until', formatDate2(quotation.validUntil)]
+    ['Client', quotation.clientName],
+    ['Pax', quotation.paxDetails],
+    ['Travel date', quotation.travelDate ? formatDate(quotation.travelDate) : ''],
+    ['Duration', quotation.duration],
+    ['Valid until', quotation.validUntil ? formatDate(quotation.validUntil) : '']
   ].filter(([, v]) => v);
-  if (tripRows.length) {
-    const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-    children.push(heading('Trip Details'), table(tripRows.map(([label, value]) => tableRow([cell([text(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })])), widths));
-  }
+  if (tripRows.length) children.push(heading('Trip Details'), factsTable(tripRows));
 
-  // ---- hotel options ----
-  if (options.length) {
-    children.push(heading('Hotel Options'));
-    for (let oi = 0; oi < options.length; oi++) {
-      const opt = options[oi];
-      children.push(new d.Paragraph({ spacing: { before: 120, after: 60 }, children: [text(opt.name || `Option ${oi + 1}`, { bold: true, size: 24, color: '0F172A' })] }));
-      for (const h of (opt.hotels || [])) {
-        const lines = [`🏨 ${h.hotelName || 'Hotel'}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
-        if (h.city || h.address) lines.push(`📍 ${[h.city, h.address].filter(Boolean).join(', ')}`);
-        if (h.roomCategory) lines.push(`Room: ${h.roomCategory}`);
-        if (h.mealPlan) lines.push(`Meal: ${h.mealPlan}`);
-        const dates = [h.checkInDate && `Check In: ${formatDate2(h.checkInDate)}`, h.checkOutDate && `Check Out: ${formatDate2(h.checkOutDate)}`].filter(Boolean);
-        if (dates.length) lines.push(dates.join('  ·  '));
-        if (h.nights) lines.push(`Stay: ${h.nights}`);
-        for (const [i2, l] of lines.entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [text(l, i2 === 0 ? { bold: true } : {})] }));
-      }
-      if (opt.pricePerPerson > 0 && !priceTables.length) children.push(new d.Paragraph({ spacing: { before: 60, after: 60 }, indent: { left: 360 }, children: [text(`Price: ${rs(opt.pricePerPerson)} per person`, { bold: true, color: BRAND }), ...(opt.totalPrice > 0 ? [text(`  ·  Total: ${rs(opt.totalPrice)}`, { color: '334155' })] : [])] }));
-    }
-  } else if (hotels.length) {
-    children.push(heading('Hotel & Accommodation Details'));
-    for (const h of hotels) {
-      const lines = [`🏨 ${h.hotelName || 'Hotel'}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
-      if (h.city || h.address) lines.push(`📍 ${[h.city, h.address].filter(Boolean).join(', ')}`);
-      if (h.roomCategory) lines.push(`Room: ${h.roomCategory}`);
-      if (h.mealPlan) lines.push(`Meal: ${h.mealPlan}`);
-      if (h.nights) lines.push(`Stay: ${h.nights}`);
-      for (const [i2, l] of lines.entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [text(l, i2 === 0 ? { bold: true } : {})] }));
-    }
-  }
-
-  // ---- inclusions ----
-  if (inclusions.length) children.push(heading('Inclusions'), ...bullets(inclusions));
-
-  // ---- pricing tables ----
-  if (priceTables.length) {
-    children.push(heading('Pricing'));
-    for (const pt of priceTables) {
-      children.push(new d.Paragraph({ spacing: { before: 120, after: 60 }, children: [text(pt.name || 'Pricing', { bold: true, color: '0F172A' })] }));
-      if (tableLayout(pt) === 'rooms') {
-        const cols = [Math.round(CONTENT * 0.28), Math.round(CONTENT * 0.19), Math.round(CONTENT * 0.17), Math.round(CONTENT * 0.17)];
-        cols.push(CONTENT - cols.reduce((a, b) => a + b, 0));
-        const headerRow = tableRow(['Room', 'Per night', 'Nights', 'Rooms', 'Total'].map((t, i) => hcell(t, cols[i])), { header: true });
-        const bodyRows = (pt.rows || []).map((row) => {
-          const priced = Number(row.rate) > 0;
-          const nights = row.nights || defaults.nights || 0;
-          const rooms = row.rooms || defaults.rooms || 1;
-          const tot = priced ? round2(Number(row.rate) * Number(nights) * Number(rooms)) : 0;
-          return tableRow([cell([text(row.label || '', { bold: true })], { width: cols[0] }), rcell(priced ? rs(row.rate) : '', cols[1]), rcell(priced ? String(nights) : '', cols[2]), rcell(priced ? String(rooms) : '', cols[3]), rcell(priced ? rs(tot) : '', cols[4], { bold: true })]);
-        });
-        const grandTotal = tableTotal(pt, quotation);
-        const totalRow = tableRow([cell([text('Grand Total', { bold: true })], { width: cols[0] + cols[1] + cols[2] + cols[3], fill: 'FEF9C3' }), rcell(rs(grandTotal), cols[4], { bold: true, size: 24 })].filter(Boolean));
-        // workaround: colspan via column span
-        const grandCols = [cols[0] + cols[1] + cols[2] + cols[3], cols[4]];
-        const grandRow = tableRow([cell([text('Grand Total', { bold: true })], { width: grandCols[0], fill: 'FEF9C3' }), rcell(rs(grandTotal), grandCols[1], { bold: true, size: 24 })]);
-        children.push(table([headerRow, ...bodyRows, grandRow], cols));
-      } else {
-        // sheet (Only Hotel)
-        const sheetCols2 = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
-        const colCount = 2 + sheetCols2.length + 2; // Sr No + amounts + Total + PAX + Final Price
-        const baseW = Math.round(CONTENT / colCount);
-        const cols = Array(colCount - 1).fill(baseW);
-        cols.push(CONTENT - baseW * (colCount - 1));
-        const headerRow = tableRow(['Sr No', ...sheetCols2.map(([, t]) => t), 'Total', 'PAX', 'Final Price'].map((t, i) => hcell(t, cols[i])), { header: true });
-        const bodyRows = (pt.rows || []).map((row) => {
-          const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
-          const final = rowFinal(row);
-          return tableRow([cell([text(row.label || '', { bold: true })], { width: cols[0] }), ...sheetCols2.map(([key], si) => rcell(Number(row[key]) > 0 ? rs(row[key]) : '', cols[1 + si])), rcell(tot > 0 ? rs(tot) : '', cols[1 + sheetCols2.length]), rcell(Number(row.pax) > 0 ? String(row.pax) : '', cols[2 + sheetCols2.length]), rcell(final > 0 ? rs(final) : '', cols[3 + sheetCols2.length], { bold: true })]);
-        });
-        const grandTotal = tableTotal(pt, quotation);
-        const grandCols = [CONTENT - cols[cols.length - 1], cols[cols.length - 1]];
-        const grandRow = tableRow([cell([text('Grand Total', { bold: true })], { width: grandCols[0], fill: 'FEF9C3' }), rcell(rs(grandTotal), grandCols[1], { bold: true, size: 24 })]);
-        children.push(table([headerRow, ...bodyRows, grandRow], cols));
-      }
-    }
-  }
-
-  // ---- itinerary (package only) ----
+  // ---- itinerary (every quotation that has one; a package without one says so, as the PDF does) ----
   const itinerary = quotation.itinerary || [];
-  if (!isHotelOnly && itinerary.length) {
-    children.push(heading('Itinerary'));
-    for (const day of itinerary) {
-      const title2 = [day.dayNumber, day.title].filter(Boolean).join(': ');
-      children.push(new d.Paragraph({ spacing: { before: 120, after: 40 }, children: [text(title2, { bold: true, color: BRAND })] }));
-      if (day.description) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(String(day.description).replace(/<[^>]*>/g, ''))] }));
+  if (itinerary.length || !isHotelOnly) {
+    children.push(heading(quotationType === 'Events / Corporate' ? 'Event & Tour Schedule' : 'Itinerary'));
+    if (itinerary.length) {
+      itinerary.forEach((day, idx) => {
+        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 30 }, shading: { type: d.ShadingType.CLEAR, fill: 'FEF9C3', color: 'auto' }, children: [text(`${plainOf(day.dayNumber) || `Day 0${idx + 1}`}: ${plainOf(day.title) || 'Sightseeing & Excursions'}`, { bold: true, color: '0F172A' })] }));
+        const meta = dayMeta(day);
+        if (meta) children.push(new d.Paragraph({ keepNext: true, spacing: { after: 30 }, children: [text(meta, { italics: true, size: 18, color: '64748B' })] }));
+        if (day.description) children.push(...paragraphs(day.description));
+      });
+    } else children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Detailed day-wise itinerary will be customized as per guest preference.', { italics: true, color: '64748B' })] }));
+    const endRuns = lineRuns(quotation.endOfTourNote || '***End of the Tour***', { bold: true });
+    children.push(new d.Paragraph({ alignment: d.AlignmentType.CENTER, spacing: { before: 140, after: 100 }, children: endRuns.length ? endRuns : [text('***End of the Tour***', { bold: true })] }));
+  }
+
+  // ---- rate tables ----
+  /** The rate rows of one hotel (room, extra bed, child with / without bed), as the PDF prints them. */
+  const rateTable = (h) => {
+    const rows = (h.rates || []).filter((r) => Number(r.rate) > 0);
+    if (!rows.length) return [];
+    const w = widthsOf([0.28, 0.2, 0.16, 0.16, 0.2]);
+    const body = rows.map((r) => tableRow([cell([text(r.label || H.RATE_LABELS[r.kind] || '', { bold: true })], { width: w[0] }), rcell(rs(r.rate), w[1]), rcell(String(H.rowNights(h, r)), w[2]), rcell(String(H.rowUnits(h, r)), w[3]), rcell(rs(H.rowTotal(h, r)), w[4], { bold: true })]));
+    if (rows.length > 1) body.push(totalRow('Hotel total', rs(H.hotelTotal(h)), w, 'F8FAFC'));
+    return [table([tableRow(['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((t, i) => hcell(t, w[i])), { header: true }), ...body], w), new d.Paragraph({ spacing: { after: 40 } })];
+  };
+  /** One pricing table (sheet for a hotel quotation, per room per night for a package), with its Grand Total. */
+  const priceTableOf = (pt) => {
+    if (P.tableLayout(pt) === 'rooms') {
+      const w = widthsOf([0.28, 0.2, 0.16, 0.16, 0.2]);
+      const body = (pt.rows || []).map((row) => {
+        const priced = Number(row.rate) > 0;
+        return tableRow([cell([text(row.label || '', { bold: true })], { width: w[0] }), rcell(P.cellText(row.rate), w[1]), rcell(priced ? String(R.roomRowNights(row, defaults)) : '', w[2]), rcell(priced ? String(R.roomRowRooms(row)) : '', w[3]), rcell(P.cellText(R.roomRowTotal(row, defaults)), w[4], { bold: true })]);
+      });
+      return [table([tableRow(['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((t, i) => hcell(t, w[i])), { header: true }), ...body, totalRow('Grand Total', rs(P.tableTotal(pt, quotation)), w)], w), new d.Paragraph({ spacing: { after: 60 } })];
+    }
+    const amounts = isHotelOnly ? P.AMOUNT_COLUMNS.filter(([key]) => key === 'package') : P.AMOUNT_COLUMNS;
+    const labelShare = 0.2;
+    const share = (1 - labelShare) / (amounts.length + 3);
+    const w = widthsOf([labelShare, ...Array(amounts.length + 3).fill(share)]);
+    const body = (pt.rows || []).map((row) => {
+      const tot = isHotelOnly ? Number(row.package) || 0 : P.rowTotal(row);
+      const final = round2(tot * (Number(row.pax) || 0));
+      return tableRow([cell([text(row.label || '', { bold: true })], { width: w[0] }), ...amounts.map(([key], i) => rcell(P.cellText(row[key]), w[1 + i])), rcell(P.cellText(tot), w[1 + amounts.length]), rcell(Number(row.pax) > 0 ? String(Number(row.pax)) : '', w[2 + amounts.length]), rcell(P.cellText(final), w[3 + amounts.length], { bold: true })]);
+    });
+    const grand = isHotelOnly ? round2((pt.rows || []).reduce((sum, r) => sum + round2((Number(r.package) || 0) * (Number(r.pax) || 0)), 0)) : P.tableTotal(pt, quotation);
+    return [table([tableRow(['Sr No', ...amounts.map(([, t]) => t), 'Total', 'PAX', 'Final Price'].map((t, i) => hcell(t, w[i])), { header: true }), ...body, totalRow('Grand Total', rs(grand), w)], w), new d.Paragraph({ spacing: { after: 60 } })];
+  };
+
+  // ---- one hotel ----
+  const hotelBlock = (h, { rates = true } = {}) => {
+    const out = [];
+    const line = (runs) => out.push(new d.Paragraph({ spacing: { after: 20 }, indent: { left: 240 }, children: runs }));
+    const star = h.starRating && h.starRating !== 'Unrated' ? `   ★ ${h.starRating}` : '';
+    out.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 20 }, indent: { left: 240 }, children: [text(plainOf(h.hotelName) || 'Hotel', { bold: true, size: 24, color: '0F172A' }), ...(star ? [text(star, { bold: true, color: 'B45309' })] : [])] }));
+    if (h.roomCategory) line([text(h.roomCategory, { bold: true, color: '0369A1' })]);
+    const where = addressLine(h);
+    if (where) line([text(`📍 ${where}`, { color: '475569' })]);
+    const dates = [h.checkInDate && `Check In: ${formatLongDate(h.checkInDate)}`, h.checkOutDate && `Check Out: ${formatLongDate(h.checkOutDate)}`].filter(Boolean);
+    if (dates.length) line([text(dates.join('   •   '))]);
+    const facts = [h.nights, h.noOfRooms, h.mealPlan].filter(Boolean);
+    if (facts.length) line([text(facts.join('   •   '), { color: '334155' })]);
+    const times = [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean);
+    if (times.length) line([text(times.join('   •   '), { color: '334155' })]);
+    if ((h.amenities || []).length) line([text('Amenities: ', { bold: true, size: 18 }), text(h.amenities.join('  •  '), { size: 18, color: '475569' })]);
+    const contact = [h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean);
+    if (contact.length) line([text(contact.join('   |   '), { size: 18, color: '64748B' })]);
+    if (rates) out.push(...rateTable(h));
+    return out;
+  };
+
+  // ---- hotels / package / vehicle details ----
+  const hasPackageSection = isLand ? (quotation.vehicles || []).length > 0 || filled(quotation.vehicleInclusions).length > 0 : hotels.length > 0 || hasOptions || Boolean(plainOf(packageDetails.roomInfo)) || inclusions.length > 0;
+  if (hasPackageSection) children.push(heading(SECTION[quotationType] || 'Package Details'));
+
+  if (isLand) {
+    const trip = quotation.landService || {};
+    const vehicles = quotation.vehicles || [];
+    const facts = [['Route', trip.route], ['Pick-up', trip.pickupPoint], ['Drop', trip.dropPoint], ['Kilometres', trip.kmPolicy]].filter(([, v]) => v);
+    if (facts.length) children.push(factsTable(facts), new d.Paragraph({ spacing: { after: 80 } }));
+    if (vehicles.length) {
+      const w = widthsOf([0.3, 0.1, 0.12, 0.08, 0.2, 0.2]);
+      const body = vehicles.map((v) => tableRow([
+        cell([text(v.vehicleType || 'Vehicle', { bold: true }), ...(plainOf(v.notes) ? [new d.TextRun({ break: 1 }), ...lineRuns(v.notes, { size: 18, color: '64748B' })] : [])], { width: w[0] }),
+        cell([text(Number(v.seats) > 0 ? String(v.seats) : '–')], { width: w[1] }),
+        cell([text(v.acType || '–')], { width: w[2] }),
+        cell([text(String(v.quantity ?? ''))], { width: w[3] }),
+        rcell(rs(v.rate), w[4]),
+        rcell(rs(L.lineAmount(v)), w[5], { bold: true })
+      ]));
+      const total = L.vehicleTotal(vehicles);
+      children.push(table([tableRow(['Vehicle', 'Seats', 'AC', 'Qty', 'Rate / vehicle', 'Amount'].map((t, i) => hcell(t, w[i], i === 0 ? d.AlignmentType.LEFT : undefined)), { header: true }), ...body, totalRow('Total for the trip', total > 0 ? rs(total) : 'On request', w)], w));
+    }
+    if (plainOf(trip.priceNote)) children.push(new d.Paragraph({ spacing: { before: 100, after: 100 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(trip.priceNote, { italics: true, color: '64748B' })] }));
+    if (filled(quotation.vehicleInclusions).length) children.push(sub('Vehicle Inclusions'), ...bullets(quotation.vehicleInclusions));
+  } else {
+    if (hasOptions) {
+      children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(priceTables.length ? 'Please choose the option that suits you best. The price of each option is shown below it. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.', { italics: true, size: 18, color: '64748B' })] }));
+      options.forEach((opt, oi) => {
+        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 200, after: 40 }, shading: { type: d.ShadingType.CLEAR, fill: '0F172A', color: 'auto' }, children: [text(` OPTION ${oi + 1}   `, { bold: true, size: 16, color: '7DD3FC' }), text(plainOf(opt.name) || `Option ${oi + 1}`, { bold: true, size: 24, color: 'FFFFFF' }), ...(opt.recommended ? [text('    ★ RECOMMENDED', { bold: true, size: 16, color: 'FBBF24' })] : [])] }));
+        const stays = opt.hotels || [];
+        const priced = priceTables[oi];
+        if (!stays.length) children.push(new d.Paragraph({ indent: { left: 240 }, children: [text('Hotels to be confirmed', { italics: true, color: '94A3B8' })] }));
+        for (const h of stays) children.push(...hotelBlock(h, { rates: !priced }));
+        if (priced) children.push(...priceTableOf(priced));
+        else if (!H.optionUsesRates(opt)) {
+          const note = opt.priceNote && opt.priceNote !== 'Per person' ? plainOf(opt.priceNote) : '';
+          children.push(new d.Paragraph({ spacing: { before: 80, after: 60 }, indent: { left: 240 }, children: [text(opt.pricePerPerson > 0 ? `Price per person: ${rs(opt.pricePerPerson)}` : 'Price: On request', { bold: true, color: '0C4A6E' }), ...(opt.pricePerPerson > 0 && opt.totalPrice > 0 ? [text(`   ·   Total: ${rs(opt.totalPrice)}`, { bold: true, color: '0C4A6E' })] : []), ...(note ? [text(`   ${note}`, { size: 18, color: '0C4A6E' })] : [])] }));
+        } else children.push(new d.Paragraph({ spacing: { before: 40, after: 80 }, indent: { left: 240 }, children: [text(`Grand Total: ${rs(H.optionTotal(opt))}`, { bold: true, size: 24, color: '0C4A6E' })] }));
+      });
+    } else if (hotels.length) {
+      children.push(sub('Accommodations & Hotel Stays'));
+      for (const h of hotels) children.push(...hotelBlock(h));
+    }
+    if (plainOf(packageDetails.roomInfo)) children.push(new d.Paragraph({ spacing: { before: 120, after: 60 }, children: [text('Room Allocation: ', { bold: true }), ...lineRuns(packageDetails.roomInfo)] }));
+    if (inclusions.length) children.push(sub('Inclusions'), ...bullets(inclusions));
+  }
+
+  // ---- flights ----
+  if (hasFlights) {
+    children.push(heading('Flight Details'));
+    if (quotation.asPerFlightTicket) {
+      children.push(new d.Paragraph({ spacing: { after: 40 }, children: [text('Flight details will be as per confirmed flight ticket', { bold: true, color: '0369A1' })] }));
+      children.push(new d.Paragraph({ spacing: { after: 40 }, children: lineRuns(quotation.flightTicketNote || 'Official airline PNR and flight e-tickets will be issued & shared upon final booking confirmation.') }));
+      if (quotation.flightTicketUrl) children.push(new d.Paragraph({ spacing: { after: 40 }, children: [text(`Attached E-Ticket: ${quotation.flightTicketUrl}`, { size: 18, color: '0284C7' })] }));
+    } else {
+      const w = widthsOf([0.2, 0.25, 0.18, 0.18, 0.19]);
+      const body = flights.map((f) => tableRow([
+        cell([text(f.flightType || 'Departure', { bold: true }), new d.TextRun({ break: 1 }), text(f.departureDate || f.depDate ? formatDate(f.departureDate || f.depDate) : '', { size: 18, color: '64748B' })], { width: w[0] }),
+        cell([text(f.route || [f.fromAirport, f.toAirport].filter(Boolean).join(' → ')), new d.TextRun({ break: 1 }), text([f.airline, f.flightNumber].filter(Boolean).join(' '), { size: 18, color: '1E3A8A', bold: true })], { width: w[1] }),
+        cell([text([f.fromAirport, f.depTime].filter(Boolean).join('  ')), ...(f.duration || f.flightStop ? [new d.TextRun({ break: 1 }), text([f.duration, f.flightStop].filter(Boolean).join(' · '), { size: 18, color: '64748B' })] : [])], { width: w[2] }),
+        cell([text([f.toAirport, f.arrTime].filter(Boolean).join('  '))], { width: w[3] }),
+        cell([text([f.cabinClass, f.baggageCheckIn && `Check-in ${f.baggageCheckIn}`, f.baggageCabin && `Cabin ${f.baggageCabin}`].filter(Boolean).join(' · '), { size: 18 })], { width: w[4] })
+      ]));
+      children.push(table([tableRow(['Flight', 'Route', 'Departs', 'Arrives', 'Class & baggage'].map((t, i) => hcell(t, w[i])), { header: true }), ...body], w));
     }
   }
 
-  // ---- policies ----
-  if ((quotation.importantNotes || []).filter((x) => x).length) children.push(heading('Important Notes'), ...numbered(quotation.importantNotes));
-  if ((quotation.paymentPolicy || []).filter((x) => x).length) children.push(heading('Payment Policy'), ...bullets(quotation.paymentPolicy));
-  if ((quotation.cancellationPolicy || []).filter((x) => x).length) children.push(heading('Cancellation Policy'), ...bullets(quotation.cancellationPolicy));
-  if ((quotation.exclusions || []).filter((x) => x).length) children.push(heading('Exclusions'), ...bullets(quotation.exclusions));
+  // ---- price: the pricing tables, or the price list of older quotations ----
+  if (priceTables.length && !hasOptions) {
+    children.push(heading('Pricing'));
+    priceTables.forEach((pt, i) => children.push(sub(pt.name || `Option ${i + 1}`), ...priceTableOf(pt)));
+  } else if (hasLegacyPricing && !hasOptions && !isLand) {
+    children.push(heading('Pricing Breakdown'));
+    const lines = pricingItems.length
+      ? pricingItems.map((item) => `${item.name}: ${rs(item.costPerPerson)} ${plainOf(item.note) || 'Per person'}`)
+      : [
+          pricing.packageCostPerPerson > 0 && `Package: ${rs(pricing.packageCostPerPerson)} ${plainOf(pricing.packageCostNote) || `Per person X ${quotation.paxDetails || 'Pax'}`}`,
+          pricing.airfareCostPerPerson > 0 && `Airfare: ${rs(pricing.airfareCostPerPerson)} ${plainOf(pricing.airfareCostNote) || `Per person X ${quotation.paxDetails || 'Pax'}`}`,
+          pricing.otherCostPerPerson > 0 && `Other Services: ${rs(pricing.otherCostPerPerson)} ${plainOf(pricing.otherCostNote) || 'Per person'}`
+        ].filter(Boolean);
+    children.push(...lines.map((l) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 40 }, children: [text(l)] })));
+    const headline = plainOf(pricing.totalCostNote) ? lineRuns(pricing.totalCostNote, { bold: true, size: 24 }) : [text(pricing.totalCostPerPerson > 0 ? `${rs(pricing.totalCostPerPerson)} Per person (Incl of GST)` : 'Custom Rate on Request', { bold: true, size: 24 })];
+    children.push(new d.Paragraph({ spacing: { before: 100, after: 60 }, shading: { type: d.ShadingType.CLEAR, fill: 'FDE047', color: 'auto' }, children: headline }));
+    if (pricing.grandTotal > 0) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(`${isHotelOnly ? 'Grand Total' : 'Total Package'}: ${rs(pricing.grandTotal)}`, { bold: true, color: '047857' })] }));
+    if (plainOf(pricing.notes)) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(pricing.notes, { italics: true, color: '64748B' })] }));
+  }
+
+  // ---- terms, policies, exclusions and vehicle notes ----
+  if (filled(quotation.importantNotes).length) children.push(heading('Terms'), ...numbered(quotation.importantNotes));
+  if (filled(quotation.paymentPolicy).length) children.push(heading('Payment Policy'), ...bullets(quotation.paymentPolicy));
+  if (filled(quotation.cancellationPolicy).length) children.push(heading('Cancellation Policy'), ...bullets(quotation.cancellationPolicy));
+  if (filled(quotation.exclusions).length) children.push(heading('Exclusions'), ...bullets(quotation.exclusions));
+  if (filled(quotation.vehicleNotes).length) children.push(heading('Points to be Noted (Vehicle Note)'), ...bullets(quotation.vehicleNotes));
 
   const doc = new d.Document({
     creator: xmlSafe(company.name),
