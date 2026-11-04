@@ -42,7 +42,7 @@ export const ShareQuotationDialog = ({ quotation, isOpen, onClose, canEdit = fal
       resetKey={quotation._id}
       noun="quotation"
       record={quotation}
-      canWord={quotation.quotationType === 'Visa'}
+      canWord={true}
       messageFor={(format) => defaultShareMessage({ quotation, format, senderName, senderNumber, company: COMPANY })}
       subjectText={defaultEmailSubject(quotation)}
       senderNumber={senderNumber}

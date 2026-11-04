@@ -77,7 +77,7 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
           {!isCollapsed && (
             <div>
               <div className="sidebar-brand-name">7Heaven Tourism</div>
-              <div className="sidebar-brand-tag">Travel with the Trust</div>
+              <div className="sidebar-brand-tag">Travel with Trust</div>
             </div>
           )}
         </div>

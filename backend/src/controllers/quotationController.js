@@ -339,7 +339,7 @@ export const convertFromInquiry = async (req, res) => {
       quotationType: 'Package',
       companyDetails: {
         name: '7HEAVEN TOURISM',
-        tagline: 'Travel with the Trust',
+        tagline: 'Travel with Trust',
         description: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings',
         address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
         phone: '+91 7862829178',

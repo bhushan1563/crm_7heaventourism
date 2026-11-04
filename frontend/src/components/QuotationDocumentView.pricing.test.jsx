@@ -27,12 +27,13 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
     expect(tables).toHaveLength(2);
     const first = tables[0];
     expect(within(first).getByText('Option 1')).toBeInTheDocument();
-    expect(within(first).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'Visa', 'TCS', 'Total', 'PAX', 'Final Price']);
+    // Only Hotel: Airfare, Visa and TCS are not part of a hotel quotation, so only Package is shown.
+    expect(within(first).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Total', 'PAX', 'Final Price']);
     const adult = within(first).getByText('Adult').closest('tr');
-    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '30,000', '12,000', '6,000', '1,500', '49,500', '2', '99,000']);
+    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '30,000', '30,000', '2', '60,000']);
     const grand = within(first).getByText('Grand Total').closest('tr');
-    expect(grand).toHaveTextContent('Rs 1,96,500'); // 99,000 + 49,500 + 48,000
-    expect(screen.getByText('Rs 1,11,000')).toBeInTheDocument(); // option 2: 55,500 x 2
+    expect(grand).toHaveTextContent('Rs 1,20,000'); // (30,000×2 + 30,000×1 + 30,000×1) → pax 2+1+1 = rows; actually rowFinal = 30000 × pax: adult 60000, extrabed 30000, cwb 30000 = 120000
+    expect(screen.getByText('Rs 72,000')).toBeInTheDocument(); // option 2: 36,000 × 2 = 72,000
   });
 
   it('uses PAX and Final Price, not the sheet\'s "No of Person" and second "Total"', () => {
@@ -45,7 +46,8 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
   it('leaves cells empty where nothing was entered, like the sheet', () => {
     show(hotelQuotation());
     const cnb = screen.getAllByText('CNB')[0].closest('tr');
-    expect(within(cnb).getAllByRole('cell').map((c) => c.textContent)).toEqual(['CNB', '', '', '', '', '', '', '']);
+    // Only Hotel: columns are Sr No, Package, Total, PAX, Final Price — 5 cells (label + 4)
+    expect(within(cnb).getAllByRole('cell').map((c) => c.textContent)).toEqual(['CNB', '', '', '', '']);
   });
 
   it('does not print an option that has nothing entered, and replaces the old price list', () => {
@@ -68,9 +70,10 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
   });
 
   it('works from what was typed in the form (text), so the preview matches the screen', () => {
-    show(hotelQuotation({ priceTables: [{ name: 'Typed', rows: [{ label: 'Adult', package: '1000', airfare: '', visa: '', tcs: '', pax: '3' }] }] }));
+    show(hotelQuotation({ priceTables: [{ name: 'Typed', rows: [{ label: 'Adult', package: '1000', airfare: '500', visa: '200', tcs: '100', pax: '3' }] }] }));
     const adult = screen.getByText('Adult').closest('tr');
-    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '', '', '', '1,000', '3', '3,000']);
+    // Only Hotel: only the Package column is shown (Airfare, Visa, TCS are hidden); Total = Package only
+    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '1,000', '3', '3,000']);
   });
 
   it('shows hostile text in a name as plain text', () => {

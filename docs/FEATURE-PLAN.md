@@ -200,7 +200,14 @@ Decisions taken (so the build can go on; each can be changed):
 - [x] 23.4 Items a to d and the Master Editor for notes and policy were already built and live in Steps 13 to 16 (no vehicle notes; hotel confirmation number under the hotel name; contact number after the address; check-in / check-out time columns; same for Package).
 - [x] 23.5 The finder run against real hotel websites. Fixed: a "hotel credit" / voucher / bonus read as the room rate; a postal code from another place shown beside the address; "313 001" not recognised as a postal code; the whole address repeated when a site puts it all in the street line. Sites that refuse robots (403) or have a bad certificate give a plain message and the paste-text way.
 
-(Steps 7 to 23 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
+### Step 24: Hotel quotation layout improvements and Word export for all types (added 2026-11-04)
+
+- [x] 24.1 Tagline corrected to "Travel with Trust" across the sidebar, all quotation documents (screen and print), Word exports and the default company record. The old value "Travel with the Trust" is gone everywhere.
+- [x] 24.2 Only Hotel quotation pricing table: Airfare, Visa and TCS columns removed. The table now shows Sr No, Package, Total, PAX, Final Price only. Grand Total is Package × PAX per row (not the full row sum). The same columns are dropped in the Word export.
+- [x] 24.3 For an Only Hotel quotation with options and a pricing table, the table now appears directly below the hotel options (not at the bottom of the page after inclusions), so the client can compare options and prices on the same view.
+- [x] 24.4 Word download is now available for all quotation types (Hotel, Package, Visa). The Share / Send dialog shows the Word radio button for every type. The generator for Hotel and Package builds the same sections as the PDF: trip details, hotel options, inclusions, pricing table, itinerary (Package only) and policies.
+
+(Steps 7 to 24 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 
