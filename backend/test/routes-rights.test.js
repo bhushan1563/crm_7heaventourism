@@ -112,10 +112,12 @@ test('confirming a booking also needs permission to read quotations (it reads an
   assert.ok(needs.includes('confirmations.canCreate') && needs.includes('quotations.canRead'), needs.join(', '));
 });
 
-test('nothing can be deleted by a right other than "delete", and bookings cannot be deleted at all', async () => {
+test('nothing can be deleted by a right other than "delete", and deleting a booking needs confirmations.canDelete', async () => {
   const rows = await routesOf();
   assert.deepEqual(rows.filter((r) => r.method === 'DELETE' && r.rights.some((x) => x.action !== 'canDelete')).map((r) => r.key), []);
-  assert.deepEqual(rows.filter((r) => r.router === 'confirmations' && r.method === 'DELETE').map((r) => r.key), [], 'bookings are cancelled, never deleted');
+  const deletes = rows.filter((r) => r.router === 'confirmations' && r.method === 'DELETE');
+  assert.deepEqual(deletes.map((r) => r.key), ['confirmations DELETE /:id']);
+  assert.deepEqual(deletes[0].rights.map((r) => `${r.moduleName}.${r.action}`), ['confirmations.canDelete']);
 });
 
 test('the standard notes and policies: anyone who can read quotations reads them, only people who may change rights change them', async () => {
