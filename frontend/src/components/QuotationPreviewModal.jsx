@@ -15,6 +15,7 @@ import {
 import QuotationDocumentView from './QuotationDocumentView';
 import { generateQuotationPDF, printQuotation } from '../utils/quotationPdfGenerator';
 import { useToast } from '../context/ToastContext';
+import { saveBlob } from '../utils/download';
 
 // The document is laid out at A4 width (96dpi). On narrow screens start zoomed out so the whole page width is visible.
 const DOC_WIDTH_PX = 794;
@@ -32,6 +33,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
   const [zoomLevel, setZoomLevel] = useState(fitZoom);
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressMsg, setProgressMsg] = useState('');
+  const [isWordGenerating, setIsWordGenerating] = useState(false);
 
   if (!isOpen || !quotation) return null;
 
@@ -59,6 +61,27 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
 
   const handlePrint = () => {
     printQuotation('quotation-modal-full-render');
+  };
+
+  const handleDownloadWord = async () => {
+    try {
+      setIsWordGenerating(true);
+      let result;
+      if (quotation?.quotationType === 'Visa') {
+        const { generateVisaQuotationDocx } = await import('../utils/quotationDocx');
+        result = await generateVisaQuotationDocx(quotation);
+      } else {
+        const { generateQuotationDocx } = await import('../utils/quotationDocx');
+        result = await generateQuotationDocx(quotation);
+      }
+      saveBlob(result.blob, result.filename);
+      showToast(`${documentLabel} Word document downloaded!`, 'success');
+    } catch (err) {
+      console.error('Word generation error:', err);
+      showToast('Failed to generate Word file: ' + err.message, 'error');
+    } finally {
+      setIsWordGenerating(false);
+    }
   };
 
   return (
@@ -177,10 +200,32 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
             <button
               onClick={handlePrint}
               className="btn btn-outline btn-sm"
-              disabled={isGenerating}
+              disabled={isGenerating || isWordGenerating}
             >
               <Printer size={14} />
               <span>Print</span>
+            </button>
+            )}
+
+            {/* Download Word Button */}
+            {canDownload && (
+            <button
+              onClick={handleDownloadWord}
+              className="btn btn-outline btn-sm"
+              disabled={isGenerating || isWordGenerating}
+              title="Download Word (.docx)"
+            >
+              {isWordGenerating ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Word…</span>
+                </>
+              ) : (
+                <>
+                  <FileText size={14} />
+                  <span>Word</span>
+                </>
+              )}
             </button>
             )}
 
@@ -189,7 +234,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
             <button
               onClick={handleDownloadPDF}
               className="btn btn-gold btn-sm"
-              disabled={isGenerating}
+              disabled={isGenerating || isWordGenerating}
             >
               {isGenerating ? (
                 <>
@@ -210,7 +255,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
               <button
                 onClick={() => onShare(quotation)}
                 className="btn btn-primary btn-sm"
-                disabled={isGenerating}
+                disabled={isGenerating || isWordGenerating}
                 title="Send to the client by WhatsApp or e-mail"
               >
                 <Send size={14} />

@@ -14,7 +14,7 @@ export const PAGE_KINDS = [
   ['gallery', 35, /(?:gallery|photos?|images|media)/i]
 ];
 
-const SKIP_PATH = /(?:\/(?:blog|news|press|careers?|jobs|login|signin|register|account|cart|checkout|wp-(?:admin|json|login|content|includes)|feed|tag|category|author|search|privacy|sitemap)\b|\.(?:pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)(?:$|\?)|[?&](?:replytocom|share|print|format=feed)=|\/page\/\d+|\/(?:fr|de|es|it|ru|zh|ja|ko|ar|pt|nl|tr|th)\/)/i;
+const SKIP_PATH = /(?:\/(?:blog|news|press|careers?|jobs|login|signin|register|account|cart|checkout|wp-(?:admin|json|login|content|includes)|feed|tag|category|author|search|privacy|sitemap|promotions?|deals?|offers?|campaigns?|specials?|limited[-_]?time|book[-_]?now|book[-_]?online)\b|\.(?:pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)(?:$|\?)|[?&](?:replytocom|share|print|format=feed)=|\/page\/\d+|\/(?:fr|de|es|it|ru|zh|ja|ko|ar|pt|nl|tr|th)\/)/i;
 const BOOKING_ENGINE = /(?:booking\.com|expedia|agoda|makemytrip|goibibo|hotels\.com|tripadvisor|airbnb|cleartrip|yatra|travelocity|trivago|synxis|travelclick|windsurfercrs|bookingengine|reservations?\.|\/book(?:ing)?[-_/]?(?:now|online|engine|room)?\b)/i;
 
 /** The same-site links of a page: [{ url, text }], each address once, without fragments. */
@@ -69,11 +69,21 @@ export const rankPages = ({ start, links = [], sitemap = [], limit = 6 }) => {
   };
   for (const link of links) consider(link.url, link.text || '', 8); // a link a visitor can click is more telling than a sitemap line
   for (const entry of sitemap) consider(entry.loc, '', 0);
-  // Take the best page of each kind first, so one kind (five "rooms" pages) cannot crowd out the others.
+  // Take the best page of each kind first, so one kind cannot crowd out the others.
+  // For high-value kinds (contact, rooms, about) allow a second page when there is budget for it.
   const ranked = [...best.values()].sort((a, b) => b.score - a.score);
   const chosen = [];
-  const kinds = new Set();
-  for (const item of ranked) if (!kinds.has(item.kind) && chosen.length < limit) { kinds.add(item.kind); chosen.push(item); }
-  for (const item of ranked) if (!chosen.includes(item) && chosen.length < limit) chosen.push(item);
+  const kindCount = new Map();
+  const HIGH_VALUE = new Set(['contact', 'rooms', 'about', 'facilities']);
+  const maxPerKind = (kind) => (HIGH_VALUE.has(kind) && limit > 5 ? 2 : 1);
+  for (const item of ranked) {
+    if (chosen.length >= limit) break;
+    const count = kindCount.get(item.kind) || 0;
+    if (count < maxPerKind(item.kind)) { kindCount.set(item.kind, count + 1); chosen.push(item); }
+  }
+  for (const item of ranked) {
+    if (chosen.length >= limit) break;
+    if (!chosen.includes(item)) chosen.push(item);
+  }
   return chosen;
 };

@@ -82,7 +82,17 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, h
                 <div className="be-hotel" key={i} role="group" aria-label={`Hotel ${i + 1}: ${stay.hotelName || 'hotel'}`}>
                   <div className="be-hotel-name">
                     {stay.hotelName || `Hotel ${i + 1}`}
+                    {stay.starRating ? <small> · {stay.starRating}</small> : null}
                     {stay.city ? <small> · {stay.city}</small> : null}
+                  </div>
+                  <div className="be-hotel-info">
+                    {stay.checkInDate && <span>Check-in: <strong>{new Date(stay.checkInDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>}
+                    {stay.checkOutDate && <span>Check-out: <strong>{new Date(stay.checkOutDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>}
+                    {stay.nights && <span>Nights: <strong>{stay.nights}</strong></span>}
+                    {stay.roomCategory && <span>Room: <strong>{stay.roomCategory}</strong></span>}
+                    {stay.mealPlan && <span>Meal: <strong>{stay.mealPlan}</strong></span>}
+                    {stay.noOfRooms && <span>Rooms: <strong>{stay.noOfRooms}</strong></span>}
+                    {stay.address && <span style={{ gridColumn: '1 / -1' }}>📍 <strong>{stay.address}{stay.city && !stay.address.includes(stay.city) ? `, ${stay.city}` : ''}</strong></span>}
                   </div>
                   <div className="be-hotel-grid">
                     <div>
