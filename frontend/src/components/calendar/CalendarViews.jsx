@@ -2,7 +2,7 @@ import React from 'react';
 import { CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink, MapPin, Moon, Plane, Users, Wallet } from 'lucide-react';
 import Modal from '../Modal';
 import {
-  KINDS, addDays, addMonths, agendaDays, buildIcs, dayNumber, daysBetween, endOfMonth, eventLabel, eventsOnDay, fullShortDate, isCancelled, layoutWeek, longDate,
+  KINDS, addDays, addMonths, agendaDays, buildIcs, dayNumber, daysBetween, endOfMonth, eventLabel, eventsOnDay, fullShortDate, isCancelled, longDate,
   monthGrid, monthName, shortDate, startOfMonth, weekDays, weekdayHeads, weekdayName
 } from '../../utils/calendarGrid';
 import { saveBlob } from '../../utils/download';
@@ -29,46 +29,44 @@ const EventChip = ({ event, day, onOpen }) => {
   );
 };
 
-/** The month: a row per week, the trips drawn as bars across the days they run, and "+N more" where a day is full. */
+/** The month: a row per week, each day cell showing its trips as coloured chips (green = travel, yellow = payment) with the guest name. */
 export const MonthView = ({ anchor, events, weekStart, today, onOpen, onDay }) => {
   const weeks = monthGrid(anchor, weekStart);
   const month = anchor.slice(0, 7);
   return (
     <div className="cal-month" aria-label={`Calendar of ${monthName(anchor)}`}>
       <div className="cal-heads">{weekdayHeads(weekStart).map((h) => <div key={h}>{h}</div>)}</div>
-      {weeks.map((days) => {
-        const { bars, hidden } = layoutWeek(days, events, 3);
-        return (
-          <div className="cal-week" key={days[0]}>
-            <div className="cal-days">
-              {days.map((d, i) => {
-                const count = eventsOnDay(events, d).length;
-                return (
-                  <button key={d} type="button" className={`cal-day${d.slice(0, 7) !== month ? ' is-other' : ''}${d === today ? ' is-today' : ''}`} onClick={() => onDay(d)} aria-label={`${longDate(d)}, ${count ? `${count} ${count === 1 ? 'trip' : 'trips'}` : 'no trips'}`}>
-                    <span className="cal-num">{dayNumber(d)}</span>
-                    {hidden[i] > 0 && <span className="cal-more">+{hidden[i]} more</span>}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="cal-bars">
-              {bars.map((b) => (
-                <button
-                  key={`${b.event.id}-${b.startCol}`}
-                  type="button"
-                  className={`cal-bar${isCancelled(b.event) ? ' is-cancelled' : ''}${b.continuesBefore ? ' is-cont-before' : ''}${b.continuesAfter ? ' is-cont-after' : ''}`}
-                  style={{ gridColumn: `${b.startCol + 1} / ${b.endCol + 2}`, gridRow: b.lane + 1, ...styleOf(b.event) }}
-                  onClick={() => onOpen(b.event)}
-                  title={`${summary(b.event)} (${rangeText(b.event)})`}
-                >
-                  {eventLabel(b.event)}
-                  {b.event.destination && <span> · {b.event.destination}</span>}
+      {weeks.map((days) => (
+        <div className="cal-week" key={days[0]}>
+          {days.map((d) => {
+            const list = eventsOnDay(events, d).filter((e) => e.start === d);
+            const shown = list.slice(0, 3);
+            const extra = list.length - shown.length;
+            return (
+              <div key={d} className={`cal-day${d.slice(0, 7) !== month ? ' is-other' : ''}${d === today ? ' is-today' : ''}`}>
+                <button type="button" className="cal-day-head" onClick={() => onDay(d)} aria-label={`${longDate(d)}, ${list.length ? `${list.length} ${list.length === 1 ? 'trip' : 'trips'}` : 'no trips'}`}>
+                  <span className="cal-num">{dayNumber(d)}</span>
                 </button>
-              ))}
-            </div>
-          </div>
-        );
-      })}
+                {shown.map((e) => (
+                  <button
+                    key={e.id}
+                    type="button"
+                    className={`cal-pill${isCancelled(e) ? ' is-cancelled' : ''}`}
+                    style={styleOf(e)}
+                    onClick={() => onOpen(e)}
+                    aria-label={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}`}
+                    title={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}`}
+                  >
+                    <span className="cal-pill-type">{e.kind === 'payment' ? 'Payment Deadline' : 'Travel'}</span>
+                    <span className="cal-pill-name">{e.title}</span>
+                  </button>
+                ))}
+                {extra > 0 && <button type="button" className="cal-more-btn" onClick={() => onDay(d)}>+{extra} more</button>}
+              </div>
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 };
