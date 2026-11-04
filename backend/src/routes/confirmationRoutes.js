@@ -1,5 +1,5 @@
 import express from 'express';
-import { cancelConfirmation, createConfirmation, findConfirmationDocument, findQuotationToConfirm, getConfirmationById, getConfirmations, updateConfirmation } from '../controllers/confirmationController.js';
+import { cancelConfirmation, createConfirmation, deleteConfirmation, findConfirmationDocument, findQuotationToConfirm, getConfirmationById, getConfirmations, updateConfirmation } from '../controllers/confirmationController.js';
 import { protect } from '../middleware/auth.js';
 import { checkRecordOwnership, checkRights } from '../middleware/checkRights.js';
 
@@ -15,5 +15,6 @@ router.get('/:id', checkRights('confirmations', 'canRead'), getConfirmationById)
 router.post('/', checkRights('confirmations', 'canCreate'), checkRights('quotations', 'canRead'), checkRecordOwnership(findQuotationToConfirm), createConfirmation);
 router.put('/:id', checkRights('confirmations', 'canUpdate'), checkRecordOwnership(findConfirmation), updateConfirmation);
 router.post('/:id/cancel', checkRights('confirmations', 'canUpdate'), checkRecordOwnership(findConfirmation), cancelConfirmation);
+router.delete('/:id', checkRights('confirmations', 'canDelete'), checkRecordOwnership(findConfirmation), deleteConfirmation);
 
 export default router;

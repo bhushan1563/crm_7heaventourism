@@ -225,6 +225,26 @@ export const updateConfirmation = async (req, res) => {
 };
 
 /** Cancels the booking: the quotation is unlocked and the statuses go back to what they were. The record itself is kept. */
+export const deleteConfirmation = async (req, res) => {
+  try {
+    const existing = await findConfirmationDocument(req.params.id);
+    if (!existing) return fail(res, 'Confirmation not found.');
+
+    // If the quotation still points to this confirmation, unlink it so it can be used again.
+    if (existing.quotationId) {
+      await QuotationModel.updateOne(
+        { _id: existing.quotationId, confirmationId: String(existing._id) },
+        { $set: { confirmationId: '', confirmationNo: '', isLocked: existing.previousQuotationLocked, status: existing.previousQuotationStatus || 'Sent' } }
+      );
+    }
+
+    await ConfirmationModel.deleteOne({ _id: existing._id });
+    res.json({ success: true, message: `Booking ${existing.confirmationNo} was deleted.` });
+  } catch (error) {
+    fail(res, friendlyMessage(error, 'Failed to delete the booking'));
+  }
+};
+
 export const cancelConfirmation = async (req, res) => {
   try {
     const existing = await findConfirmationDocument(req.params.id);

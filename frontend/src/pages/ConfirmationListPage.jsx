@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Loader2, Lock, RefreshCw, Search, Send } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, Edit2, Eye, FileText, Loader2, Lock, RefreshCw, Search, Send, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import confirmationService from '../services/confirmationService';
 import { getErrorMessage } from '../services/api';
 import ConfirmationPreview from '../components/confirmation/ConfirmationPreview';
 import ShareConfirmationDialog from '../components/confirmation/ShareConfirmationDialog';
+import ConfirmDialog from '../components/ConfirmDialog';
 import { formatDate } from '../utils/dateHelper';
 import './itineraries.css';
 import '../components/confirmation/confirmation.css';
@@ -33,6 +34,8 @@ export const ConfirmationListPage = () => {
   const [previewing, setPreviewing] = useState(null); // the full record being previewed
   const [openingId, setOpeningId] = useState('');
   const [sharing, setSharing] = useState(null); // the booking being sent to the client
+  const [toDelete, setToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const latestRequest = useRef(0);
 
   const load = useCallback(async () => {
@@ -89,6 +92,25 @@ export const ConfirmationListPage = () => {
     const merged = { ...patch, ...(updated?.updatedAt ? { updatedAt: updated.updatedAt } : {}) };
     setResult((r) => ({ ...r, data: r.data.map((x) => (x._id === id ? { ...x, ...merged } : x)) }));
     setSharing((current) => (current && current._id === id ? { ...current, ...merged } : current));
+  };
+
+  const confirmDelete = async () => {
+    const item = toDelete;
+    setDeleting(true);
+    try {
+      const res = await confirmationService.delete(item._id);
+      if (res.success) {
+        showToast(res.message || `${item.confirmationNo} was deleted.`, 'success');
+        setToDelete(null);
+        load();
+      } else {
+        showToast(res.message || 'The booking could not be deleted.', 'error');
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'The booking could not be deleted.'), 'error');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const { data, total, pages } = result;
@@ -224,6 +246,11 @@ export const ConfirmationListPage = () => {
                             <Send size={13} /> Send
                           </button>
                         )}
+                        {can('confirmations', 'canDelete') && (
+                          <button type="button" className="btn-icon btn-outline itin-danger" onClick={() => setToDelete(item)} title="Delete this booking" aria-label={`Delete ${item.confirmationNo}`}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -247,6 +274,7 @@ export const ConfirmationListPage = () => {
       )}
 
       <ConfirmationPreview confirmation={previewing} isOpen={Boolean(previewing)} onClose={() => setPreviewing(null)} />
+      <ConfirmDialog isOpen={Boolean(toDelete)} onClose={() => setToDelete(null)} onConfirm={confirmDelete} isDanger isLoading={deleting} title="Delete this booking?" message={`"${toDelete?.confirmationNo || ''}" will be permanently deleted. The linked quotation will be unlocked and can be edited again.`} confirmText="Delete" />
       {sharing && (
         <ShareConfirmationDialog
           confirmation={sharing}

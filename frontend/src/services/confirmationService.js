@@ -8,7 +8,8 @@ export const confirmationService = {
   confirm: async (quotationId, optionIndex, priceTableIndex) =>
     (await api.post('/confirmations', { quotationId, ...(optionIndex === undefined ? {} : { optionIndex }), ...(priceTableIndex === undefined ? {} : { priceTableIndex }) })).data,
   update: async (id, payload) => (await api.put(`/confirmations/${id}`, payload)).data,
-  cancel: async (id, reason) => (await api.post(`/confirmations/${id}/cancel`, { reason })).data
+  cancel: async (id, reason) => (await api.post(`/confirmations/${id}/cancel`, { reason })).data,
+  delete: async (id) => (await api.delete(`/confirmations/${id}`)).data
 };
 
 export default confirmationService;
