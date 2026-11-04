@@ -256,3 +256,19 @@ test('property: more agreeing sources never lower the confidence of a fact', () 
   );
   assert.equal(n, 0);
 });
+
+test('a postal code that the printed address does not contain is left out, and one that agrees is preferred (found on real sites)', () => {
+  const full = c('address.full', 'PO Box No. 125, Udaipur 313 001, Rajasthan, India', 'json-ld', 0.8);
+  const wrong = merge([full, c('address.postalCode', '302028', 'meta', 0.6)]).hotel.address;
+  assert.equal(wrong.postalCode, '313001', 'the code the address itself prints wins over a stray one');
+  const agreeing = merge([full, c('address.postalCode', '302028', 'meta', 0.9), c('address.postalCode', '313001', 'text', 0.4)]).hotel.address;
+  assert.equal(agreeing.postalCode, '313001');
+  const kept = merge([c('address.full', 'Palace Road, Jaipur 302006, India', 'json-ld', 0.8), c('address.postalCode', '302006', 'json-ld', 0.8)]).hotel.address;
+  assert.equal(kept.postalCode, '302006');
+});
+
+test('the postal code is not left on the end of the town', () => {
+  const a = merge([c('address.full', 'PO Box 125, Udaipur 313 001, Rajasthan, India', 'json-ld', 0.8), c('address.locality', 'Udaipur 313 001', 'json-ld', 0.8), c('address.postalCode', '313 001', 'json-ld', 0.8)]).hotel.address;
+  assert.equal(a.locality, 'Udaipur');
+  assert.equal(a.postalCode, '313 001');
+});

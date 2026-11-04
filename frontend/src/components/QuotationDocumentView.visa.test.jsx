@@ -55,9 +55,11 @@ describe('the visa quotation document', () => {
     expect(container.querySelector('[id$="-page-2"]')).not.toBeNull();
   });
 
-  it('still prints the exclusions and policies pages of the quotation', () => {
-    const { container } = view(visaQuotation());
-    expect(container).toHaveTextContent('Travel insurance');
+  it('prints no terms, policies or exclusions page: the client does not want them on a visa quotation', () => {
+    const { container } = view(visaQuotation({ importantNotes: ['Fees are not refundable'], paymentPolicy: ['100% advance'], cancellationPolicy: ['No refund after submission'] }));
+    for (const gone of ['TERMS, POLICIES, EXCLUSIONS', 'Payment Policy', 'Cancellation Policy', 'Fees are not refundable', '100% advance', 'No refund after submission', 'Travel insurance', 'Exclusions']) expect(container, gone).not.toHaveTextContent(gone);
+    expect(container.querySelector('[id$="-page-terms"]')).toBeNull();
+    expect(container).toHaveTextContent('Documents'); // the visa's own pages are still there
   });
 
   it('uses the singular for one applicant and says "On request" before any fee has an amount', () => {

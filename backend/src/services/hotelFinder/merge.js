@@ -163,6 +163,32 @@ export const mergeCandidates = ({ candidates, pageKinds = new Map(), site = '', 
   } else {
     address.full = [address.street, address.locality, address.region, address.postalCode, address.country].filter(Boolean).join(', ');
   }
+  // A postal code that the printed address does not contain is another place's (a head office, a sister hotel): prefer one that agrees.
+  if (address.full && address.postalCode) {
+    const digits = (s) => String(s).replace(/[\s-]/g, '').toLowerCase();
+    const inFull = (code) => digits(address.full).includes(digits(code));
+    if (!inFull(address.postalCode)) {
+      const agreeing = part('postalCode').find((c) => inFull(c.value));
+      if (agreeing) {
+        address.postalCode = agreeing.value;
+        addressInfo.postalCode = info(agreeing);
+      } else {
+        const stated = addressParts(address.full).postalCode;
+        if (stated) address.postalCode = stated;
+        else {
+          address.postalCode = '';
+          delete addressInfo.postalCode;
+        }
+      }
+    }
+    // the code is shown once, in its own part: it is not also left on the end of the town
+    for (const key of ['street', 'locality']) {
+      if (address[key] && address[key] !== address.postalCode) {
+        const stripped = address[key].replace(new RegExp(`[\\s,]*${address.postalCode.replace(/[^\w]/g, '').split('').join('[\\s-]?')}$`), '').trim();
+        if (stripped.length >= 3) address[key] = stripped;
+      }
+    }
+  }
   hotel.address = address;
   fieldInfo.address = fullInfo || info(rank([...by('address.locality'), ...by('address.street')].map((c) => ({ ...c, value: cleanDisplay(c.value) })), keyText, pageKinds)[0]);
   fieldInfo.addressParts = addressInfo;
