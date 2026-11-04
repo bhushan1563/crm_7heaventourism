@@ -243,6 +243,96 @@ const PriceTablesSection = ({ tables, quotation }) => {
 };
 
 /**
+ * One option's price table shown directly below the option's hotel block, so hotel + price appear together.
+ * No "PRICING" banner — the option header names the option already.
+ */
+const OptionPriceTable = ({ table, quotation }) => {
+  const border = '1px solid #0f172a';
+  const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
+  const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
+  const defaults = roomDefaults(quotation);
+  const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
+  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
+  const sheetColSpan = 2 + sheetCols.length + 1;
+
+  if (tableLayout(table) === 'rooms') {
+    return (
+      <div className="quotation-keep" style={{ marginTop: '3px' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+          <thead>
+            <tr>
+              {['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((title, c) => (
+                <th key={title} style={{ ...head, width: c === 0 ? '28%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(table.rows || []).map((row, r) => {
+              const rateEntered = Number(row.rate) > 0;
+              return (
+                <tr key={r}>
+                  <td style={{ ...cell, textAlign: 'left', fontWeight: 800 }}>{row.label}</td>
+                  <td style={cell}>{cellText(row.rate)}</td>
+                  <td style={{ ...cell, textAlign: 'center' }}>{rateEntered ? roomRowNights(row, defaults) : ''}</td>
+                  <td style={{ ...cell, textAlign: 'center' }}>{rateEntered ? roomRowRooms(row) : ''}</td>
+                  <td style={{ ...cell, fontWeight: 800 }}>{cellText(roomRowTotal(row, defaults))}</td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td colSpan={4} style={{ ...cell, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
+              <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  // 'sheet' layout (Only Hotel and Package)
+  return (
+    <div className="quotation-keep" style={{ marginTop: '3px' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed' }}>
+        <thead>
+          <tr>
+            {['Sr No', ...sheetCols.map(([, title]) => title), 'Total', 'PAX', 'Final Price'].map((title, c) => (
+              <th key={title} style={{ ...head, width: c === 0 ? '20%' : undefined, textAlign: c === 0 ? 'left' : 'center' }}>{title}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {(table.rows || []).map((row, r) => (
+            <tr key={r}>
+              <td style={{ ...cell, textAlign: 'left', fontWeight: 800 }}>{row.label}</td>
+              {sheetCols.map(([key]) => (
+                <td key={key} style={cell}>{cellText(row[key])}</td>
+              ))}
+              {(() => {
+                const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
+                const final = Math.round(tot * (Number(row.pax) || 0) * 100) / 100;
+                return (<>
+                  <td style={cell}>{cellText(tot)}</td>
+                  <td style={{ ...cell, textAlign: 'center' }}>{Number(row.pax) > 0 ? Number(row.pax) : ''}</td>
+                  <td style={{ ...cell, fontWeight: 800 }}>{cellText(final)}</td>
+                </>);
+              })()}
+            </tr>
+          ))}
+          <tr>
+            <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
+            <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
+              {rs(isHotelOnly
+                ? Math.round((table.rows || []).reduce((sum, r) => sum + Math.round((Number(r.package) || 0) * (Number(r.pax) || 0) * 100) / 100, 0) * 100) / 100
+                : tableTotal(table, quotation))}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+};
+
+/**
  * The body of a VISA quotation: the visa itself, the documents the applicants must bring (a checklist), the fees (per applicant or
  * for the whole group) with their total, and what the service includes. The price of the quotation is the fee table.
  */
@@ -523,18 +613,25 @@ const OptionProposal = ({ option, number, priced = false }) => {
   );
 };
 
-/** The options of a hotel quotation, one after the other, each priced by the rate tables of its hotels. */
-const HotelOptionsProposal = ({ options, priced = false }) => (
+/** The options of a hotel (or package) quotation, one after the other. When `tables` are provided each option
+ *  shows its price table directly below its hotel block so hotel and price are always on the same page. */
+const HotelOptionsProposal = ({ options, priced = false, tables = [], quotation = null }) => (
   <div style={{ marginBottom: '10px' }}>
     <div style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '5px' }}>
       <Building2 size={13} style={{ color: '#0284c7' }} />
       <span>Hotel Options</span>
     </div>
-    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>{priced ? 'Please choose the option that suits you best. The price of each option is in the pricing table below. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.'}</div>
+    <div style={{ fontSize: '8.5px', color: '#64748b', marginBottom: '8px' }}>{priced ? 'Please choose the option that suits you best. The price of each option is shown below it. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.'}</div>
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-      {options.map((option, i) => (
-        <OptionProposal key={i} option={option} number={i + 1} priced={priced} />
-      ))}
+      {options.map((option, i) => {
+        const table = tables[i];
+        return (
+          <div key={i}>
+            <OptionProposal option={option} number={i + 1} priced={priced} />
+            {table && quotation && <OptionPriceTable table={table} quotation={quotation} />}
+          </div>
+        );
+      })}
     </div>
   </div>
 );
@@ -859,8 +956,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   );
 
   const PricingSection = () => {
-    // For Only Hotel with options the pricing was already rendered inline below the options; don't render it again here.
-    if (hasPriceTables && hasOptions && quotationType === 'Only Hotel') return null;
+    // When options are shown each carries its own inline price table; don't render a separate PRICING section.
+    if (hasPriceTables && hasOptions) return null;
     if (hasPriceTables) return <PriceTablesSection tables={priceTables} quotation={quotation} />;
     if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
     return (
@@ -1146,13 +1243,14 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                 {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
-                {!isLand && !isVisaQuotation && hasOptions && (quotationType === 'Only Hotel'
-                  ? <>
-                      <HotelOptionsProposal options={options} priced={hasPriceTables} />
-                      {/* For Only Hotel the pricing sits directly below the options so the two can be compared at a glance. */}
-                      {hasPriceTables && <PriceTablesSection tables={priceTables} quotation={quotation} />}
-                    </>
-                  : <OptionsComparison options={options} paxDetails={quotation.paxDetails} priced={hasPriceTables} />)}
+                {!isLand && !isVisaQuotation && hasOptions && (
+                  hasPriceTables
+                    ? /* Each option carries its own price table directly below it, for any quotation type. */
+                      <HotelOptionsProposal options={options} priced tables={priceTables} quotation={quotation} />
+                    : quotationType === 'Only Hotel'
+                      ? <HotelOptionsProposal options={options} />
+                      : <OptionsComparison options={options} paxDetails={quotation.paxDetails} />
+                )}
 
                 {/* Hotels Table / Cards Layout */}
                 {!isLand && !isVisaQuotation && !hasOptions && hasHotels && (
