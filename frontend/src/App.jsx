@@ -25,6 +25,7 @@ const ItineraryListPage = lazyWithReload(() => import('./pages/ItineraryListPage
 const ItineraryEditorPage = lazyWithReload(() => import('./pages/ItineraryEditorPage'));
 const VisaListPage = lazyWithReload(() => import('./pages/VisaListPage'));
 const VisaEditorPage = lazyWithReload(() => import('./pages/VisaEditorPage'));
+const TravelCalendarPage = lazyWithReload(() => import('./pages/TravelCalendarPage'));
 const ConfirmationListPage = lazyWithReload(() => import('./pages/ConfirmationListPage'));
 const ConfirmationEditorPage = lazyWithReload(() => import('./pages/ConfirmationEditorPage'));
 const UserManagementPage = lazyWithReload(() => import('./pages/UserManagementPage'));
@@ -68,6 +69,7 @@ export function App() {
                     <Route path="/itineraries" element={<ItineraryListPage />} />
                     <Route path="/itineraries/new" element={<ItineraryEditorPage />} />
                     <Route path="/itineraries/:id/edit" element={<ItineraryEditorPage />} />
+                    <Route path="/calendar" element={<TravelCalendarPage />} />
                     <Route path="/confirmations" element={<ConfirmationListPage />} />
                     <Route path="/confirmations/:id" element={<ConfirmationEditorPage />} />
                     <Route path="/users" element={<UserManagementPage />} />

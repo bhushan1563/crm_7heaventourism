@@ -21,7 +21,8 @@ const ROUTERS = {
   hotelFinder: () => import('../src/routes/hotelFinderRoutes.js'),
   visas: () => import('../src/routes/visaRoutes.js'),
   confirmations: () => import('../src/routes/confirmationRoutes.js'),
-  masterText: () => import('../src/routes/masterTextRoutes.js')
+  masterText: () => import('../src/routes/masterTextRoutes.js'),
+  calendar: () => import('../src/routes/calendarRoutes.js')
 };
 
 // Routes without a rights tag, and why that is right.
@@ -32,6 +33,7 @@ const NO_RIGHTS_TAG = {
   'auth PUT /password': 'a person changes their own password',
   'auth PUT /avatar': 'a person changes their own picture',
   'auth DELETE /avatar': 'a person removes their own picture',
+  'calendar GET /': 'reads three modules: each source of events is left out unless the person may read it (see calendar.test.js)',
   'media POST /': 'guarded by requireMediaRights: what the photo is for decides the module, and it runs before the file is read (see media.test.js)'
 };
 
