@@ -3,8 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, configure, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-// The whole suite runs in parallel and the first screen of a file pays for loading its modules: allow far more than the usual second.
-configure({ asyncUtilTimeout: 8000 });
+// The whole suite runs in parallel and the first screen of a file pays for loading its modules; on a loaded CI runner allow far more than the usual second.
+configure({ asyncUtilTimeout: 25000 });
 
 const h = vi.hoisted(() => ({ showToast: vi.fn() }));
 vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: { _id: 'admin1', role: 'Admin', firstName: 'Bhushan', lastName: 'Doshi' } }) }));

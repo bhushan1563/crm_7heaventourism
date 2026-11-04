@@ -220,8 +220,51 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   const hcell = (label, w, fill = '0F172A') => cell([run(label, { bold: true, color: 'FFFFFF', size: 18 })], { width: w, fill, align: d.AlignmentType.CENTER });
   const rcell = (value, w, fmt = {}) => cell([run(value, fmt)], { width: w, align: d.AlignmentType.RIGHT });
   const heading = (t) => new d.Paragraph({ heading: d.HeadingLevel.HEADING_2, keepNext: true, spacing: { before: 220, after: 80 }, children: [run(t)] });
-  const bullets = (items) => items.filter((x) => String(x || '').trim()).map((item) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 50 }, children: [run(String(item).replace(/<[^>]*>/g, ''))] }));
-  const numbered = (items) => items.filter((x) => String(x || '').trim()).map((item, i) => new d.Paragraph({ spacing: { after: 60 }, indent: { left: 360, hanging: 360 }, children: [run(`${i + 1}.  ${String(item).replace(/<[^>]*>/g, '')}`)] }));
+
+  // Parse HTML to plain text using DOMParser so entities (&amp; &lt; etc.) are decoded and tags stripped.
+  const domParser = new DOMParser();
+  const plainText = (html) => {
+    if (!html) return '';
+    return domParser.parseFromString(`<body>${html}</body>`, 'text/html').body.textContent || '';
+  };
+  // Split an HTML string into one plain-text string per block element (p, li, br, div …) so notes and
+  // descriptions become multiple Word paragraphs instead of one wall of text.
+  const htmlToParagraphs = (html) => {
+    if (!html) return [];
+    const doc = domParser.parseFromString(`<body>${html}</body>`, 'text/html');
+    const collect = (node, out) => {
+      for (const child of node.childNodes) {
+        if (child.nodeType === 3) {
+          const t = child.textContent;
+          if (t.trim()) {
+            if (out.length && !out[out.length - 1].endsWith('\n')) out[out.length - 1] += t;
+            else out.push(t);
+          }
+        } else if (child.nodeType === 1) {
+          const tag = child.tagName.toLowerCase();
+          if (['p', 'div', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tag)) {
+            const t = child.textContent.trim();
+            if (t) out.push(t);
+          } else if (tag === 'br') {
+            if (out.length) out[out.length - 1] += '\n';
+            else out.push('');
+          } else {
+            collect(child, out);
+          }
+        }
+      }
+    };
+    const out = [];
+    collect(doc.body, out);
+    if (!out.length) {
+      const t = doc.body.textContent.trim();
+      if (t) out.push(t);
+    }
+    return out.map((s) => s.replace(/\n$/, '').trim()).filter(Boolean);
+  };
+
+  const bullets = (items) => items.filter((x) => String(x || '').trim()).map((item) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 50 }, children: [run(plainText(String(item)))] }));
+  const numbered = (items) => items.filter((x) => String(x || '').trim()).map((item, i) => new d.Paragraph({ spacing: { after: 60 }, indent: { left: 360, hanging: 360 }, children: [run(`${i + 1}.  ${plainText(String(item))}`)] }));
 
   const formatDate2 = (s) => {
     if (!s) return '';
@@ -270,15 +313,17 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   if (hotels.length) {
     children.push(heading('Hotel Bookings'));
     for (const h of hotels) {
-      const lines = [`${h.hotelName || 'Hotel'}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
-      if (h.city || h.address) lines.push(`📍 ${[h.city, h.address].filter(Boolean).join(', ')}`);
-      if (h.bookingNo) lines.push(`Hotel Confirmation No: ${h.bookingNo}`);
-      if (h.contactNumber) lines.push(`Contact: ${h.contactNumber}`);
+      const hotelName = plainText(h.hotelName || 'Hotel');
+      const lines = [`${hotelName}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
+      const city = plainText(h.city); const addr = plainText(h.address);
+      if (city || addr) lines.push(`📍 ${[city, addr].filter(Boolean).join(', ')}`);
+      if (h.bookingNo) lines.push(`Hotel Confirmation No: ${plainText(h.bookingNo)}`);
+      if (h.contactNumber) lines.push(`Contact: ${plainText(h.contactNumber)}`);
       if (h.checkInDate) lines.push(`Check-in: ${formatDate2(h.checkInDate)}${h.checkInTime ? ` at ${h.checkInTime}` : ''}`);
       if (h.checkOutDate) lines.push(`Check-out: ${formatDate2(h.checkOutDate)}${h.checkOutTime ? ` by ${h.checkOutTime}` : ''}`);
-      if (h.nights) lines.push(`Nights: ${h.nights}`);
-      if (h.roomCategory) lines.push(`Room: ${h.roomCategory}`);
-      if (h.mealPlan) lines.push(`Meal: ${h.mealPlan}`);
+      if (h.nights) lines.push(`Nights: ${plainText(String(h.nights))}`);
+      if (h.roomCategory) lines.push(`Room: ${plainText(h.roomCategory)}`);
+      if (h.mealPlan) lines.push(`Meal: ${plainText(h.mealPlan)}`);
       for (const [i2, l] of lines.entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [run(l, i2 === 0 ? { bold: true, size: 24 } : {})] }));
       children.push(new d.Paragraph({ spacing: { after: 60 } }));
     }
@@ -326,8 +371,14 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   }
 
   // ---- booking notes ----
-  if (view?.notes && String(view.notes).replace(/<[^>]*>/g, '').trim()) {
-    children.push(heading('Notes'), new d.Paragraph({ spacing: { after: 60 }, children: [run(String(view.notes).replace(/<[^>]*>/g, '').trim())] }));
+  {
+    const noteParagraphs = htmlToParagraphs(view?.notes || '');
+    if (noteParagraphs.length) {
+      children.push(heading('Notes'));
+      for (const p of noteParagraphs) {
+        children.push(new d.Paragraph({ spacing: { after: 60 }, children: [run(p)] }));
+      }
+    }
   }
 
   // ---- page break before quotation pages ----
@@ -348,29 +399,29 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   }
 
   // ---- hotel options or hotel list ----
+  const hotelLines = (h) => {
+    const name = plainText(h.hotelName || 'Hotel');
+    const lines = [`🏨 ${name}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
+    const city = plainText(h.city); const addr = plainText(h.address);
+    if (city || addr) lines.push(`📍 ${[city, addr].filter(Boolean).join(', ')}`);
+    if (h.roomCategory) lines.push(`Room: ${plainText(h.roomCategory)}`);
+    if (h.mealPlan) lines.push(`Meal: ${plainText(h.mealPlan)}`);
+    if (h.nights) lines.push(`Stay: ${plainText(String(h.nights))}`);
+    return lines;
+  };
   if (options.length) {
     children.push(heading('Hotel Options'));
     for (let oi = 0; oi < options.length; oi++) {
       const opt = options[oi];
-      children.push(new d.Paragraph({ spacing: { before: 120, after: 60 }, children: [run(opt.name || `Option ${oi + 1}`, { bold: true, size: 24, color: '0F172A' })] }));
+      children.push(new d.Paragraph({ spacing: { before: 120, after: 60 }, children: [run(plainText(opt.name) || `Option ${oi + 1}`, { bold: true, size: 24, color: '0F172A' })] }));
       for (const h of (opt.hotels || [])) {
-        const lines = [`🏨 ${h.hotelName || 'Hotel'}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
-        if (h.city || h.address) lines.push(`📍 ${[h.city, h.address].filter(Boolean).join(', ')}`);
-        if (h.roomCategory) lines.push(`Room: ${h.roomCategory}`);
-        if (h.mealPlan) lines.push(`Meal: ${h.mealPlan}`);
-        if (h.nights) lines.push(`Stay: ${h.nights}`);
-        for (const [i2, l] of lines.entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [run(l, i2 === 0 ? { bold: true } : {})] }));
+        for (const [i2, l] of hotelLines(h).entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [run(l, i2 === 0 ? { bold: true } : {})] }));
       }
     }
   } else if (hotels.length) {
     children.push(heading('Hotel & Accommodation'));
     for (const h of hotels) {
-      const lines = [`🏨 ${h.hotelName || 'Hotel'}${h.starRating && h.starRating !== 'Unrated' ? `  ★ ${h.starRating}` : ''}`];
-      if (h.city || h.address) lines.push(`📍 ${[h.city, h.address].filter(Boolean).join(', ')}`);
-      if (h.roomCategory) lines.push(`Room: ${h.roomCategory}`);
-      if (h.mealPlan) lines.push(`Meal: ${h.mealPlan}`);
-      if (h.nights) lines.push(`Stay: ${h.nights}`);
-      for (const [i2, l] of lines.entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [run(l, i2 === 0 ? { bold: true } : {})] }));
+      for (const [i2, l] of hotelLines(h).entries()) children.push(new d.Paragraph({ spacing: { after: 30 }, indent: { left: 360 }, children: [run(l, i2 === 0 ? { bold: true } : {})] }));
     }
   }
 
@@ -419,9 +470,14 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   if (!isHotelOnly && itinerary.length) {
     children.push(heading('Itinerary'));
     for (const day of itinerary) {
-      const title2 = [day.dayNumber, day.title].filter(Boolean).join(': ');
+      const title2 = [plainText(day.dayNumber), plainText(day.title)].filter(Boolean).join(': ');
       children.push(new d.Paragraph({ spacing: { before: 120, after: 40 }, children: [run(title2, { bold: true, color: BRAND })] }));
-      if (day.description) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [run(String(day.description).replace(/<[^>]*>/g, ''))] }));
+      if (day.description) {
+        const descParagraphs = htmlToParagraphs(day.description);
+        for (const p of (descParagraphs.length ? descParagraphs : [plainText(day.description)])) {
+          children.push(new d.Paragraph({ spacing: { after: 30 }, children: [run(p)] }));
+        }
+      }
     }
   }
 
