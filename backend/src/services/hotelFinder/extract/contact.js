@@ -123,7 +123,7 @@ export const socialCandidates = (doc, base) => {
 
 const COUNTRIES = ['India', 'United Arab Emirates', 'UAE', 'Sri Lanka', 'Nepal', 'Bhutan', 'Maldives', 'Thailand', 'Indonesia', 'Malaysia', 'Singapore', 'Vietnam', 'Cambodia', 'Philippines', 'Japan', 'China', 'Hong Kong', 'South Korea', 'Turkey', 'Greece', 'Italy', 'France', 'Spain', 'Portugal', 'Germany', 'Switzerland', 'Austria', 'Netherlands', 'Belgium', 'United Kingdom', 'UK', 'England', 'Scotland', 'Ireland', 'United States', 'USA', 'US', 'Canada', 'Mexico', 'Brazil', 'Australia', 'New Zealand', 'South Africa', 'Kenya', 'Tanzania', 'Egypt', 'Morocco', 'Mauritius', 'Seychelles', 'Oman', 'Qatar', 'Saudi Arabia', 'Bahrain', 'Kuwait', 'Jordan', 'Croatia', 'Czech Republic', 'Poland', 'Russia', 'Denmark', 'Norway', 'Sweden', 'Finland', 'Iceland'];
 const COUNTRY_SET = new Map(COUNTRIES.map((c) => [c.toLowerCase(), c]));
-const POSTAL = /\b(\d{6}|\d{5}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}|\d{4})\b/;
+const POSTAL = /\b(\d{6}|\d{3}\s\d{3}|\d{5}(?:-\d{4})?|[A-Z]{1,2}\d[A-Z\d]?\s?\d[A-Z]{2}|\d{4})\b/;
 
 /** Splits "Pichola, Udaipur, Rajasthan 313001, India" into what it can: street, locality, region, postal code, country. */
 export const addressParts = (full) => {
@@ -138,7 +138,7 @@ export const addressParts = (full) => {
   for (let i = parts.length - 1; i >= 0; i -= 1) {
     const m = POSTAL.exec(parts[i]);
     if (m && (parts[i].replace(m[0], '').trim().length <= 40)) {
-      result.postalCode = m[1];
+      result.postalCode = m[1].replace(/^(\d{3})\s(\d{3})$/, '$1$2'); // "313 001" is printed both ways in India
       const rest = parts[i].replace(m[0], '').replace(/[-–\s]+$/g, '').trim();
       if (rest) parts[i] = rest;
       else parts.splice(i, 1);

@@ -78,6 +78,17 @@ describe('the quotation as the confirmation prints it', () => {
     expect(quotationOf(c).packageDetails.hotels[0].bookingNo).toBe(''); // the saved booking is not changed by the form
   });
 
+  it('prints the booking\'s own travel date (the one edited on the confirmation page), not the quotation\'s old one', () => {
+    const c = confirmation({ travelDate: '2026-12-12', quote: { ...confirmation().quote, travelDate: '2026-11-01' } });
+    expect(quotationOf(c).travelDate).toBe('2026-12-12');
+    const f = formOf(c);
+    f.travelDate = '2027-01-05';
+    expect(quotationOf(c, f).travelDate).toBe('2027-01-05'); // an unsaved edit shows at once in the preview
+    f.travelDate = '';
+    expect(quotationOf(c, f).travelDate).toBe(''); // a cleared date is cleared, not brought back from the old quotation
+    expect(quotationOf({ ...c, travelDate: undefined }).travelDate).toBe('2026-11-01'); // an old booking without its own date keeps the quotation's
+  });
+
   it('says it is a confirmation, so the header can say so', () => {
     expect(quotationOf(confirmation()).confirmationInfo).toEqual({ no: '7H-CF-2026-001', confirmedAt: '2026-11-04T10:00:00.000Z', status: 'Confirmed' });
   });

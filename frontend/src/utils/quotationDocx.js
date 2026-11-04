@@ -154,11 +154,7 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
   const inclusions = (quotation.visaInclusions || []).filter((x) => String(x || '').replace(/<[^>]*>/g, '').trim());
   if (inclusions.length) children.push(heading('Visa inclusions'), ...bullets(inclusions));
 
-  const notes = (list) => (list || []).filter((x) => String(x || '').replace(/<[^>]*>/g, '').trim());
-  if (notes(quotation.importantNotes).length) children.push(heading('Terms'), ...numbered(notes(quotation.importantNotes)));
-  if (notes(quotation.paymentPolicy).length) children.push(heading('Payment policy'), ...bullets(notes(quotation.paymentPolicy)));
-  if (notes(quotation.cancellationPolicy).length) children.push(heading('Cancellation policy'), ...bullets(notes(quotation.cancellationPolicy)));
-  if (notes(quotation.exclusions).length) children.push(heading('Exclusions'), ...bullets(notes(quotation.exclusions)));
+  // No terms, payment or cancellation policy and no exclusions: the client does not want them on a visa quotation.
 
   const doc = new d.Document({
     creator: xmlSafe(company.name),

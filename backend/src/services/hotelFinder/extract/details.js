@@ -160,7 +160,7 @@ export const roomCandidates = (lines) => {
 
 const PER_NIGHT = /(?:per|a|each|\/)\s*(?:room\s+)?(?:per\s+)?night|nightly|\/\s*night|per\s+room|rates?\s+(?:start|from)|starting\s+(?:from|at|rate)|from\s+(?:only\s+)?(?:₹|rs|inr|\$|€|£)|onwards|tariff|room\s+rates?|price\s+from/i;
 const PER_PERSON = /per\s+(?:person|pax|adult|guest)|\/\s*(?:person|pax|head)/i;
-const NOT_A_RATE = /\b(?:off|discount|save|saving|deposit|refund|cashback|coupon|promo(?:code)?|wallet|points?|loyalty|membership|fee for|extra\s+(?:bed|person|adult|child))\b/i;
+const NOT_A_RATE = /\b(?:off|discount|save|saving|deposit|refund|cashback|coupon|promo(?:code)?|wallet|points?|loyalty|membership|credits?|vouchers?|gift|bonus|rewards?|complimentary|upgrade|fee for|extra\s+(?:bed|person|adult|child))\b/i;
 
 export const priceCandidates = (lines) => {
   const out = [];

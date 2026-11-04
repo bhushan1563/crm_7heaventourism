@@ -59,8 +59,10 @@ describe('the Word file of a visa quotation', () => {
       'Documents required', 'Passport valid for 6 months', 'Passport-size photographs', 'white background',
       'Visa fee', 'Per applicant × 3', 'Rs 19,500', 'Whole group', 'Rs 800', 'Total for 3 applicants', 'Rs 20,300',
       'Note:', 'Embassy fees', 'may change', 'Visa inclusions', 'Form filling',
-      'Terms', 'Fees are not refundable', 'Payment policy', '100% advance', 'Cancellation policy', 'No refund after submission', 'Exclusions', 'Travel insurance'
+      
     ]) expect(plain, text).toContain(text);
+    // the client does not want terms, policies or exclusions on a visa quotation
+    for (const gone of ['Payment policy', 'Cancellation policy', 'Exclusions', 'Fees are not refundable', '100% advance', 'No refund after submission', 'Travel insurance']) expect(plain, gone).not.toContain(gone);
     expect(formatDate('2027-03-15')).not.toBe('');
   });
 

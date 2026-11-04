@@ -100,7 +100,16 @@ const addressCandidates = (raw, source, confidence, byId) => {
     country: countryName(label(address.addressCountry))
   };
   for (const [key, value] of Object.entries(parts)) if (value) out.push(cand(`address.${key}`, value, source, confidence));
-  const full = [parts.street, parts.locality, parts.region, parts.postalCode, parts.country].filter(Boolean).join(', ');
+  // Some sites put the whole address in the street line: a part already said there is not said twice.
+  const said = [];
+  const full = [parts.street, parts.locality, parts.region, parts.postalCode, parts.country]
+    .filter(Boolean)
+    .filter((part) => {
+      const dup = said.some((earlier) => earlier.toLowerCase().includes(part.toLowerCase()));
+      said.push(part);
+      return !dup;
+    })
+    .join(', ');
   if (full) out.push(cand('address.full', full, source, confidence));
   return out;
 };

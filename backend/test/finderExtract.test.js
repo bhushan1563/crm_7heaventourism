@@ -339,3 +339,20 @@ test('another country and style: a Manhattan boutique hotel in dollars, with add
   assert.match(best(r, 'policy.pets'), /Pets are welcome/);
   assert.equal(values(r, 'name').filter((c) => c.source === 'h1').length, 1, 'the main heading agrees with the title');
 });
+
+test('a hotel credit, a voucher or a bonus is not a room rate (found on real sites)', async () => {
+  const { priceCandidates } = await import('../src/services/hotelFinder/extract/details.js');
+  const lines = (...texts) => texts.map((text) => ({ text }));
+  assert.equal(priceCandidates(lines('Plus a INR 2,000 hotel credit per night per stay on non-cumulative basis')).length, 0);
+  assert.equal(priceCandidates(lines('USD $50 Hotel credit per room, per night')).length, 0);
+  assert.equal(priceCandidates(lines('Complimentary dining voucher of INR 3,000 per night')).length, 0);
+  const real = priceCandidates(lines('Deluxe Room from INR 9,500 per night'));
+  assert.equal(real.length, 1);
+  assert.equal(real[0].value.from, 9500);
+});
+
+test('an address that has the whole address in its street line is not said twice (found on a real site)', () => {
+  const html = '<html><head><title>Hotel</title><script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Palace Hotel","address":{"@type":"PostalAddress","streetAddress":"Palace Road, Jaipur 302006, Rajasthan, India","addressLocality":"Jaipur","postalCode":"302006","addressCountry":"IN"}}</script></head><body></body></html>';
+  const full = extractPage({ html, url: 'https://palace.example/' }).candidates.find((c) => c.field === 'address.full');
+  assert.equal(full.value, 'Palace Road, Jaipur 302006, Rajasthan, India');
+});

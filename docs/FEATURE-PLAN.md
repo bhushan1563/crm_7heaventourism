@@ -192,7 +192,15 @@ Decisions taken (so the build can go on; each can be changed):
 - [x] 22.6 Hotel List with two sections (Hotels, Found hotels); the saved-find page (view, edit, download, delete); "Add to the hotel list" with a form prefilled from the find and the missing required details asked for
 - [x] 22.7 Tests at every level: unit and property-based on the reader and extractors, integration against local pretend hotel sites (redirects, robots, sitemaps, slow, huge, compressed, hostile), scenario tests of the whole flow, interface tests, a real-browser walkthrough; security checks (address tricks, DNS rebinding, redirects to private addresses, decompression bombs)
 
-(Steps 7 to 22 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
+### Step 23: Visa without the policies page; the confirmation follows its quotation; the finder checked on real sites (added 2026-11-04, from the user's message with the confirmation and visa screenshots)
+
+- [x] 23.1 A visa quotation no longer prints the Terms / Payment policy / Cancellation policy / Exclusions back page, on screen, in print or in the Word file (the client: "This Policy not required in Visa Quotation"). Hotel and package quotations are unchanged.
+- [x] 23.2 The confirmation's document shows the booking's own travel date (the one edited on the confirmation page), not the old date of the quotation.
+- [x] 23.3 Checked that a confirmed quotation is locked and that cancel, change the quotation, confirm again gives a new booking showing every changed part (travellers, payments and notes belong to the booking, so they start empty again).
+- [x] 23.4 Items a to d and the Master Editor for notes and policy were already built and live in Steps 13 to 16 (no vehicle notes; hotel confirmation number under the hotel name; contact number after the address; check-in / check-out time columns; same for Package).
+- [x] 23.5 The finder run against real hotel websites. Fixed: a "hotel credit" / voucher / bonus read as the room rate; a postal code from another place shown beside the address; "313 001" not recognised as a postal code; the whole address repeated when a site puts it all in the street line. Sites that refuse robots (403) or have a bad certificate give a plain message and the paste-text way.
+
+(Steps 7 to 23 are complete except 19.4 and 20.7; what else remains is waiting on the client, see above.)
 
 ## 4. Definition of done (every step)
 

@@ -134,8 +134,11 @@ export const quotationOf = (confirmation, form) => {
     const b = bookings[i];
     return b ? { ...stay, bookingNo: b.confirmationNo, contactNumber: b.contactNumber, checkInTime: b.checkInTime, checkOutTime: b.checkOutTime } : stay;
   });
+  // The travel date is the booking's own (it is edited on the confirmation page), not the one the quotation had when it was sold.
+  const travelDate = form ? form.travelDate || '' : confirmation?.travelDate ?? quote.travelDate;
   return {
     ...quote,
+    travelDate,
     quotationNo: confirmation?.confirmationNo || quote.quotationNo || '',
     packageDetails: { ...(quote.packageDetails || {}), hotels },
     confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed' }

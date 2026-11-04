@@ -817,7 +817,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     }
   };
 
-  const showBackPages = !pageNumber || pageNumber === 3;
+  // The terms, policies and exclusions page is for hotel, package, land and event quotations. The client does not want it on a visa
+  // quotation (it has its own checklist, fees and inclusions), so a visa never prints it.
+  const showBackPages = (!pageNumber || pageNumber === 3) && !isVisaQuotation;
   const hasPoliciesPage = hasPaymentPolicy || hasCancellationPolicy;
   const hasExclusionsPage = hasExclusions || hasVehicleNotes;
 
