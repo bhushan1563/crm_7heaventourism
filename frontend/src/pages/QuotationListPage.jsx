@@ -37,6 +37,7 @@ import ExportButton from '../components/ExportButton';
 import QuotationPreviewModal from '../components/QuotationPreviewModal';
 import QuotationDocumentView from '../components/QuotationDocumentView';
 import { generateQuotationPDF } from '../utils/quotationPdfGenerator';
+import { saveBlob } from '../utils/download';
 import { formatDate } from '../utils/dateHelper';
 import { QUOTATION_STATUS_TABS } from '../config';
 import { getErrorMessage } from '../services/api';
@@ -74,6 +75,7 @@ export const QuotationListPage = () => {
   // Direct downloading state per item id
   const [downloadingId, setDownloadingId] = useState(null);
   const [directDownloadQuote, setDirectDownloadQuote] = useState(null);
+  const [wordDownloadingId, setWordDownloadingId] = useState(null);
 
   const fetchQuotations = async () => {
     try {
@@ -219,6 +221,27 @@ export const QuotationListPage = () => {
     } finally {
       setDownloadingId(null);
       setDirectDownloadQuote(null);
+    }
+  };
+
+  const handleDirectWordDownload = async (quote) => {
+    try {
+      setWordDownloadingId(quote._id);
+      let result;
+      if (quote.quotationType === 'Visa') {
+        const { generateVisaQuotationDocx } = await import('../utils/quotationDocx');
+        result = await generateVisaQuotationDocx(quote);
+      } else {
+        const { generateQuotationDocx } = await import('../utils/quotationDocx');
+        result = await generateQuotationDocx(quote);
+      }
+      saveBlob(result.blob, result.filename);
+      showToast(`${quote.quotationNo} Word document downloaded!`, 'success');
+    } catch (err) {
+      console.error('Word download error:', err);
+      showToast('Failed to generate Word file: ' + getErrorMessage(err), 'error');
+    } finally {
+      setWordDownloadingId(null);
     }
   };
 
@@ -460,7 +483,7 @@ export const QuotationListPage = () => {
               <th>Pricing</th>
               <th>Assigned Team</th>
               <th>Status</th>
-              <th style={{ textAlign: 'center' }}>PDF & Actions</th>
+              <th style={{ textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -613,6 +636,21 @@ export const QuotationListPage = () => {
                             style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
                           >
                             {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                          </button>
+                        )}
+
+                        </span>
+                        {/* 3b. Direct Word Download */}
+                        <span className="ql-slot">
+                        {hasDownloadRight && (
+                          <button
+                            onClick={() => handleDirectWordDownload(q)}
+                            className="btn btn-outline btn-sm btn-icon"
+                            disabled={wordDownloadingId === q._id}
+                            title="Download Word (.docx)"
+                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                          >
+                            {wordDownloadingId === q._id ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
                           </button>
                         )}
 
