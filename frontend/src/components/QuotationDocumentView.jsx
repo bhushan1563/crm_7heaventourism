@@ -4,6 +4,7 @@ import { Plane, Check, X, Diamond, Building2, Calendar, MapPin, Phone, Mail, Awa
 import logoImg from '../assets/logo.webp';
 import { formatDate, formatLongDate } from '../utils/dateHelper';
 import { richToPlainText, toDisplayHtml } from '../utils/richText';
+import { shownPriceNote } from '../utils/pricingNote';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { addressLine } from '../utils/hotelStay';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
@@ -1010,7 +1011,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
             }}
           >
-            <Line value={pricing.totalCostNote || (pricing.totalCostPerPerson > 0 ? `Rs ${pricing.totalCostPerPerson.toLocaleString('en-IN')} Per person (Incl of GST)` : 'Custom Rate on Request')} />
+            <Line value={shownPriceNote(pricing)} />
           </div>
           {pricing.grandTotal > 0 && (
             <div style={{ fontSize: '11px', fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '4px 10px', borderRadius: '4px', border: '1px solid #a7f3d0' }}>

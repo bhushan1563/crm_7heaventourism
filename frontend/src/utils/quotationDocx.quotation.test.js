@@ -115,3 +115,13 @@ describe('hostile or odd data', () => {
     expect(plain).toContain('ok');
   });
 });
+
+describe('a quotation imported from the old export', () => {
+  it('prints its real per-person price, not the default "Rs 0" line it was saved with', async () => {
+    const { plain } = await open({ quotationNo: '7H-QT-2026-019', quotationType: 'Package', clientName: 'Nihar Vashi', destination: 'Andaman', paxDetails: '4 Adults', packageDetails: { roomInfo: '2 Rooms' }, pricing: { totalCostPerPerson: 48800, grandTotal: 195200, totalCostNote: 'Rs 0 Per person (Incl of GST)' } });
+    expect(plain).toContain('Rs 48,800 Per person (Incl of GST)');
+    expect(plain).toContain('Total Package: Rs 1,95,200');
+    expect(plain).toContain('Room Allocation: 2 Rooms');
+    expect(plain).not.toContain('Rs 0 Per person');
+  });
+});

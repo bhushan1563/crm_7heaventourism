@@ -8,6 +8,7 @@ import { toDocxColor, toHalfPoints } from './itineraryDocx';
 import { shareFileName } from './shareContact';
 import { feeAmount, visaFeeTotal } from './visa';
 import { addressLine } from './hotelStay';
+import { shownPriceNote } from './pricingNote';
 import * as H from './hotelRates';
 import * as L from './landService';
 import * as P from './priceTables';
@@ -808,7 +809,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
           pricing.otherCostPerPerson > 0 && `Other Services: ${rs(pricing.otherCostPerPerson)} ${plainOf(pricing.otherCostNote) || 'Per person'}`
         ].filter(Boolean);
     children.push(...lines.map((l) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 40 }, children: [text(l)] })));
-    const headline = plainOf(pricing.totalCostNote) ? lineRuns(pricing.totalCostNote, { bold: true, size: 24 }) : [text(pricing.totalCostPerPerson > 0 ? `${rs(pricing.totalCostPerPerson)} Per person (Incl of GST)` : 'Custom Rate on Request', { bold: true, size: 24 })];
+    const headline = lineRuns(shownPriceNote(pricing), { bold: true, size: 24 });
     children.push(new d.Paragraph({ spacing: { before: 100, after: 60 }, shading: { type: d.ShadingType.CLEAR, fill: 'FDE047', color: 'auto' }, children: headline }));
     if (pricing.grandTotal > 0) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(`${isHotelOnly ? 'Grand Total' : 'Total Package'}: ${rs(pricing.grandTotal)}`, { bold: true, color: '047857' })] }));
     if (plainOf(pricing.notes)) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(pricing.notes, { italics: true, color: '64748B' })] }));

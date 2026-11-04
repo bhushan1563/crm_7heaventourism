@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { autoPriceNote, nextPriceNote } from './pricingNote';
+import { autoPriceNote, nextPriceNote, shownPriceNote } from './pricingNote';
 
 describe('the price line', () => {
   it('is written in the usual words, with Indian digit grouping', () => {
@@ -33,5 +33,24 @@ describe('the price line', () => {
       }),
       { numRuns: 300 }
     );
+  });
+});
+
+describe('shownPriceNote: the price line that is printed', () => {
+  const pricing = (over) => ({ totalCostPerPerson: 48800, grandTotal: 195200, totalCostNote: 'Rs 0 Per person (Incl of GST)', ...over });
+  it('replaces an automatic line that disagrees with the price (the default of every imported quotation)', () => {
+    expect(shownPriceNote(pricing())).toBe('Rs 48,800 Per person (Incl of GST)');
+    expect(shownPriceNote(pricing({ totalCostNote: '<p>Rs 0 Per person (Incl of GST)</p>' }))).toBe('Rs 48,800 Per person (Incl of GST)');
+    expect(shownPriceNote(pricing({ totalCostNote: '' }))).toBe('Rs 48,800 Per person (Incl of GST)');
+  });
+  it('keeps a line that agrees, and any line somebody wrote', () => {
+    expect(shownPriceNote(pricing({ totalCostNote: 'Rs 48,800 Per person (Incl of GST)' }))).toBe('Rs 48,800 Per person (Incl of GST)');
+    expect(shownPriceNote(pricing({ totalCostNote: '<p><strong>Special offer: Rs 45,000 Per person</strong></p>' }))).toBe('<p><strong>Special offer: Rs 45,000 Per person</strong></p>');
+    expect(shownPriceNote(pricing({ totalCostNote: 'From Rs 20,000' }))).toBe('From Rs 20,000');
+  });
+  it('with no per-person price it falls back to the total, then to "on request"', () => {
+    expect(shownPriceNote(pricing({ totalCostPerPerson: 0 }))).toBe('Rs 1,95,200 Total (Incl of GST)');
+    expect(shownPriceNote(pricing({ totalCostPerPerson: 0, grandTotal: 0 }))).toBe('Custom Rate on Request');
+    expect(shownPriceNote(null)).toBe('Custom Rate on Request');
   });
 });

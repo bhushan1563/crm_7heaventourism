@@ -22,6 +22,7 @@
     "create-admin": "node scripts/create-admin.mjs",
     "test": "npm test -w backend && npm test -w frontend",
     "import-csv": "node scripts/import-legacy-csv.mjs",
+    "repair-legacy": "node scripts/repair-legacy-quotations.mjs",
     "backup-db": "node scripts/backup-db.mjs",
     "restore-db": "node scripts/restore-db.mjs",
     "package": "node scripts/package-release.mjs",

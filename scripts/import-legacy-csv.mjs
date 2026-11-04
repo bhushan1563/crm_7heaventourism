@@ -187,7 +187,7 @@ const mapQuotations = (rows) => {
     out.push({
       quotationNo, quotationType, clientName: r['Client Name'], destination: r['Destination'], duration: r['Duration'],
       paxDetails: r['Pax'], travelDate: parseDate(r['Travel Date']), status, sales: r['Sales Agent'], ops: r['Ops Agent'],
-      pricing: { totalCostPerPerson: num(r['Cost Per Person']), grandTotal: num(r['Grand Total']) }
+      pricing: { totalCostPerPerson: num(r['Cost Per Person']), grandTotal: num(r['Grand Total']), totalCostNote: `Rs ${num(r['Cost Per Person']).toLocaleString('en-IN')} Per person (Incl of GST)` }
     });
   }
   return out;
