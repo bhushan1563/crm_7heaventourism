@@ -157,7 +157,7 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
     return new d.Table({
       width: { size: CONTENT, type: d.WidthType.DXA },
       columnWidths: widths,
-      rows: rows.map(([label, value]) => new d.TableRow({ cantSplit: true, children: [cell([text(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })] }))
+      rows: rows.map(([label, value]) => new d.TableRow({ cantSplit: true, children: [cell([text(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })] }))
     });
   };
 
@@ -186,8 +186,8 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
   ].filter(([, v]) => v);
 
   const children = [];
-  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [text(company.name, { bold: true, size: 30, color: BRAND }), text(`   ${company.tagline || ''}`, { size: 18, color: '64748B' })] }));
-  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '475569' }), text(`     Date: ${formatDate(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '475569' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [text(company.name, { bold: true, size: 30, color: BRAND }), text(`   ${company.tagline || ''}`, { size: 18, color: '000000' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '000000' }), text(`     Date: ${formatDate(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '000000' })] }));
   children.push(new d.Paragraph({ heading: d.HeadingLevel.TITLE, spacing: { after: 40 }, children: [text('VISA QUOTATION')] }));
   children.push(new d.Paragraph({ spacing: { after: 160 }, children: [text(title, { bold: true, size: 28, color: '0F172A' })] }));
 
@@ -214,7 +214,7 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
     ];
     children.push(heading('Fees'), new d.Table({ width: { size: CONTENT, type: d.WidthType.DXA }, columnWidths: widths, rows }));
   }
-  if (visa.priceNote && String(visa.priceNote).replace(/<[^>]*>/g, '').trim()) children.push(new d.Paragraph({ spacing: { before: 100, after: 100 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(visa.priceNote, { italics: true, color: '64748B' })] }));
+  if (visa.priceNote && String(visa.priceNote).replace(/<[^>]*>/g, '').trim()) children.push(new d.Paragraph({ spacing: { before: 100, after: 100 }, children: [text('Note: ', { italics: true, color: '000000' }), ...lineRuns(visa.priceNote, { italics: true, color: '000000' })] }));
 
   const inclusions = (quotation.visaInclusions || []).filter((x) => String(x || '').replace(/<[^>]*>/g, '').trim());
   if (inclusions.length) children.push(heading('Visa inclusions'), ...bullets(inclusions));
@@ -238,8 +238,8 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
         footers: {
           default: new d.Footer({
             children: [
-              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '94A3B8' })] }),
-              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '94A3B8' }), text(' of ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '94A3B8' })] })
+              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), text(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
             ]
           })
         },
@@ -353,8 +353,8 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   const children = [];
 
   // ---- document header ----
-  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [run(company.name, { bold: true, size: 30, color: BRAND }), run(`   ${company.tagline || 'Travel with Trust'}`, { size: 18, color: '64748B' })] }));
-  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [run(`Ref: ${info.no || confirmation?.confirmationNo || '—'}`, { size: 18, color: '475569' }), run(`     Confirmed: ${formatDate2(info.confirmedAt || confirmation?.confirmedAt)}`, { size: 18, color: '475569' }), ...(cancelled ? [run('     CANCELLED', { size: 18, color: 'B91C1C', bold: true })] : [])] }));
+  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [run(company.name, { bold: true, size: 30, color: BRAND }), run(`   ${company.tagline || 'Travel with Trust'}`, { size: 18, color: '000000' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [run(`Ref: ${info.no || confirmation?.confirmationNo || '—'}`, { size: 18, color: '000000' }), run(`     Confirmed: ${formatDate2(info.confirmedAt || confirmation?.confirmedAt)}`, { size: 18, color: '000000' }), ...(cancelled ? [run('     CANCELLED', { size: 18, color: 'B91C1C', bold: true })] : [])] }));
   children.push(new d.Paragraph({ heading: d.HeadingLevel.TITLE, spacing: { after: 40 }, children: [run('BOOKING CONFIRMATION', { color: cancelled ? 'B91C1C' : '047857' })] }));
   children.push(new d.Paragraph({ spacing: { after: 160 }, children: [run(quotation.destination || '', { bold: true, size: 28, color: '0F172A' })] }));
 
@@ -371,7 +371,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   ].filter(([, v]) => v);
   if (detailRows.length) {
     const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-    children.push(heading('Confirmation Details'), tbl(detailRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
+    children.push(heading('Confirmation Details'), tbl(detailRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
   }
 
   // ---- hotels (with booking confirmation numbers) ----
@@ -437,7 +437,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
       ...(pay.note ? [['Payment note', pay.note]] : []),
     ];
     const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-    children.push(heading('Payment'), tbl(payRows.map(([label, value], i) => trow([cell([run(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value, { bold: i === 2, size: i === 2 ? 24 : 22 })], { width: widths[1], fill: i === 2 ? (balance > 0 ? 'FEF9C3' : 'ECFDF5') : undefined })])), widths));
+    children.push(heading('Payment'), tbl(payRows.map(([label, value], i) => trow([cell([run(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value, { bold: i === 2, size: i === 2 ? 24 : 22 })], { width: widths[1], fill: i === 2 ? (balance > 0 ? 'FEF9C3' : 'ECFDF5') : undefined })])), widths));
   }
 
   // ---- custom fields ----
@@ -445,7 +445,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     const rows = view.customFields.filter((f) => f.label?.trim());
     if (rows.length) {
       const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-      children.push(heading('Additional Details'), tbl(rows.map((f) => trow([cell([run(f.label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(f.value || '–')], { width: widths[1] })])), widths));
+      children.push(heading('Additional Details'), tbl(rows.map((f) => trow([cell([run(f.label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(f.value || '–')], { width: widths[1] })])), widths));
     }
   }
 
@@ -474,7 +474,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   ].filter(([, v]) => v);
   if (tripRows.length) {
     const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-    children.push(heading('Trip Details'), tbl(tripRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
+    children.push(heading('Trip Details'), tbl(tripRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
   }
 
   // ---- hotel options or hotel list ----
@@ -582,8 +582,8 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
       properties: { page: { size: { width: PAGE.width, height: PAGE.height }, margin: { top: PAGE.margin, bottom: PAGE.margin, left: PAGE.margin, right: PAGE.margin } } },
       footers: {
         default: new d.Footer({ children: [
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '94A3B8' })] }),
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run('Page ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '94A3B8' }), run(' of ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '94A3B8' })] })
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), run(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
         ]})
       },
       children
@@ -632,7 +632,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     tableRow([cell([text(label, { bold: true })], { width: widths.slice(0, -1).reduce((a, b) => a + b, 0), fill, span: widths.length - 1 }), rcell(value, widths[widths.length - 1], { bold: true, size: 24 })]);
   const factsTable = (rows) => {
     const widths = widthsOf([0.3, 0.7]);
-    return table(rows.map(([label, value]) => tableRow([cell([text(label, { bold: true, color: '334155' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })])), widths);
+    return table(rows.map(([label, value]) => tableRow([cell([text(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([text(value)], { width: widths[1] })])), widths);
   };
 
   const quotationType = quotation.quotationType || 'Package';
@@ -657,8 +657,8 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
   const children = [];
 
   // ---- header ----
-  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [text(company.name, { bold: true, size: 30, color: BRAND }), text(`   ${company.tagline || 'Travel with Trust'}`, { size: 18, color: '64748B' })] }));
-  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '475569' }), text(`     Date: ${formatDate(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '475569' }), text(`     Type: ${quotationType}`, { size: 18, color: '475569' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 20 }, children: [text(company.name, { bold: true, size: 30, color: BRAND }), text(`   ${company.tagline || 'Travel with Trust'}`, { size: 18, color: '000000' })] }));
+  children.push(new d.Paragraph({ spacing: { after: 160 }, border: { bottom: { style: d.BorderStyle.SINGLE, size: 8, color: BRAND, space: 4 } }, children: [text(`Ref: ${quotation.quotationNo || '—'}`, { size: 18, color: '000000' }), text(`     Date: ${formatDate(quotation.createdAt || new Date().toISOString())}`, { size: 18, color: '000000' }), text(`     Type: ${quotationType}`, { size: 18, color: '000000' })] }));
   children.push(new d.Paragraph({ heading: d.HeadingLevel.TITLE, spacing: { after: 40 }, children: [text(TITLES[quotationType] || 'PACKAGE QUOTATION')] }));
   children.push(new d.Paragraph({ spacing: { after: 160 }, children: [text(quotation.destination || (isHotelOnly ? 'HOTEL STAY PROPOSAL' : 'CUSTOM TOUR PACKAGE'), { bold: true, size: 28, color: '0F172A' })] }));
 
@@ -680,10 +680,10 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       itinerary.forEach((day, idx) => {
         children.push(new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 30 }, shading: { type: d.ShadingType.CLEAR, fill: 'FEF9C3', color: 'auto' }, children: [text(`${plainOf(day.dayNumber) || `Day 0${idx + 1}`}: ${plainOf(day.title) || 'Sightseeing & Excursions'}`, { bold: true, color: '0F172A' })] }));
         const meta = dayMeta(day);
-        if (meta) children.push(new d.Paragraph({ keepNext: true, spacing: { after: 30 }, children: [text(meta, { italics: true, size: 18, color: '64748B' })] }));
+        if (meta) children.push(new d.Paragraph({ keepNext: true, spacing: { after: 30 }, children: [text(meta, { italics: true, size: 18, color: '000000' })] }));
         if (day.description) children.push(...paragraphs(day.description));
       });
-    } else children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Detailed day-wise itinerary will be customized as per guest preference.', { italics: true, color: '64748B' })] }));
+    } else children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Detailed day-wise itinerary will be customized as per guest preference.', { italics: true, color: '000000' })] }));
     const endRuns = lineRuns(quotation.endOfTourNote || '***End of the Tour***', { bold: true });
     children.push(new d.Paragraph({ alignment: d.AlignmentType.CENTER, spacing: { before: 140, after: 100 }, children: endRuns.length ? endRuns : [text('***End of the Tour***', { bold: true })] }));
   }
@@ -729,16 +729,16 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     out.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 20 }, indent: { left: 240 }, children: [text(plainOf(h.hotelName) || 'Hotel', { bold: true, size: 24, color: '0F172A' }), ...(star ? [text(star, { bold: true, color: 'B45309' })] : [])] }));
     if (h.roomCategory) line([text(h.roomCategory, { bold: true, color: '0369A1' })]);
     const where = addressLine(h);
-    if (where) line([text(`📍 ${where}`, { color: '475569' })]);
+    if (where) line([text(`📍 ${where}`, { color: '000000' })]);
     const dates = [h.checkInDate && `Check In: ${formatLongDate(h.checkInDate)}`, h.checkOutDate && `Check Out: ${formatLongDate(h.checkOutDate)}`].filter(Boolean);
     if (dates.length) line([text(dates.join('   •   '))]);
     const facts = [h.nights, h.noOfRooms, h.mealPlan].filter(Boolean);
-    if (facts.length) line([text(facts.join('   •   '), { color: '334155' })]);
+    if (facts.length) line([text(facts.join('   •   '), { color: '000000' })]);
     const times = [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean);
-    if (times.length) line([text(times.join('   •   '), { color: '334155' })]);
-    if ((h.amenities || []).length) line([text('Amenities: ', { bold: true, size: 18 }), text(h.amenities.join('  •  '), { size: 18, color: '475569' })]);
+    if (times.length) line([text(times.join('   •   '), { color: '000000' })]);
+    if ((h.amenities || []).length) line([text('Amenities: ', { bold: true, size: 18 }), text(h.amenities.join('  •  '), { size: 18, color: '000000' })]);
     const contact = [h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean);
-    if (contact.length) line([text(contact.join('   |   '), { size: 18, color: '64748B' })]);
+    if (contact.length) line([text(contact.join('   |   '), { size: 18, color: '000000' })]);
     if (rates) out.push(...rateTable(h));
     return out;
   };
@@ -755,7 +755,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     if (vehicles.length) {
       const w = widthsOf([0.3, 0.1, 0.12, 0.08, 0.2, 0.2]);
       const body = vehicles.map((v) => tableRow([
-        cell([text(v.vehicleType || 'Vehicle', { bold: true }), ...(plainOf(v.notes) ? [new d.TextRun({ break: 1 }), ...lineRuns(v.notes, { size: 18, color: '64748B' })] : [])], { width: w[0] }),
+        cell([text(v.vehicleType || 'Vehicle', { bold: true }), ...(plainOf(v.notes) ? [new d.TextRun({ break: 1 }), ...lineRuns(v.notes, { size: 18, color: '000000' })] : [])], { width: w[0] }),
         cell([text(Number(v.seats) > 0 ? String(v.seats) : '–')], { width: w[1] }),
         cell([text(v.acType || '–')], { width: w[2] }),
         cell([text(String(v.quantity ?? ''))], { width: w[3] }),
@@ -765,16 +765,16 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       const total = L.vehicleTotal(vehicles);
       children.push(table([tableRow(['Vehicle', 'Seats', 'AC', 'Qty', 'Rate / vehicle', 'Amount'].map((t, i) => hcell(t, w[i], i === 0 ? d.AlignmentType.LEFT : undefined)), { header: true }), ...body, totalRow('Total for the trip', total > 0 ? rs(total) : 'On request', w)], w));
     }
-    if (plainOf(trip.priceNote)) children.push(new d.Paragraph({ spacing: { before: 100, after: 100 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(trip.priceNote, { italics: true, color: '64748B' })] }));
+    if (plainOf(trip.priceNote)) children.push(new d.Paragraph({ spacing: { before: 100, after: 100 }, children: [text('Note: ', { italics: true, color: '000000' }), ...lineRuns(trip.priceNote, { italics: true, color: '000000' })] }));
     if (filled(quotation.vehicleInclusions).length) children.push(sub('Vehicle Inclusions'), ...bullets(quotation.vehicleInclusions));
   } else {
     if (hasOptions) {
-      children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(priceTables.length ? 'Please choose the option that suits you best. The price of each option is shown below it. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.', { italics: true, size: 18, color: '64748B' })] }));
+      children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(priceTables.length ? 'Please choose the option that suits you best. The price of each option is shown below it. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.', { italics: true, size: 18, color: '000000' })] }));
       options.forEach((opt, oi) => {
         children.push(new d.Paragraph({ keepNext: true, spacing: { before: 200, after: 40 }, shading: { type: d.ShadingType.CLEAR, fill: '0F172A', color: 'auto' }, children: [...(isDefaultOptionName(plainOf(opt.name), oi + 1) ? [text(` Option ${oi + 1}`, { bold: true, size: 24, color: 'FFFFFF' })] : [text(` OPTION ${oi + 1}   `, { bold: true, size: 16, color: '7DD3FC' }), text(plainOf(opt.name), { bold: true, size: 24, color: 'FFFFFF' })]), ...(opt.recommended ? [text('    ★ RECOMMENDED', { bold: true, size: 16, color: 'FBBF24' })] : [])] }));
         const stays = opt.hotels || [];
         const priced = priceTables[oi];
-        if (!stays.length) children.push(new d.Paragraph({ indent: { left: 240 }, children: [text('Hotels to be confirmed', { italics: true, color: '94A3B8' })] }));
+        if (!stays.length) children.push(new d.Paragraph({ indent: { left: 240 }, children: [text('Hotels to be confirmed', { italics: true, color: '000000' })] }));
         for (const h of stays) children.push(...hotelBlock(h, { rates: !priced }));
         if (priced) children.push(...priceTableOf(priced));
         else if (!H.optionUsesRates(opt)) {
@@ -800,9 +800,9 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     } else {
       const w = widthsOf([0.2, 0.25, 0.18, 0.18, 0.19]);
       const body = flights.map((f) => tableRow([
-        cell([text(f.flightType || 'Departure', { bold: true }), new d.TextRun({ break: 1 }), text(f.departureDate || f.depDate ? formatDate(f.departureDate || f.depDate) : '', { size: 18, color: '64748B' })], { width: w[0] }),
+        cell([text(f.flightType || 'Departure', { bold: true }), new d.TextRun({ break: 1 }), text(f.departureDate || f.depDate ? formatDate(f.departureDate || f.depDate) : '', { size: 18, color: '000000' })], { width: w[0] }),
         cell([text(f.route || [f.fromAirport, f.toAirport].filter(Boolean).join(' → ')), new d.TextRun({ break: 1 }), text([f.airline, f.flightNumber].filter(Boolean).join(' '), { size: 18, color: '1E3A8A', bold: true })], { width: w[1] }),
-        cell([text([f.fromAirport, f.depTime].filter(Boolean).join('  ')), ...(f.duration || f.flightStop ? [new d.TextRun({ break: 1 }), text([f.duration, f.flightStop].filter(Boolean).join(' · '), { size: 18, color: '64748B' })] : [])], { width: w[2] }),
+        cell([text([f.fromAirport, f.depTime].filter(Boolean).join('  ')), ...(f.duration || f.flightStop ? [new d.TextRun({ break: 1 }), text([f.duration, f.flightStop].filter(Boolean).join(' · '), { size: 18, color: '000000' })] : [])], { width: w[2] }),
         cell([text([f.toAirport, f.arrTime].filter(Boolean).join('  '))], { width: w[3] }),
         cell([text([f.cabinClass, f.baggageCheckIn && `Check-in ${f.baggageCheckIn}`, f.baggageCabin && `Cabin ${f.baggageCabin}`].filter(Boolean).join(' · '), { size: 18 })], { width: w[4] })
       ]));
@@ -827,7 +827,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     const headline = lineRuns(shownPriceNote(pricing), { bold: true, size: 24 });
     children.push(new d.Paragraph({ spacing: { before: 100, after: 60 }, shading: { type: d.ShadingType.CLEAR, fill: 'FDE047', color: 'auto' }, children: headline }));
     if (pricing.grandTotal > 0) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(`${isHotelOnly ? 'Grand Total' : 'Total Package'}: ${rs(pricing.grandTotal)}`, { bold: true, color: '047857' })] }));
-    if (plainOf(pricing.notes)) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Note: ', { italics: true, color: '64748B' }), ...lineRuns(pricing.notes, { italics: true, color: '64748B' })] }));
+    if (plainOf(pricing.notes)) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Note: ', { italics: true, color: '000000' }), ...lineRuns(pricing.notes, { italics: true, color: '000000' })] }));
   }
 
   // ---- terms, policies, exclusions and vehicle notes ----
@@ -852,8 +852,8 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       properties: { page: { size: { width: PAGE.width, height: PAGE.height }, margin: { top: PAGE.margin, bottom: PAGE.margin, left: PAGE.margin, right: PAGE.margin } } },
       footers: {
         default: new d.Footer({ children: [
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '94A3B8' })] }),
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '94A3B8' }), text(' of ', { size: 16, color: '94A3B8' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '94A3B8' })] })
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), text(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
         ]})
       },
       children

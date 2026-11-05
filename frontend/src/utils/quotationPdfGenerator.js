@@ -359,7 +359,7 @@ export const printFlightVoucher = (quotation) => {
       <div style="font-size: 18px; font-weight: 800; color: #0369a1; margin-bottom: 8px;">
         ✈️ Flight Details As Per Issued Flight Ticket
       </div>
-      <div style="font-size: 13px; color: #334155; line-height: 1.5; max-width: 540px; margin: 0 auto;">
+      <div style="font-size: 13px; color: #000000; line-height: 1.5; max-width: 540px; margin: 0 auto;">
         ${toDisplayHtml(quotation.flightTicketNote || 'Official airline PNR and confirmed e-tickets will be shared upon booking confirmation and flight ticket issuance.')}
       </div>
       ${quotation.flightTicketUrl ? `
@@ -376,28 +376,28 @@ export const printFlightVoucher = (quotation) => {
       </div>
       <div style="display: grid; grid-template-columns: 2fr 1fr 2fr; gap: 12px; align-items: center; text-align: center;">
         <div style="text-align: left;">
-          <div style="font-size: 11px; color: #64748b;">From</div>
+          <div style="font-size: 11px; color: #000000;">From</div>
           <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${esc(f.fromAirport || 'Departure Airport')}</div>
           <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${esc(f.depTime || '--:--')}${withDate(f.depDate)}</div>
         </div>
         <div>
-          <div style="font-size: 11px; color: #64748b;">${esc(f.duration || 'Direct')}</div>
+          <div style="font-size: 11px; color: #000000;">${esc(f.duration || 'Direct')}</div>
           <div style="color: #b91c1c; font-size: 16px;">✈</div>
           <div style="font-size: 10px; color: #059669; font-weight: 700;">${esc(f.flightStop || 'Non-stop')}</div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 11px; color: #64748b;">To</div>
+          <div style="font-size: 11px; color: #000000;">To</div>
           <div style="font-size: 14px; font-weight: 800; color: #0f172a;">${esc(f.toAirport || 'Arrival Airport')}</div>
           <div style="font-size: 12px; font-weight: 600; color: #0284c7;">${esc(f.arrTime || '--:--')}${withDate(f.arrDate)}</div>
         </div>
       </div>
-      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #475569; display: flex; justify-content: space-between;">
+      <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed #e2e8f0; font-size: 11px; color: #000000; display: flex; justify-content: space-between;">
         <span>Check-in Baggage: <strong>${esc(f.baggageCheckIn || '15 kg')}</strong></span>
         <span>Class: <strong>${esc(f.cabinClass || 'Economy')}</strong></span>
       </div>
     </div>
   `).join('') : `
-    <div style="text-align: center; padding: 24px; color: #64748b; font-style: italic;">
+    <div style="text-align: center; padding: 24px; color: #000000; font-style: italic;">
       No specific flight segments entered. Flight details will be as per confirmed flight ticket.
     </div>
   `);
@@ -420,8 +420,8 @@ export const printFlightVoucher = (quotation) => {
           .header { border-bottom: 2px solid #0284c7; padding-bottom: 12px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
           .title-badge { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 13px; font-weight: 800; letter-spacing: 0.1em; display: inline-block; }
           .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; background: #f8fafc; padding: 14px; border-radius: 6px; margin-bottom: 20px; font-size: 12px; border: 1px solid #e2e8f0; }
-          .instructions { font-size: 10px; color: #475569; line-height: 1.5; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
-          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 10px; }
+          .instructions { font-size: 10px; color: #000000; line-height: 1.5; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px; }
+          .footer { margin-top: 30px; text-align: center; font-size: 10px; color: #000000; border-top: 1px solid #cbd5e1; padding-top: 10px; }
         </style>
       </head>
       <body>
@@ -430,7 +430,7 @@ export const printFlightVoucher = (quotation) => {
             <h1 style="font-size: 22px; font-weight: 900; color: #0f172a; margin: 0;">${co.name}</h1>
             <div style="font-size: 10px; color: #0284c7; font-weight: 700; letter-spacing: 0.1em; margin-top: 2px;">AIRLINE TICKETS & TRAVEL VOUCHER</div>
           </div>
-          <div style="text-align: right; font-size: 11px; color: #64748b;">
+          <div style="text-align: right; font-size: 11px; color: #000000;">
             <div><strong>Ref:</strong> ${esc(quotation.quotationNo || '7H-QT-2026')}</div>
             <div><strong>Date:</strong> ${esc(formatDate(quotation.travelDate) || new Date().toLocaleDateString())}</div>
           </div>

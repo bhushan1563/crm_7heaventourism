@@ -1,5 +1,5 @@
 import React from 'react';
-import { toDisplayHtml } from '../../utils/richText';
+import { toDocumentHtml } from '../../utils/richText';
 import { formatDate } from '../../utils/dateHelper';
 import { durationText } from '../../utils/confirmation';
 
@@ -29,7 +29,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
     ['Quotation', confirmation.quotationNo],
     ['Confirmed on', confirmation.confirmedAt ? formatDate(confirmation.confirmedAt) : '']
   ].filter(([, value]) => value);
-  const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#1f2937' };
+  const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#000000' };
   const travellerColumns = '0.4fr 3fr 0.7fr 1.6fr 2.2fr';
   const contactColumns = '1.4fr 2.4fr 2.2fr';
   const pay = view.payment;
@@ -51,7 +51,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         )}
 
         <Heading>Confirmation Details</Heading>
-        <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
+        <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#000000' }}>
           {facts.map(([label, value]) => (
             <div key={label}>
               <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
@@ -109,7 +109,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
           {[['Total amount', rs(pay.totalAmount)], ['Received', rs(pay.received)]].map(([label, value], i) => (
             <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px', fontSize: '10px', borderTop: i ? '1px solid #e2e8f0' : 'none', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff' }}>
-              <span style={{ color: '#334155' }}>{label}</span>
+              <span style={{ color: '#000000' }}>{label}</span>
               <strong style={{ color: '#0f172a' }}>{value}</strong>
             </div>
           ))}
@@ -119,7 +119,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
           </div>
         </div>
         {(pay.balance > 0 && pay.balanceDueDate) || pay.note ? (
-          <div className="quotation-keep" style={{ fontSize: '9.5px', color: '#334155', marginTop: '4px' }}>
+          <div className="quotation-keep" style={{ fontSize: '9.5px', color: '#000000', marginTop: '4px' }}>
             {pay.balance > 0 && pay.balanceDueDate && <div><strong style={{ color: '#0f172a' }}>Balance due by:</strong> {formatDate(pay.balanceDueDate)}</div>}
             {pay.note && <div><strong style={{ color: '#0f172a' }}>Note:</strong> {pay.note}</div>}
           </div>
@@ -130,7 +130,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         {view.customFields.length > 0 && (
           <>
             <Heading>Additional Details</Heading>
-            <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '3px 14px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#334155' }}>
+            <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '3px 14px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#000000' }}>
               {view.customFields.map((f, i) => (
                 <div key={i}>
                   <strong style={{ color: '#0f172a' }}>{f.label}:</strong> {f.value || '–'}
@@ -143,7 +143,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         {view.notes && (
           <>
             <Heading>Notes</Heading>
-            <div className="qd-rich" style={{ fontSize: '9.5px', lineHeight: '1.45', color: '#1f2937' }} dangerouslySetInnerHTML={{ __html: toDisplayHtml(view.notes) }} />
+            <div className="qd-rich" style={{ fontSize: '9.5px', lineHeight: '1.45', color: '#000000' }} dangerouslySetInnerHTML={{ __html: toDocumentHtml(view.notes) }} />
           </>
         )}
       </div>

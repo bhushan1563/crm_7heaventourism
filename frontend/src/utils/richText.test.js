@@ -1,6 +1,57 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { RICH_TAGS, cleanStyle, looksLikeHtml, plainToHtml, richToPlainText, sanitizeForDisplay, simplifyRich, toDisplayHtml } from './richText';
+import { RICH_TAGS, cleanStyle, looksLikeHtml, plainToHtml, richToPlainText, sanitizeForDisplay, simplifyRich, splitDisplayBlocks, toDisplayHtml, toDocumentHtml } from './richText';
+
+describe('toDocumentHtml: sizes in a printed document are relative to the text around them', () => {
+  it('prints the editor\'s Normal size (14px) as the size of the page text, and the others in proportion', () => {
+    const out = toDocumentHtml('<p><span style="font-size:14px">a</span><span style="font-size:18px">b</span><span style="font-size:12px">c</span><span style="font-size:28px">d</span></p>');
+    expect(out).toContain('font-size:1em');
+    expect(out).toContain('font-size:1.286em');
+    expect(out).toContain('font-size:0.857em');
+    expect(out).toContain('font-size:2em');
+    expect(out).not.toMatch(/font-size:\d+px/);
+  });
+  it('reads points too, keeps colour and highlight, and leaves text without a size alone', () => {
+    const out = toDocumentHtml('<p><span style="color:#dc2626;font-size:10.5pt">x</span> <mark style="background-color:#fde047">y</mark> plain</p>');
+    expect(out).toContain('color:#dc2626;font-size:1em');
+    expect(out).toContain('background-color:#fde047');
+    expect(toDocumentHtml('just text')).toBe('<p>just text</p>');
+    expect(toDocumentHtml('')).toBe('');
+  });
+  it('is as safe as toDisplayHtml', () => {
+    expect(toDocumentHtml('<p onclick="x()">ok<script>alert(1)</script></p>')).not.toMatch(/onclick|script/);
+  });
+});
+
+describe('splitDisplayBlocks: a text as pieces that can fall on different pages', () => {
+  it('gives each paragraph, each line of a paragraph and each list item its own piece, in order', () => {
+    const pieces = splitDisplayBlocks('<p>One<br>Two<br>Three</p><p>Four</p><ul><li>Five</li><li>Six</li></ul><ol start="3"><li>Seven</li><li>Eight</li></ol>');
+    const words = pieces.map((p) => new DOMParser().parseFromString(p, 'text/html').body.textContent);
+    expect(words).toEqual(['One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight']);
+    expect(pieces[4]).toMatch(/^<ul[^>]*><li>Five<\/li><\/ul>$/);
+    expect(pieces[7]).toContain('start="4"'); // the numbering goes on
+    expect(pieces[0]).toContain('margin:0'); // lines of one paragraph stay as close as they were
+  });
+  it('keeps the formatting of each line, and a paragraph without line breaks whole', () => {
+    const pieces = splitDisplayBlocks('<p><strong>Bold</strong> start<br><span style="color:#dc2626">Red line</span></p><p>Whole <em>paragraph</em></p>');
+    expect(pieces).toHaveLength(3);
+    expect(pieces[0]).toContain('<strong>Bold</strong> start');
+    expect(pieces[1]).toContain('color:#dc2626');
+    expect(pieces[2]).toBe('<p>Whole <em>paragraph</em></p>');
+  });
+  it('gives nothing for no text, and the text itself when it cannot be split', () => {
+    expect(splitDisplayBlocks('')).toEqual([]);
+    expect(splitDisplayBlocks(null)).toEqual([]);
+    expect(splitDisplayBlocks('<p>Only</p>')).toEqual(['<p>Only</p>']);
+  });
+  it('never loses a word, whatever the text', () => {
+    fc.assert(fc.property(fc.array(fc.stringMatching(/^[A-Za-z]{1,8}$/), { minLength: 1, maxLength: 12 }), (words) => {
+      const html = `<p>${words.slice(0, 6).join('<br>')}</p><ul>${words.slice(6).map((w) => `<li>${w}</li>`).join('')}</ul>`;
+      const out = splitDisplayBlocks(html).map((p) => new DOMParser().parseFromString(p, 'text/html').body.textContent);
+      expect(out.join(' ')).toBe(words.join(' '));
+    }));
+  });
+});
 
 describe('cleanStyle', () => {
   it('keeps colour, highlight and font size with valid values', () => {

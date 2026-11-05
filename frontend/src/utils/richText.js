@@ -70,6 +70,63 @@ export const plainToHtml = (text) =>
 /** Whatever is stored (plain or formatted) as safe HTML. */
 export const toDisplayHtml = (value) => (looksLikeHtml(value) ? sanitizeForDisplay(value) : plainToHtml(value));
 
+// The formatting editor offers its sizes in pixels with "Normal" (14px) as the size of ordinary text, but a quotation is printed small (about
+// 9.5px for its text). A size is therefore printed relative to the text around it: Normal is the text of the page, Large a little bigger,
+// Small a little smaller. Without this, text pasted or sized in the editor came out at 14px or more beside 9.5px text.
+const EDITOR_TEXT_PX = 14;
+const toRelativeSizes = (html) =>
+  html.replace(/font-size:\s*(\d+(?:\.\d+)?)(px|pt)/gi, (_, n, unit) => `font-size:${Math.round(((Number(n) * (unit.toLowerCase() === 'pt' ? 4 / 3 : 1)) / EDITOR_TEXT_PX) * 1000) / 1000}em`);
+
+/** Stored text as safe HTML for a printed document: like `toDisplayHtml`, with every size relative to the text around it. */
+export const toDocumentHtml = (value) => toRelativeSizes(toDisplayHtml(value));
+
+const escapeText = (text) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+/**
+ * The blocks of a text as separate pieces of HTML, so a long text can run on over several pages instead of moving as one block:
+ * each paragraph, each line of a paragraph (the lines of an itinerary day are kept with <br>) and each item of a list. The pieces,
+ * set one under the other, look the same as the whole text. Returns [] for no text.
+ */
+export const splitDisplayBlocks = (html) => {
+  const source = String(html ?? '').trim();
+  if (!source) return [];
+  const doc = new DOMParser().parseFromString(`<body>${source}</body>`, 'text/html');
+  const blocks = [];
+  const tight = (el) => {
+    const style = el.getAttribute('style');
+    el.setAttribute('style', `${style ? `${style};` : ''}margin:0`);
+    return el;
+  };
+  for (const node of Array.from(doc.body.childNodes)) {
+    if (node.nodeType === 3) {
+      const text = node.textContent.trim();
+      if (text) blocks.push(`<p>${escapeText(text)}</p>`);
+    } else if (node.nodeType === 1 && (node.tagName === 'UL' || node.tagName === 'OL')) {
+      const first = node.tagName === 'OL' ? Number(node.getAttribute('start')) || 1 : 0;
+      Array.from(node.children).forEach((item, i) => {
+        const list = doc.createElement(node.tagName.toLowerCase());
+        if (first) list.setAttribute('start', String(first + i));
+        list.appendChild(item.cloneNode(true));
+        blocks.push(tight(list).outerHTML);
+      });
+    } else if (node.nodeType === 1 && node.tagName === 'P' && node.querySelector('br')) {
+      let line = node.cloneNode(false);
+      const flush = () => {
+        if (line.textContent.trim() || line.querySelector('*')) blocks.push(tight(line).outerHTML);
+        line = node.cloneNode(false);
+      };
+      for (const child of Array.from(node.childNodes)) {
+        if (child.nodeType === 1 && child.tagName === 'BR') flush();
+        else line.appendChild(child.cloneNode(true));
+      }
+      flush();
+    } else if (node.nodeType === 1) {
+      blocks.push(node.outerHTML);
+    }
+  }
+  return blocks.length ? blocks : [source];
+};
+
 /** Visible text only, with line breaks between paragraphs and list items. */
 export const richToPlainText = (value) => {
   if (typeof value !== 'string' || !value) return '';
