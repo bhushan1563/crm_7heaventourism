@@ -14,6 +14,19 @@ import { LAYOUT_OF_TYPE, normalizeQuotationPriceTables, tableHasData, tableTotal
 import { roomDefaults } from '../utils/roomTables.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
+import { loadMasterText } from '../services/masterText.js';
+import { isMissingStandardText, withStandardText } from '../utils/standardText.js';
+
+/**
+ * Quotations as the web app receives them. One brought in from the old export has no notes, policies or exclusions at all: it is
+ * given the company's standard text (see utils/standardText.js), so it opens, prints, copies and confirms like any other.
+ */
+const presentQuotations = async (docs) => {
+  const list = docs.map((doc) => (doc.toJSON ? doc.toJSON() : doc));
+  if (!list.some(isMissingStandardText)) return list;
+  const master = await loadMasterText();
+  return list.map((quotation) => withStandardText(quotation, master));
+};
 
 /**
  * The parts of a request body that carry photos and formatted text, cleaned: the itinerary days, the hotel stays and the lists
@@ -164,7 +177,7 @@ export const getQuotations = async (req, res) => {
     res.json({
       success: true,
       count: quotations.length,
-      data: quotations
+      data: await presentQuotations(quotations)
     });
   } catch (error) {
     console.error('Error fetching quotations:', error);
@@ -180,7 +193,7 @@ export const getQuotationById = async (req, res) => {
     }
     res.json({
       success: true,
-      data: quotation
+      data: (await presentQuotations([quotation]))[0]
     });
   } catch (error) {
     console.error('Error fetching quotation:', error);
@@ -277,7 +290,9 @@ export const duplicateQuotation = async (req, res) => {
     const createdByName = `${req.user.firstName} ${req.user.lastName}`.trim();
 
     // Clone data and omit _id
-    const originalObj = original.toObject ? original.toObject() : { ...original };
+    const asStored = original.toObject ? original.toObject() : { ...original };
+    // An old quotation with no notes or policies: the copy starts with the company's standard ones.
+    const originalObj = isMissingStandardText(asStored) ? withStandardText(asStored, await loadMasterText()) : asStored;
     delete originalObj._id;
     delete originalObj.createdAt;
     delete originalObj.updatedAt;

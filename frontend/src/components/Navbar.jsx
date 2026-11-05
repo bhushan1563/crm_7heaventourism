@@ -9,6 +9,7 @@ import ConfirmDialog from './ConfirmDialog';
 // [path prefix, section, page title]
 const PAGES = [
   ['/guests', 'Sales', 'Guest Inquiries & Leads'],
+  ['/clients', 'Sales', 'Clients'],
   ['/quotations', 'Sales', 'Quotations & Itineraries'],
   ['/confirmations', 'Sales', 'Booking Confirmations'],
   ['/calendar', 'Sales', 'Travel Calendar'],

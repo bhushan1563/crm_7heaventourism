@@ -14,6 +14,7 @@ import {
   Route,
   CalendarDays,
   CheckCircle2,
+  Contact,
   Stamp,
   X
 } from 'lucide-react';
@@ -40,6 +41,7 @@ export const Sidebar = ({ isCollapsed, isMobile = false, isOpen = false, onClose
       label: 'Sales',
       items: [
         { to: '/guests', label: 'Guest List', icon: Users },
+        { to: '/clients', label: 'Clients', icon: Contact },
         { to: '/quotations', label: 'Quotations', icon: FileText },
         { to: '/confirmations', label: 'Confirmations', icon: CheckCircle2 },
         { to: '/calendar', label: 'Travel Calendar', icon: CalendarDays },

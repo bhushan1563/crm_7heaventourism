@@ -22,7 +22,8 @@ const ROUTERS = {
   visas: () => import('../src/routes/visaRoutes.js'),
   confirmations: () => import('../src/routes/confirmationRoutes.js'),
   masterText: () => import('../src/routes/masterTextRoutes.js'),
-  calendar: () => import('../src/routes/calendarRoutes.js')
+  calendar: () => import('../src/routes/calendarRoutes.js'),
+  clients: () => import('../src/routes/clientRoutes.js')
 };
 
 // Routes without a rights tag, and why that is right.
@@ -89,7 +90,7 @@ test('every business route is guarded by a right, and the exceptions are written
 });
 
 test('every right names a real module and a real action, in the module the router belongs to', async () => {
-  const ownModule = { guests: 'guest_list', suppliers: 'supplier_list', quotations: 'quotations', users: 'users', rights: 'rights', scanner: 'scanner', itineraries: 'itineraries', hotels: 'hotels', visas: 'visas', confirmations: 'confirmations' };
+  const ownModule = { guests: 'guest_list', suppliers: 'supplier_list', quotations: 'quotations', users: 'users', rights: 'rights', scanner: 'scanner', itineraries: 'itineraries', hotels: 'hotels', visas: 'visas', confirmations: 'confirmations', clients: 'guest_list' };
   for (const row of await routesOf()) {
     for (const { moduleName, action } of row.rights) {
       assert.ok(RIGHT_MODULES.includes(moduleName), `${row.key}: "${moduleName}" is not a rights module`);

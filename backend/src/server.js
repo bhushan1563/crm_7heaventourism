@@ -28,6 +28,7 @@ import hotelRoutes from './routes/hotelRoutes.js';
 import visaRoutes from './routes/visaRoutes.js';
 import confirmationRoutes from './routes/confirmationRoutes.js';
 import calendarRoutes from './routes/calendarRoutes.js';
+import clientRoutes from './routes/clientRoutes.js';
 import masterTextRoutes from './routes/masterTextRoutes.js';
 import { serveMedia } from './controllers/mediaController.js';
 import { serveFinderImage } from './controllers/hotelFinderController.js';
@@ -147,6 +148,7 @@ app.use('/api/hotel-finder', hotelFinderRoutes);
 app.use('/api/visas', visaRoutes);
 app.use('/api/confirmations', confirmationRoutes);
 app.use('/api/calendar', calendarRoutes);
+app.use('/api/clients', clientRoutes);
 app.use('/api/master-text', masterTextRoutes);
 app.use('/api', apiNotFound);
 

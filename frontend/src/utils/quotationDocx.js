@@ -9,6 +9,7 @@ import { shareFileName } from './shareContact';
 import { feeAmount, visaFeeTotal } from './visa';
 import { addressLine } from './hotelStay';
 import { shownPriceNote } from './pricingNote';
+import { isDefaultOptionName } from './quotationOptions';
 import * as H from './hotelRates';
 import * as L from './landService';
 import * as P from './priceTables';
@@ -770,7 +771,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     if (hasOptions) {
       children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(priceTables.length ? 'Please choose the option that suits you best. The price of each option is shown below it. All amounts are in Rs.' : 'Please choose the option that suits you best. All amounts are in Rs.', { italics: true, size: 18, color: '64748B' })] }));
       options.forEach((opt, oi) => {
-        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 200, after: 40 }, shading: { type: d.ShadingType.CLEAR, fill: '0F172A', color: 'auto' }, children: [text(` OPTION ${oi + 1}   `, { bold: true, size: 16, color: '7DD3FC' }), text(plainOf(opt.name) || `Option ${oi + 1}`, { bold: true, size: 24, color: 'FFFFFF' }), ...(opt.recommended ? [text('    ★ RECOMMENDED', { bold: true, size: 16, color: 'FBBF24' })] : [])] }));
+        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 200, after: 40 }, shading: { type: d.ShadingType.CLEAR, fill: '0F172A', color: 'auto' }, children: [...(isDefaultOptionName(plainOf(opt.name), oi + 1) ? [text(` Option ${oi + 1}`, { bold: true, size: 24, color: 'FFFFFF' })] : [text(` OPTION ${oi + 1}   `, { bold: true, size: 16, color: '7DD3FC' }), text(plainOf(opt.name), { bold: true, size: 24, color: 'FFFFFF' })]), ...(opt.recommended ? [text('    ★ RECOMMENDED', { bold: true, size: 16, color: 'FBBF24' })] : [])] }));
         const stays = opt.hotels || [];
         const priced = priceTables[oi];
         if (!stays.length) children.push(new d.Paragraph({ indent: { left: 240 }, children: [text('Hotels to be confirmed', { italics: true, color: '94A3B8' })] }));

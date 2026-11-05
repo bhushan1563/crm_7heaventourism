@@ -7,6 +7,7 @@ import { richToPlainText, toDisplayHtml } from '../utils/richText';
 import { shownPriceNote } from '../utils/pricingNote';
 import { dayMeta, photoRows } from '../utils/itineraryDoc';
 import { addressLine } from '../utils/hotelStay';
+import { isDefaultOptionName } from '../utils/quotationOptions';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
@@ -574,6 +575,7 @@ const HotelProposalBody = ({ h, priced = false }) => {
  */
 const OptionProposal = ({ option, number, priced = false }) => {
   const name = option.name || `Option ${number}`;
+  const unnamed = isDefaultOptionName(option.name, number);
   const byTables = optionUsesRates(option);
   const note = option.priceNote && option.priceNote !== 'Per person' ? option.priceNote : '';
   const blocks = option.hotels.length ? option.hotels : [null];
@@ -587,14 +589,18 @@ const OptionProposal = ({ option, number, priced = false }) => {
           <div key={k} className="quotation-keep" style={{ border: `${option.recommended ? 2 : 1}px solid ${border}`, borderRadius: '8px', overflow: 'hidden', backgroundColor: '#ffffff' }}>
             {first ? (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', background: '#0f172a', color: '#ffffff', padding: '6px 10px' }}>
-                <div>
-                  <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.14em', color: '#7dd3fc' }}>OPTION {number}</span>
-                  <div style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>{name}</div>
-                </div>
+                {unnamed ? (
+                  <div style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>Option {number}</div>
+                ) : (
+                  <div>
+                    <span style={{ fontSize: '8px', fontWeight: 800, letterSpacing: '0.14em', color: '#7dd3fc' }}>OPTION {number}</span>
+                    <div style={{ fontSize: '12px', fontWeight: 800, lineHeight: 1.2 }}>{name}</div>
+                  </div>
+                )}
                 {option.recommended && <span style={{ background: '#f59e0b', color: '#ffffff', fontSize: '8px', fontWeight: 800, letterSpacing: '0.1em', padding: '2px 8px', borderRadius: '3px' }}>★ RECOMMENDED</span>}
               </div>
             ) : (
-              <div style={{ background: '#f1f5f9', color: '#475569', fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', textTransform: 'uppercase' }}>Option {number} · {name}</div>
+              <div style={{ background: '#f1f5f9', color: '#475569', fontSize: '8px', fontWeight: 700, letterSpacing: '0.06em', padding: '3px 10px', textTransform: 'uppercase' }}>Option {number}{unnamed ? '' : ` · ${name}`}</div>
             )}
             {h ? <HotelProposalBody h={h} priced={priced} /> : <div style={{ padding: '10px', fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>Hotels to be confirmed</div>}
             {last && !priced && (

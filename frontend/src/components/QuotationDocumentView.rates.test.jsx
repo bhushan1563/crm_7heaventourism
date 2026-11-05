@@ -107,6 +107,17 @@ describe('the options of a hotel quotation, printed as a proposal', () => {
   });
 });
 
+describe('an option that has no name of its own', () => {
+  it('says "Option 1" once, not "OPTION 1" and "Option 1" one under the other', () => {
+    const { container } = show(quotation([option('Option 1', [stay('A', [room(1000)]), stay('B', [room(2000)])]), option('Sea view rooms', [stay('C', [room(1)])])]));
+    expect(screen.queryByText('OPTION 1')).toBeNull();
+    expect(screen.getAllByText('Option 1')).toHaveLength(2); // the header of the first hotel's block, and the strip above the second hotel's block
+    expect(container.textContent).not.toMatch(/option 1\s*·\s*option 1/i);
+    expect(screen.getByText('OPTION 2')).toBeInTheDocument(); // a named option keeps its number above its name
+    expect(screen.getByText('Sea view rooms')).toBeInTheDocument();
+  });
+});
+
 describe('a packages quotation with options is not changed', () => {
   it('still prints the side-by-side cards with the price per person, and no rate table', () => {
     show(quotation([option('Option A', [stay('Hotel A', [])], { pricePerPerson: 25000, totalPrice: 50000 }), option('Option B', [stay('Hotel B', [])], { pricePerPerson: 40000, totalPrice: 80000 })], { quotationType: 'Package' }));

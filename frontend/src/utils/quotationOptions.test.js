@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { OPTION_LIMITS, addOption, blankOption, cheapestIndex, duplicateOption, guestCount, hotelsOfFirstOption, moveOption, optionsProblem, removeOption, repriceOptions, setPrice, setRecommended, startOptions } from './quotationOptions';
+import { OPTION_LIMITS, addOption, blankOption, cheapestIndex, duplicateOption, guestCount, hotelsOfFirstOption, isDefaultOptionName, moveOption, optionsProblem, removeOption, repriceOptions, setPrice, setRecommended, startOptions } from './quotationOptions';
+
+describe('an option with no name of its own', () => {
+  it('is one that is empty or just says its own number, so the number is not printed twice', () => {
+    expect(isDefaultOptionName('Option 1', 1)).toBe(true);
+    expect(isDefaultOptionName('  option 2 ', 2)).toBe(true);
+    expect(isDefaultOptionName('', 3)).toBe(true);
+    expect(isDefaultOptionName(undefined, 1)).toBe(true);
+    expect(isDefaultOptionName(blankOption(4).name, 4)).toBe(true);
+    expect(isDefaultOptionName('Option 2', 1)).toBe(false); // a different number is a name of its own
+    expect(isDefaultOptionName('3 Star Hotels', 1)).toBe(false);
+  });
+});
 
 const stay = (name, over = {}) => ({ hotelName: name, hotelId: '0123456789abcdef01234567', nights: '2 Nights', ...over });
 const two = () => [{ ...blankOption(1), hotels: [stay('A')], pricePerPerson: 25000 }, { ...blankOption(2), hotels: [stay('B')], pricePerPerson: 40000 }];

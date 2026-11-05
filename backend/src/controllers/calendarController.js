@@ -3,16 +3,11 @@ import QuotationModel from '../models/Quotation.js';
 import ConfirmationModel from '../models/Confirmation.js';
 import ManualCalendarEvent from '../models/ManualCalendarEvent.js';
 import { friendlyMessage } from '../utils/errors.js';
+import { mayRead } from '../utils/mayRead.js';
 import { daysBetween, eventOf, isIsoDate, lookBackFrom, overlaps, paymentEventOf, rangeOf } from '../utils/calendarEvents.js';
 import { balanceOf } from '../utils/confirmationInput.js';
 
 const LIMIT = 2000;
-
-const mayRead = (req, moduleName) => {
-  if (req.user && (req.user.role === 'Admin' || req.user.role === 'SuperAdmin')) return true;
-  const rights = req.userRights?.[moduleName];
-  return rights ? Boolean(rights.canRead) : true;
-};
 
 const manualEventOf = (doc) => ({
   id: `manual:${doc._id}`,

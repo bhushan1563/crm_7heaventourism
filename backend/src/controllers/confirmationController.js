@@ -9,6 +9,8 @@ import { balanceOf, isFullyPaid, normalizeBookingInput, normalizeCancelReason } 
 import { escapeRegex, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
 import { CLAIM_MARK, releaseStaleClaim } from '../services/confirmationClaims.js';
+import { loadMasterText } from '../services/masterText.js';
+import { isMissingStandardText, withStandardText } from '../utils/standardText.js';
 
 const fail = (res, message) => res.status(200).json({ success: false, message });
 const fullName = (user) => `${user.firstName} ${user.lastName}`.trim();
@@ -130,7 +132,10 @@ export const createConfirmation = async (req, res) => {
       QuotationModel.updateOne({ _id: claimed._id }, { $set: { status: claimed.status, isLocked: claimed.isLocked, confirmationId: '', confirmationNo: '' } });
 
     try {
-      const snapshot = confirmationFromQuotation(claimed.toObject(), req.body.optionIndex, req.body.priceTableIndex);
+      // An old quotation (from the export) has no notes or policies: the booking keeps the company's standard ones.
+      const asStored = claimed.toObject();
+      const confirmed = isMissingStandardText(asStored) ? withStandardText(asStored, await loadMasterText()) : asStored;
+      const snapshot = confirmationFromQuotation(confirmed, req.body.optionIndex, req.body.priceTableIndex);
       if (!snapshot.ok) {
         await undoClaim();
         return fail(res, snapshot.message);

@@ -1,0 +1,35 @@
+/* The clients page: two lists (current and future clients) on one page. */
+.clients-page { display: flex; flex-direction: column; gap: 16px; }
+.cl-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
+.cl-search { flex: 1 1 260px; max-width: 420px; }
+.cl-count { margin-left: 4px; padding: 1px 7px; border-radius: 10px; background: var(--surface-3); color: var(--text-secondary); font-size: 0.7rem; font-weight: 700; }
+.itin-tabs .is-active .cl-count { background: var(--primary); color: #fff; }
+.cl-note { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.cl-alert { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; border: 1px solid #fecaca; border-radius: 10px; background: #fef2f2; color: #991b1b; font-size: 0.85rem; }
+.cl-alert p { margin: 0; }
+
+.cl-line { display: flex; align-items: center; gap: 6px; font-size: 0.8rem; line-height: 1.5; min-width: 0; }
+.cl-line svg { flex: none; color: var(--text-muted); }
+.cl-line span, .cl-mail { overflow-wrap: anywhere; }
+.cl-mail { color: var(--primary-text); text-decoration: none; }
+.cl-mail:hover { text-decoration: underline; }
+.cl-icon { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; color: #12b76a; }
+.cl-icon:hover { background: color-mix(in srgb, #12b76a 14%, transparent); }
+.cl-sub { font-size: 0.72rem; color: var(--text-muted); }
+.cl-none { color: var(--text-muted); }
+.cl-notes { display: block; max-width: 280px; font-size: 0.8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cl-empty { text-align: center; padding: 36px 12px !important; color: var(--text-muted); }
+.cl-open { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; color: var(--primary-text); text-decoration: none; white-space: nowrap; }
+.cl-open:hover { text-decoration: underline; }
+.cl-actions { display: flex; justify-content: flex-end; gap: 6px; }
+.cl-danger:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
+.cl-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.cl-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 14px; }
+.cl-form-foot { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .cl-form-grid { grid-template-columns: 1fr; }
+  .cl-search { max-width: none; flex-basis: 100%; }
+  .cl-actions { justify-content: flex-start; }
+}

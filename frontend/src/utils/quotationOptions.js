@@ -14,6 +14,12 @@ export const guestCount = (paxDetails) => {
 
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 
+/** True when an option has no name of its own (empty, or just "Option 2" in place 2): the number already says it, so it is not printed twice. */
+export const isDefaultOptionName = (name, number) => {
+  const text = String(name ?? '').trim().toLowerCase();
+  return !text || text === `option ${number}`;
+};
+
 export const blankOption = (number) => ({ name: `Option ${number}`, recommended: false, hotels: [], pricePerPerson: 0, totalPrice: 0, priceNote: 'Per person' });
 
 /**
