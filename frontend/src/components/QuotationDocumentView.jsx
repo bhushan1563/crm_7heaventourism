@@ -729,7 +729,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // A booking confirmation carries `confirmationInfo`: it says so under the destination, shows what each hotel gave, and leaves the vehicle notes out.
   const confirmationInfo = quotation.confirmationInfo || null;
   const isConfirmation = Boolean(confirmationInfo);
-  const vehicleNotes = quotationType === 'Visa' || isConfirmation ? [] : quotation.vehicleNotes || []; // a visa has no vehicle
+  // A visa has no vehicle, and a hotel quotation (Only Hotel) does not carry vehicle notes either; packages and the other kinds keep them.
+  const vehicleNotes = quotationType === 'Visa' || quotationType === 'Only Hotel' || isConfirmation ? [] : quotation.vehicleNotes || [];
   const importantNotes = quotation.importantNotes || [];
 
   // Header Component

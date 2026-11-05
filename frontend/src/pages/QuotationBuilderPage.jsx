@@ -2773,8 +2773,8 @@ export const QuotationBuilderPage = () => {
                 )}
               </div>
 
-              {/* Vehicle Guidelines (not for a visa) */}
-              {!isVisa(formData) && (
+              {/* Vehicle Guidelines (not for a visa, and not for a hotel quotation: they are not printed there) */}
+              {!isVisa(formData) && formData.quotationType !== 'Only Hotel' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--fg-0369A1)', display: 'flex', alignItems: 'center', gap: '6px' }}>

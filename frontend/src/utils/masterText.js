@@ -11,7 +11,7 @@ export const MASTER_SECTIONS = [
   { key: 'paymentPolicy', title: 'Payment policy', noun: 'payment line', hint: 'When and how much the client pays.', placeholder: 'e.g. 25% advance at the time of booking.' },
   { key: 'cancellationPolicy', title: 'Cancellation policy', noun: 'cancellation line', hint: 'What is charged when the client cancels.', placeholder: 'e.g. 30 days or more before departure: 10% of the tour cost.' },
   { key: 'exclusions', title: 'Exclusions', noun: 'exclusion', hint: 'What the price does not include.', placeholder: 'e.g. Airfare unless specified.' },
-  { key: 'vehicleNotes', title: 'Vehicle notes', noun: 'vehicle note', hint: 'Points about the vehicle on a package. (They are left out of a booking confirmation.)', placeholder: 'e.g. Kilometres are counted garage to garage.' }
+  { key: 'vehicleNotes', title: 'Vehicle notes', noun: 'vehicle note', hint: 'Points about the vehicle on a package. (They are left out of hotel quotations and of a booking confirmation.)', placeholder: 'e.g. Kilometres are counted garage to garage.' }
 ];
 
 export const MASTER_KEYS = MASTER_SECTIONS.map((s) => s.key);

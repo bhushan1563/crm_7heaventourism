@@ -85,16 +85,33 @@ describe.each([['Only Hotel'], ['Package']])('a %s confirmation', (type) => {
 });
 
 describe('the same quotation before it is confirmed is exactly as it was', () => {
-  it.each([['Only Hotel'], ['Package']])('a %s quotation has no confirmation line, keeps its vehicle notes, its timings and its phone label', (type) => {
+  it.each([['Only Hotel'], ['Package']])('a %s quotation has no confirmation line, keeps its timings and its phone label', (type) => {
     show(quote(type));
     expect(document.body.textContent).not.toContain('Confirmation Details');
     expect(document.body.textContent).not.toContain('Hotel Confirmation No');
     expect(document.body.textContent).not.toContain('Time: ____');
-    expect(screen.getByText(/Vehicle Note/)).toBeInTheDocument();
-    expect(screen.getByText(/Vehicle will wait 30 minutes/)).toBeInTheDocument();
     const card = screen.getByText(/Hotel Sunrise/).closest('.quotation-keep').textContent;
     expect(card).toMatch(/Check-in from 14:00/);
     expect(card).toContain('+91 294 111 2222');
+  });
+
+  it('a package keeps its vehicle notes', () => {
+    show(quote('Package'));
+    expect(screen.getByText(/Vehicle Note/)).toBeInTheDocument();
+    expect(screen.getByText(/Vehicle will wait 30 minutes/)).toBeInTheDocument();
+  });
+
+  it.each([['Events / Corporate'], ['Land Service']])('a %s quotation keeps its vehicle notes too', (type) => {
+    show(quote(type));
+    expect(screen.getByText(/Vehicle will wait 30 minutes/)).toBeInTheDocument();
+  });
+
+  it('a hotel quotation has no vehicle notes, and keeps the rest of its terms', () => {
+    show(quote('Only Hotel', { exclusions: ['Airfare unless specified'], paymentPolicy: ['25% advance'] }));
+    expect(screen.queryByText(/Vehicle Note/)).toBeNull();
+    expect(screen.queryByText(/Vehicle will wait 30 minutes/)).toBeNull();
+    expect(screen.getByText('Airfare unless specified')).toBeInTheDocument();
+    expect(screen.getByText(/25% advance/)).toBeInTheDocument();
   });
 });
 

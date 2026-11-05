@@ -50,6 +50,18 @@ describe('the Word file of an older quotation says everything the PDF says', () 
     for (const t of ['Flight Details', 'Pricing Breakdown', 'Payment Policy', 'Exclusions', 'Terms']) expect(plain).not.toContain(t);
   });
 
+  it('prints the vehicle notes of a package, but not those of a hotel quotation', async () => {
+    const notes = { vehicleNotes: ['Opening and closing kilometres are counted garage to garage'] };
+    const pkg = (await open(oldPackage(notes))).plain;
+    expect(pkg).toContain('Points to be Noted (Vehicle Note)');
+    expect(pkg).toContain('garage to garage');
+    const hotel = (await open(oldPackage({ ...notes, quotationType: 'Only Hotel' }))).plain;
+    expect(hotel).not.toContain('Vehicle Note');
+    expect(hotel).not.toContain('garage to garage');
+    expect(hotel).toContain('Payment Policy'); // the rest of the terms stay
+    expect(hotel).toContain('Personal expenses');
+  });
+
   it('a hotel quotation that has an itinerary prints it too', async () => {
     const { plain } = await open(oldPackage({ quotationType: 'Only Hotel' }));
     expect(plain).toContain('HOTEL QUOTATION');

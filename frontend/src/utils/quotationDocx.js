@@ -835,7 +835,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
   if (filled(quotation.paymentPolicy).length) children.push(heading('Payment Policy'), ...bullets(quotation.paymentPolicy));
   if (filled(quotation.cancellationPolicy).length) children.push(heading('Cancellation Policy'), ...bullets(quotation.cancellationPolicy));
   if (filled(quotation.exclusions).length) children.push(heading('Exclusions'), ...bullets(quotation.exclusions));
-  if (filled(quotation.vehicleNotes).length) children.push(heading('Points to be Noted (Vehicle Note)'), ...bullets(quotation.vehicleNotes));
+  if (!isHotelOnly && filled(quotation.vehicleNotes).length) children.push(heading('Points to be Noted (Vehicle Note)'), ...bullets(quotation.vehicleNotes));
 
   const doc = new d.Document({
     creator: xmlSafe(company.name),
