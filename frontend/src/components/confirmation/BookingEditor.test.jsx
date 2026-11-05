@@ -38,6 +38,25 @@ describe('BookingEditor', () => {
     expect(screen.getByText('Balance to pay').parentElement).toHaveTextContent('Rs 1,20,000');
   });
 
+  it('has a switch for showing the prices on the voucher, off to start with', async () => {
+    const seen = vi.fn();
+    render(<Harness initial={start()} onState={seen} />);
+    const box = screen.getByRole('checkbox', { name: /Show the prices on the confirmation voucher/ });
+    expect(box).not.toBeChecked();
+    await userEvent.click(box);
+    expect(box).toBeChecked();
+    expect(seen.mock.lastCall[0].showPricing).toBe(true);
+    await userEvent.click(box);
+    expect(seen.mock.lastCall[0].showPricing).toBe(false);
+  });
+
+  it('keeps the switch as it was saved, and cannot be changed where the booking is read-only', () => {
+    render(<Harness initial={start({ showPricing: true })} readOnly />);
+    const box = screen.getByRole('checkbox', { name: /Show the prices on the confirmation voucher/ });
+    expect(box).toBeChecked();
+    expect(box).toBeDisabled();
+  });
+
   it('keeps the supplier the balance is paid to', async () => {
     const seen = vi.fn();
     render(<Harness initial={start()} onState={seen} />);

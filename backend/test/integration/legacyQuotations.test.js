@@ -1,4 +1,5 @@
 import { startDbApp } from './helpers-db.js';
+import mongoose from 'mongoose';
 import test, { before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { STANDARD_TEXT, STANDARD_TEXT_KEYS } from '../../src/utils/standardText.js';
@@ -111,6 +112,29 @@ test('a booking made from a full quotation keeps its own itinerary, hotels, incl
   assert.deepEqual(shown.exclusions, ['Airfare']);
   assert.deepEqual(shown.importantNotes, ['Carry your ID']);
   assert.deepEqual(shown.paymentPolicy, ['25% now']);
+});
+
+test('a booking does not show prices on its voucher until it is told to, and the choice is kept', async () => {
+  const q = await legacy('PRICE-001');
+  const made = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: String(q._id) } })).body;
+  assert.equal(made.success, true, made.message);
+  assert.equal(made.data.showPricing, false, 'off to start with');
+  const id = made.data._id;
+  const save = (json) => app.call(`/api/confirmations/${id}`, { method: 'PUT', token: admin.token, json });
+
+  assert.equal((await save({ showPricing: 'yes' })).body.success, false, 'anything but true or false is refused');
+  const on = (await save({ showPricing: true })).body;
+  assert.equal(on.success, true, on.message);
+  assert.equal(on.data.showPricing, true);
+  assert.equal((await app.call(`/api/confirmations/${id}`, { token: admin.token })).body.data.showPricing, true);
+  assert.equal((await save({ payment: { received: 1000 } })).body.data.showPricing, true, 'saving something else leaves it as it was');
+  assert.equal((await save({ showPricing: false })).body.data.showPricing, false);
+  assert.equal(((await app.call(`/api/confirmations/${id}`, { token: admin.token })).body.data.payment.totalAmount), 50000, 'the amounts are still kept');
+
+  // A booking made before the switch existed has no value stored: it is off.
+  await ConfirmationModel.collection.updateOne({ _id: new mongoose.Types.ObjectId(id) }, { $unset: { showPricing: '' } });
+  const old = (await app.call(`/api/confirmations/${id}`, { token: admin.token })).body.data;
+  assert.ok(!old.showPricing);
 });
 
 test('the company\'s own saved text is used when there is one, list by list', async () => {

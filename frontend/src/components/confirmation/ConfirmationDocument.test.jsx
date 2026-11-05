@@ -25,7 +25,7 @@ const view = (c, form) => render(
 
 describe('the booking confirmation document', () => {
   it('opens with the booking page, then carries the quotation as it was sold, all numbered with the confirmation number', () => {
-    const { container } = view(confirmation());
+    const { container } = view(confirmation({ showPricing: true }));
     const pages = [...container.querySelectorAll('.quotation-page')];
     expect(pages[0].id).toMatch(/-booking$/);
     expect(pages.length).toBeGreaterThanOrEqual(3); // booking page, itinerary, package/price
@@ -36,8 +36,39 @@ describe('the booking confirmation document', () => {
     for (const p of pages) expect(p).toHaveTextContent('Ref: 7H-CF-2026-001');
   });
 
+  it('leaves out the payment and every price unless the booking says the voucher shows them', () => {
+    const { container } = view(confirmation());
+    const page = document.querySelector('[id$="-booking"]');
+    for (const text of ['Aarav Mehta', 'Anaya Mehta', 'Booking Confirmation', 'Confirmation Details']) expect(page).toHaveTextContent(text);
+    for (const text of ['Payment', 'Total amount', 'Received', 'Balance to pay', 'Fully paid', 'Rs 1,20,000', 'Rs 40,000', 'Rs 80,000', 'Balance due by', 'Advance by cheque']) expect(page).not.toHaveTextContent(text);
+    expect(container).toHaveTextContent('Arrival in Jaipur'); // the trip itself is all there
+    for (const text of ['Rs 60,000', 'Per person', 'Grand Total', 'Pricing Breakdown', '1,20,000']) expect(container).not.toHaveTextContent(text);
+    cleanup();
+    const shown = view(confirmation({ showPricing: true }));
+    expect(document.querySelector('[id$="-booking"]')).toHaveTextContent('Rs 1,20,000');
+    expect(shown.container).toHaveTextContent('Rs 60,000 Per person');
+  });
+
+  it('follows the switch on the screen before it is saved', () => {
+    const c = confirmation();
+    const base = { travelDate: '2027-05-01', travellers: [], payment: { totalAmount: 10000, received: 1000, balanceDueDate: '', note: '' }, notes: '', customFields: [] };
+    // as the preview of the booking page builds it: the quotation pages and the booking page both read the form on the screen
+    const live = (form) => render(
+      <MemoryRouter>
+        <QuotationDocumentView quotation={quotationOf(c, form)} before={(parts) => <BookingPage confirmation={c} view={bookingView(c, form)} {...parts} />} />
+      </MemoryRouter>
+    );
+    live({ ...base, showPricing: false });
+    expect(document.querySelector('[id$="-booking"]')).not.toHaveTextContent('Rs 9,000');
+    expect(document.body).not.toHaveTextContent('Rs 60,000 Per person');
+    cleanup();
+    live({ ...base, showPricing: true });
+    expect(document.querySelector('[id$="-booking"]')).toHaveTextContent('Rs 9,000');
+    expect(document.body).toHaveTextContent('Rs 60,000 Per person');
+  });
+
   it('shows who and where, the travellers, the payment, the additional details and the notes', () => {
-    view(confirmation());
+    view(confirmation({ showPricing: true }));
     const page = document.querySelector('[id$="-booking"]');
     for (const text of ['Aarav Mehta', 'RAJASTHAN', '5 Nights / 6 Days', '2 Adults', 'Option B', '7H-QT-2026-004', 'Anaya Mehta', 'Z1234567', 'Vegetarian', 'Advance by cheque', 'Hotel voucher no.', 'HV-7781', 'Airport pick-up at 10:30']) {
       expect(page).toHaveTextContent(text);
@@ -76,7 +107,7 @@ describe('the booking confirmation document', () => {
   });
 
   it('says "Fully paid" once everything is received, and leaves out empty sections', () => {
-    view(confirmation({ travellers: [], customFields: [], notes: '', payment: { totalAmount: 5000, received: 5000, balanceDueDate: null, note: '' }, optionName: '' }));
+    view(confirmation({ showPricing: true, travellers: [], customFields: [], notes: '', payment: { totalAmount: 5000, received: 5000, balanceDueDate: null, note: '' }, optionName: '' }));
     const page = document.querySelector('[id$="-booking"]');
     expect(page).toHaveTextContent('Fully paid');
     expect(page).not.toHaveTextContent('Balance due by');
@@ -86,7 +117,7 @@ describe('the booking confirmation document', () => {
 
   it('prints what is on the screen (unsaved edits) rather than only what was saved', () => {
     const c = confirmation();
-    const form = { travelDate: '2027-05-01', travellers: [{ name: 'Only Edited Name', age: '', passportNo: '', notes: '' }], payment: { totalAmount: 10000, received: 1000, balanceDueDate: '', note: '' }, notes: '', customFields: [] };
+    const form = { travelDate: '2027-05-01', travellers: [{ name: 'Only Edited Name', age: '', passportNo: '', notes: '' }], payment: { totalAmount: 10000, received: 1000, balanceDueDate: '', note: '' }, showPricing: true, notes: '', customFields: [] };
     view(c, form);
     const page = document.querySelector('[id$="-booking"]');
     expect(page).toHaveTextContent('Only Edited Name');

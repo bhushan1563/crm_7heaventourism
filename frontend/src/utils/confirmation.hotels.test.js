@@ -90,7 +90,7 @@ describe('the quotation as the confirmation prints it', () => {
   });
 
   it('says it is a confirmation, so the header can say so', () => {
-    expect(quotationOf(confirmation()).confirmationInfo).toEqual({ no: '7H-CF-2026-001', confirmedAt: '2026-11-04T10:00:00.000Z', status: 'Confirmed' });
+    expect(quotationOf(confirmation()).confirmationInfo).toEqual({ no: '7H-CF-2026-001', confirmedAt: '2026-11-04T10:00:00.000Z', status: 'Confirmed', showPricing: false });
   });
 
   it('keeps everything else of the frozen copy as it was, and never adds hotels', () => {

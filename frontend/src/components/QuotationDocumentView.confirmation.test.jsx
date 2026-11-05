@@ -84,6 +84,49 @@ describe.each([['Only Hotel'], ['Package']])('a %s confirmation', (type) => {
   });
 });
 
+describe('the prices on a confirmation', () => {
+  const rated = (over = {}) => stay('Hotel Sunrise', { rates: [{ kind: 'room', label: '2 Adults', rate: 5000, nights: null, rooms: null }], ...over });
+  const withPrices = (type, over = {}, extra = {}) => confirmation(type, { quote: quote(type, { packageDetails: { hotels: [rated()], inclusions: [] }, pricing: { grandTotal: 40000, totalCostPerPerson: 20000, totalCostNote: 'Rs 20,000 Per person', items: [] }, ...over }), ...extra });
+
+  it.each([['Only Hotel'], ['Package']])('a %s voucher has no price box, no rate table and no total unless the booking shows prices', (type) => {
+    show(quotationOf(withPrices(type)));
+    expect(screen.getByText(/Hotel Sunrise/)).toBeInTheDocument();
+    for (const text of ['Per room per night', 'Rs 20,000 Per person', 'Rs 40,000', 'Pricing Breakdown']) expect(document.body.textContent).not.toContain(text);
+    cleanup();
+    show(quotationOf(withPrices(type, {}, { showPricing: true })));
+    expect(document.body.textContent).toContain('Rs 20,000 Per person');
+    if (type === 'Only Hotel') expect(document.body.textContent).toContain('Per room per night');
+  });
+
+  it('a land service voucher keeps its vehicles but not their rates or the total', () => {
+    const vehicles = [{ vehicleType: 'Innova Crysta', seats: 6, acType: 'AC', quantity: 1, rate: 4500, notes: '' }];
+    show(quotationOf(withPrices('Land Service', { vehicles, packageDetails: { hotels: [], inclusions: [] } })));
+    expect(screen.getByText('Innova Crysta')).toBeInTheDocument();
+    for (const text of ['Rate / vehicle', 'Amount', 'Total for the trip', 'Rs 4,500']) expect(document.body.textContent).not.toContain(text);
+    cleanup();
+    show(quotationOf(withPrices('Land Service', { vehicles, packageDetails: { hotels: [], inclusions: [] } }, { showPricing: true })));
+    for (const text of ['Rate / vehicle', 'Total for the trip', 'Rs 4,500']) expect(document.body.textContent).toContain(text);
+  });
+
+  it('a visa voucher keeps the visa and its documents but not the fee table', () => {
+    const visa = { country: 'Dubai', applicants: 2 };
+    const visaFees = [{ label: 'Visa fee', amount: 6500, per: 'applicant' }];
+    show(quotationOf(withPrices('Visa', { visa, visaFees, packageDetails: { hotels: [], inclusions: [] } })));
+    expect(document.body.textContent).toContain('Dubai');
+    for (const text of ['Total for 2 applicants', 'Rs 6,500', 'Rs 13,000']) expect(document.body.textContent).not.toContain(text);
+    cleanup();
+    show(quotationOf(withPrices('Visa', { visa, visaFees, packageDetails: { hotels: [], inclusions: [] } }, { showPricing: true })));
+    expect(document.body.textContent).toContain('Total for 2 applicants');
+    expect(document.body.textContent).toContain('Rs 13,000');
+  });
+
+  it('a quotation that is not a confirmation always shows its prices', () => {
+    show(withPrices('Only Hotel').quote);
+    expect(document.body.textContent).toContain('Per room per night');
+    expect(document.body.textContent).toContain('Rs 20,000 Per person');
+  });
+});
+
 describe('the same quotation before it is confirmed is exactly as it was', () => {
   it.each([['Only Hotel'], ['Package']])('a %s quotation has no confirmation line, keeps its timings and its phone label', (type) => {
     show(quote(type));

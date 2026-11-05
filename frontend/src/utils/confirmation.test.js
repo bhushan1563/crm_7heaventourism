@@ -31,7 +31,7 @@ describe('the form and the payload', () => {
     expect(p.customFields).toEqual([{ label: 'Driver', value: 'Raju' }]);
   });
   it('copes with a confirmation that has nothing yet', () => {
-    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', supplier: '', note: '' }, contacts: { coordinator: { name: '', numbers: [''] }, emergency: { name: '', numbers: [''] } }, hotelBookings: [], notes: '', customFields: [] });
+    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', supplier: '', note: '' }, contacts: { coordinator: { name: '', numbers: [''] }, emergency: { name: '', numbers: [''] } }, showPricing: false, hotelBookings: [], notes: '', customFields: [] });
     expect(toDateInput(null)).toBe('');
   });
   it('keeps the tour coordinator and the emergency contact with several numbers, leaving a blank box to type in', () => {
@@ -42,6 +42,17 @@ describe('the form and the payload', () => {
     expect(bookingPayload(typed).contacts).toEqual({ coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }, emergency: { name: '', numbers: [] } });
     expect(bookingView(null, typed).contacts).toEqual([{ key: 'coordinator', label: 'Tour coordinator', name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }]);
     expect(bookingView(null, form()).contacts).toEqual([]);
+  });
+  it('keeps whether the voucher shows prices: off unless the booking says so, in the form, the payload, the preview and the printed page', () => {
+    expect(formFromConfirmation({}).showPricing).toBe(false);
+    expect(formFromConfirmation({ showPricing: true }).showPricing).toBe(true);
+    expect(bookingPayload(formFromConfirmation({ showPricing: true })).showPricing).toBe(true);
+    expect(bookingPayload(form()).showPricing).toBe(false); // a form that never heard of it sends "no"
+    expect(bookingView({}, form({ showPricing: true })).showPricing).toBe(true);
+    expect(bookingView({}, form()).showPricing).toBe(false);
+    expect(quotationOf({ quote: {} }).confirmationInfo.showPricing).toBe(false);
+    expect(quotationOf({ quote: {}, showPricing: true }).confirmationInfo.showPricing).toBe(true);
+    expect(quotationOf({ quote: {}, showPricing: true }, { showPricing: false }).confirmationInfo.showPricing).toBe(false); // an unsaved switch wins in the preview
   });
   it('says which number is wrong, and allows a form that has no contacts at all', () => {
     const wrong = bookingErrors(form({ contacts: { coordinator: { name: 'Ravi', numbers: ['98765 43210', 'call me'] }, emergency: { name: '', numbers: [''] } } }));

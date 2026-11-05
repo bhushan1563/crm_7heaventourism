@@ -346,7 +346,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   const hotels = packageDetails.hotels || [];
   const options = quotation.options || [];
   const inclusions = (packageDetails.inclusions || []).filter((x) => String(x || '').trim());
-  const priceTables = tablesOf(quotation).filter(tableHasData);
+  const priceTables = view?.showPricing ? tablesOf(quotation).filter(tableHasData) : []; // the voucher prints no price tables unless the booking says so
   const defaults = roomDefaults(quotation);
   const pay = view?.payment || {};
 
@@ -424,8 +424,8 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     ], cols));
   }
 
-  // ---- payment ----
-  {
+  // ---- payment (only when the booking says the voucher shows prices) ----
+  if (view?.showPricing) {
     const totalAmt = Number(pay.totalAmount) || 0;
     const received = Number(pay.received) || 0;
     const balance = round2(totalAmt - received);

@@ -147,6 +147,12 @@ export const normalizeBookingInput = (body, current = {}) => {
     data.payment = payment;
   }
 
+  // Whether the voucher shows the prices: yes or no (anything else is refused, never guessed).
+  if (body.showPricing !== undefined) {
+    if (typeof body.showPricing !== 'boolean') return fail('Whether the voucher shows the prices must be yes or no.');
+    data.showPricing = body.showPricing;
+  }
+
   // The people to call during the trip: the tour coordinator and the emergency contact, each a name and up to a few numbers.
   // A person that is not sent keeps what is stored; blank numbers are dropped.
   if (body.contacts !== undefined) {

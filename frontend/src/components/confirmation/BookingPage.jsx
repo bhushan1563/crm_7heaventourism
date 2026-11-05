@@ -103,6 +103,8 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
           </>
         )}
 
+        {view.showPricing && (
+          <>
         <Heading>Payment</Heading>
         <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
           {[['Total amount', rs(pay.totalAmount)], ['Received', rs(pay.received)]].map(([label, value], i) => (
@@ -122,6 +124,8 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
             {pay.note && <div><strong style={{ color: '#0f172a' }}>Note:</strong> {pay.note}</div>}
           </div>
         ) : null}
+          </>
+        )}
 
         {view.customFields.length > 0 && (
           <>

@@ -169,6 +169,13 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, h
 
       <section className="glass-panel edit-section" aria-labelledby="be-payment">
         <h3 id="be-payment" className="edit-section-title">Payment</h3>
+        <label className="be-check" htmlFor="show-pricing">
+          <input id="show-pricing" type="checkbox" checked={Boolean(form.showPricing)} disabled={readOnly} onChange={(e) => onChange({ showPricing: e.target.checked })} />
+          <span>
+            <strong>Show the prices on the confirmation voucher</strong>
+            <small>Off by default. When it is off, the voucher (the page, the PDF, the Word file and what is sent to the client) leaves out the payment details and every price. The amounts below are still kept here for your own records.</small>
+          </span>
+        </label>
         <p className="edit-hint">The total starts as the price of the quotation. Change it if the final price was agreed differently.</p>
         <div className="be-pay-grid">
           <div className="form-group">

@@ -85,7 +85,7 @@ const ConfirmationLine = ({ info, align = 'left' }) =>
  * with a strip of more photos, the address and contact details, the stay, the room and meal plan, the check-in and
  * check-out times and the amenities.
  */
-const HotelStayCard = ({ h, confirmed = false }) => {
+const HotelStayCard = ({ h, confirmed = false, hidePrices = false }) => {
   const [cover, ...more] = h.photos || [];
   const facts = [
     h.checkInDate && ['Check In', confirmed ? whenText(h.checkInDate, h.checkInTime) : formatLongDate(h.checkInDate)],
@@ -136,13 +136,13 @@ const HotelStayCard = ({ h, confirmed = false }) => {
             {[!confirmed && h.contactNumber && `Phone: ${h.contactNumber}`, h.contactPerson && `Contact: ${h.contactPerson}`, h.email && `Email: ${h.email}`].filter(Boolean).join('  |  ')}
           </div>
         )}
-        <RateTablePrint stay={h} />
+        {!hidePrices && <RateTablePrint stay={h} />}
       </div>
     </div>
   );
 };
 
-const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
+const rs =(n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 /**
  * The PRICING of a hotel or package quotation, laid out like the company's sheets: a box titled PRICING, then for each option its name,
@@ -338,7 +338,7 @@ const OptionPriceTable = ({ table, quotation }) => {
  * The body of a VISA quotation: the visa itself, the documents the applicants must bring (a checklist), the fees (per applicant or
  * for the whole group) with their total, and what the service includes. The price of the quotation is the fee table.
  */
-const VisaSection = ({ visa, fees, documents, inclusions, trip = {} }) => {
+const VisaSection = ({ visa, fees, documents, inclusions, trip = {}, hidePrices = false }) => {
   const applicants = Math.max(1, Number(visa.applicants) || 1);
   const total = visaFeeTotal(fees, applicants);
   const columns = '3fr 1.7fr 1.1fr 1.2fr';
@@ -398,7 +398,7 @@ const VisaSection = ({ visa, fees, documents, inclusions, trip = {} }) => {
 
       {documents.length > 0 && checklist('Documents Required', documents, '✓')}
 
-      {fees.length > 0 && (
+      {!hidePrices && fees.length > 0 && (
         <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: columns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
             {['Fee', 'Charged', 'Rate', 'Amount'].map((h, i) => (
@@ -419,7 +419,7 @@ const VisaSection = ({ visa, fees, documents, inclusions, trip = {} }) => {
           </div>
         </div>
       )}
-      {visa.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={visa.priceNote} /></div>}
+      {!hidePrices && visa.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={visa.priceNote} /></div>}
 
       {inclusions.length > 0 && checklist('Visa Inclusions', inclusions, '✓')}
     </div>
@@ -430,9 +430,10 @@ const VisaSection = ({ visa, fees, documents, inclusions, trip = {} }) => {
  * The vehicle part of a LAND SERVICE quotation (vehicle only): the trip, a table of vehicles with their rates and amounts,
  * the total, and what the vehicle includes. The price of the quotation is this table.
  */
-const LandServiceSection = ({ vehicles, trip, inclusions }) => {
+const LandServiceSection = ({ vehicles, trip, inclusions, hidePrices = false }) => {
   const total = vehicleTotal(vehicles);
-  const columns = '2.7fr 0.7fr 0.85fr 0.6fr 1.15fr 1.25fr';
+  const columns = hidePrices ? '2.7fr 0.7fr 0.85fr 0.6fr' : '2.7fr 0.7fr 0.85fr 0.6fr 1.15fr 1.25fr';
+  const heads = hidePrices ? ['Vehicle', 'Seats', 'AC', 'Qty'] : ['Vehicle', 'Seats', 'AC', 'Qty', 'Rate / vehicle', 'Amount'];
   const facts = [['Route', trip.route], ['Pick-up', trip.pickupPoint], ['Drop', trip.dropPoint], ['Kilometres', trip.kmPolicy]].filter(([, v]) => v);
   const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#1f2937' };
   return (
@@ -450,7 +451,7 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
       {vehicles.length > 0 && (
         <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden', marginBottom: '8px' }}>
           <div style={{ display: 'grid', gridTemplateColumns: columns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-            {['Vehicle', 'Seats', 'AC', 'Qty', 'Rate / vehicle', 'Amount'].map((h, i) => (
+            {heads.map((h, i) => (
               <div key={h} style={{ padding: '5px 6px', textAlign: i >= 4 ? 'right' : 'left' }}>{h}</div>
             ))}
           </div>
@@ -463,17 +464,19 @@ const LandServiceSection = ({ vehicles, trip, inclusions }) => {
               <div style={cell}>{v.seats > 0 ? v.seats : '–'}</div>
               <div style={cell}>{v.acType || '–'}</div>
               <div style={cell}>{v.quantity}</div>
-              <div style={{ ...cell, textAlign: 'right' }}>{rs(v.rate)}</div>
-              <div style={{ ...cell, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{rs((Number(v.quantity) || 0) * (Number(v.rate) || 0))}</div>
+              {!hidePrices && <div style={{ ...cell, textAlign: 'right' }}>{rs(v.rate)}</div>}
+              {!hidePrices && <div style={{ ...cell, textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{rs((Number(v.quantity) || 0) * (Number(v.rate) || 0))}</div>}
             </div>
           ))}
-          <div style={{ display: 'grid', gridTemplateColumns: '5.6fr 1.25fr', borderTop: '2px solid #0f172a', backgroundColor: '#fef9c3' }}>
-            <div style={{ padding: '6px 8px', fontSize: '10.5px', fontWeight: 800, color: '#0f172a' }}>Total for the trip</div>
-            <div style={{ padding: '6px 6px', fontSize: '11.5px', fontWeight: 800, color: '#0f172a', textAlign: 'right' }}>{total > 0 ? rs(total) : 'On request'}</div>
-          </div>
+          {!hidePrices && (
+            <div style={{ display: 'grid', gridTemplateColumns: '5.6fr 1.25fr', borderTop: '2px solid #0f172a', backgroundColor: '#fef9c3' }}>
+              <div style={{ padding: '6px 8px', fontSize: '10.5px', fontWeight: 800, color: '#0f172a' }}>Total for the trip</div>
+              <div style={{ padding: '6px 6px', fontSize: '11.5px', fontWeight: 800, color: '#0f172a', textAlign: 'right' }}>{total > 0 ? rs(total) : 'On request'}</div>
+            </div>
+          )}
         </div>
       )}
-      {trip.priceNote && <div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={trip.priceNote} /></div>}
+      {!hidePrices && trip.priceNote &&<div className="quotation-keep" style={{ fontSize: '9px', color: '#64748b', fontStyle: 'italic', marginBottom: '10px' }}>Note: <Line value={trip.priceNote} /></div>}
 
       {inclusions.length > 0 && (
         <div>
@@ -729,6 +732,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // A booking confirmation carries `confirmationInfo`: it says so under the destination, shows what each hotel gave, and leaves the vehicle notes out.
   const confirmationInfo = quotation.confirmationInfo || null;
   const isConfirmation = Boolean(confirmationInfo);
+  // A booking confirmation does not print prices unless the booking says so (the "Show prices on the voucher" switch).
+  const hidePrices = isConfirmation && !confirmationInfo.showPricing;
   // A visa has no vehicle, and a hotel quotation (Only Hotel) does not carry vehicle notes either; packages and the other kinds keep them.
   const vehicleNotes = quotationType === 'Visa' || quotationType === 'Only Hotel' || isConfirmation ? [] : quotation.vehicleNotes || [];
   const importantNotes = quotation.importantNotes || [];
@@ -901,18 +906,18 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
   // Pricing check
   const pricingItems = pricing.items && pricing.items.length > 0 ? pricing.items : [];
-  const hasPricingSection =
+  const hasPricingSection = !hidePrices && Boolean(
     pricingItems.length > 0 ||
     pricing.packageCostPerPerson > 0 ||
     pricing.airfareCostPerPerson > 0 ||
     pricing.otherCostPerPerson > 0 ||
     pricing.totalCostPerPerson > 0 ||
     pricing.grandTotal > 0 ||
-    pricing.totalCostNote;
+    pricing.totalCostNote);
 
   // A hotel quotation (the sheet) or a package (per room per night) priced with the pricing tables prints them (only the options with
   // something entered, and only those laid out for this kind of quotation) instead of the price list.
-  const priceTables = tablesOf(quotation).filter(tableHasData);
+  const priceTables = hidePrices ? [] : tablesOf(quotation).filter(tableHasData);
   const hasPriceTables = priceTables.length > 0;
   const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0));
   const hasExclusions = exclusions && exclusions.length > 0;
@@ -1247,9 +1252,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                   {getPackageSectionTitle()}
                 </h3>
 
-                {isVisaQuotation && <VisaSection visa={visa} fees={visaFees} documents={visaDocuments} inclusions={visaInclusions} trip={{ client: quotation.clientName, pax: quotation.paxDetails, travelDate: quotation.travelDate, duration: quotation.duration, validUntil: quotation.validUntil }} />}
+                {isVisaQuotation && <VisaSection hidePrices={hidePrices} visa={visa} fees={visaFees}documents={visaDocuments} inclusions={visaInclusions} trip={{ client: quotation.clientName, pax: quotation.paxDetails, travelDate: quotation.travelDate, duration: quotation.duration, validUntil: quotation.validUntil }} />}
 
-                {isLand && <LandServiceSection vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
+                {isLand && <LandServiceSection hidePrices={hidePrices} vehicles={vehicles} trip={quotation.landService || {}} inclusions={vehicleInclusions} />}
 
                 {!isLand && !isVisaQuotation && hasOptions && (
                   hasPriceTables
@@ -1270,7 +1275,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {packageDetails.hotels.map((h, i) => (quotationType === 'Only Hotel' ? (
-                        <HotelStayCard key={i} h={h} confirmed={isConfirmation} />
+                        <HotelStayCard key={i} h={h} confirmed={isConfirmation} hidePrices={hidePrices} />
                       ) : (
                         <div
                           key={i}

@@ -50,6 +50,13 @@ test('contact problems name the person and the number', () => {
   assert.match(bad({ contacts: { coordinator: { numbers: Array.from({ length: L.contactNumbers + 1 }, (_, i) => `98765 4321${i}`) } } }), /tour coordinator can have at most 5 numbers/);
 });
 
+test('whether the voucher shows the prices is yes or no, and only that', () => {
+  assert.equal(ok({ showPricing: true }).showPricing, true);
+  assert.equal(ok({ showPricing: false }).showPricing, false);
+  assert.equal('showPricing' in ok({ notes: '' }), false, 'not sent: not changed');
+  for (const value of ['true', 1, 0, null, 'yes', {}, []]) assert.match(bad({ showPricing: value }), /must be yes or no/, String(value));
+});
+
 test('traveller problems name the traveller', () => {
   assert.equal(bad({ travellers: [{ name: 'A' }, { name: '  ' }] }), 'Please enter the name of traveller 2.');
   assert.match(bad({ travellers: [{ name: 'A', age: -1 }] }), /age of traveller 1 must be a whole number from 0 to 120/);

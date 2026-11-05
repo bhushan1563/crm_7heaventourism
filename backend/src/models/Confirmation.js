@@ -83,6 +83,8 @@ const confirmationSchema = new mongoose.Schema(
       supplier: { type: String, default: '' }, // who the balance is paid to; shown on the travel calendar's payment deadline
       note: { type: String, default: '' }
     },
+    // Whether the confirmation voucher prints the payment details and the prices. A voucher usually carries none, so it is off unless chosen.
+    showPricing: { type: Boolean, default: false },
     contacts: {
       coordinator: { type: contactSchema, default: () => ({}) },
       emergency: { type: contactSchema, default: () => ({}) }

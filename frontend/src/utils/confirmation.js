@@ -58,6 +58,7 @@ export const formFromConfirmation = (c) => ({
   travellers: (c?.travellers || []).map((t) => ({ name: t.name || '', age: t.age ?? '', passportNo: t.passportNo || '', notes: t.notes || '' })),
   payment: { totalAmount: c?.payment?.totalAmount ?? 0, received: c?.payment?.received ?? 0, balanceDueDate: toDateInput(c?.payment?.balanceDueDate), supplier: c?.payment?.supplier || '', note: c?.payment?.note || '' },
   contacts: contactsForm(c?.contacts),
+  showPricing: Boolean(c?.showPricing), // off unless the booking says so: the voucher usually carries no prices
   hotelBookings: hotelBookingsOf(c),
   notes: c?.notes || '',
   customFields: (c?.customFields || []).map((f) => ({ label: f.label || '', value: f.value || '' }))
@@ -69,6 +70,7 @@ export const bookingPayload = (form) => ({
   travellers: form.travellers.map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
   payment: { totalAmount: Number(form.payment.totalAmount) || 0, received: Number(form.payment.received) || 0, balanceDueDate: form.payment.balanceDueDate || '', supplier: (form.payment.supplier || '').trim(), note: form.payment.note.trim() },
   contacts: contactsPayload(form.contacts),
+  showPricing: Boolean(form.showPricing),
   hotelBookings: (form.hotelBookings || []).map((h) => ({ confirmationNo: h.confirmationNo.trim(), contactNumber: h.contactNumber.trim(), checkInTime: h.checkInTime, checkOutTime: h.checkOutTime })),
   notes: form.notes,
   customFields: form.customFields.map((f) => ({ label: f.label.trim(), value: f.value.trim() }))
@@ -174,7 +176,7 @@ export const quotationOf = (confirmation, form) => {
     travelDate,
     quotationNo: confirmation?.confirmationNo || quote.quotationNo || '',
     packageDetails: { ...(quote.packageDetails || {}), hotels },
-    confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed' }
+    confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed', showPricing: form ? Boolean(form.showPricing) : Boolean(confirmation?.showPricing) }
   };
 };
 
@@ -186,6 +188,7 @@ export const bookingView = (confirmation, form) => {
     travelDate: f.travelDate || '',
     travellers: f.travellers.filter((t) => t.name.trim()).map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
     payment: { ...payment, balance: balanceOf(payment) },
+    showPricing: Boolean(f.showPricing),
     contacts: CONTACT_ROLES.map(([key, label]) => ({ key, label, name: String(f.contacts?.[key]?.name ?? '').trim(), numbers: contactNumbersOf(f.contacts?.[key]) })).filter((c) => c.name || c.numbers.length),
     notes: f.notes || '',
     customFields: f.customFields.filter((d) => d.label.trim()).map((d) => ({ label: d.label.trim(), value: d.value.trim() }))
