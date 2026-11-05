@@ -91,6 +91,8 @@ const confirmationSchema = new mongoose.Schema(
     },
     hotelBookings: { type: [hotelBookingSchema], default: [] }, // per hotel of the copy: its confirmation number, contact number and times
     notes: { type: String, default: '' }, // formatted text (sanitised on the server), printed on the confirmation
+    additionalServices: { type: String, default: '' }, // formatted text: extra services booked for this trip, printed under "General Policy" on the last page
+    importantNotes: { type: String, default: '' }, // formatted text: notes for this booking, printed under "General Policy" on the last page
     customFields: { type: [customFieldSchema], default: [] }, // "Additional details": label + value, for what the client adds to their list
 
     // Kept so that cancelling puts things back as they were.

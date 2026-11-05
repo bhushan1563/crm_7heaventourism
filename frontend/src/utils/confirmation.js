@@ -61,6 +61,8 @@ export const formFromConfirmation = (c) => ({
   showPricing: Boolean(c?.showPricing), // off unless the booking says so: the voucher usually carries no prices
   hotelBookings: hotelBookingsOf(c),
   notes: c?.notes || '',
+  additionalServices: c?.additionalServices || '',
+  importantNotes: c?.importantNotes || '',
   customFields: (c?.customFields || []).map((f) => ({ label: f.label || '', value: f.value || '' }))
 });
 
@@ -73,6 +75,8 @@ export const bookingPayload = (form) => ({
   showPricing: Boolean(form.showPricing),
   hotelBookings: (form.hotelBookings || []).map((h) => ({ confirmationNo: h.confirmationNo.trim(), contactNumber: h.contactNumber.trim(), checkInTime: h.checkInTime, checkOutTime: h.checkOutTime })),
   notes: form.notes,
+  additionalServices: form.additionalServices || '',
+  importantNotes: form.importantNotes || '',
   customFields: form.customFields.map((f) => ({ label: f.label.trim(), value: f.value.trim() }))
 });
 
@@ -176,7 +180,10 @@ export const quotationOf = (confirmation, form) => {
     travelDate,
     quotationNo: confirmation?.confirmationNo || quote.quotationNo || '',
     packageDetails: { ...(quote.packageDetails || {}), hotels },
-    confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed', showPricing: form ? Boolean(form.showPricing) : Boolean(confirmation?.showPricing) }
+    confirmationInfo: { no: confirmation?.confirmationNo || '', confirmedAt: confirmation?.confirmedAt || '', status: confirmation?.status || 'Confirmed', showPricing: form ? Boolean(form.showPricing) : Boolean(confirmation?.showPricing),
+      // what the booking adds under "General Policy" on the last page
+      additionalServices: (form ? form.additionalServices : confirmation?.additionalServices) || '',
+      importantNotes: (form ? form.importantNotes : confirmation?.importantNotes) || '' }
   };
 };
 
@@ -189,6 +196,8 @@ export const bookingView = (confirmation, form) => {
     travellers: f.travellers.filter((t) => t.name.trim()).map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
     payment: { ...payment, balance: balanceOf(payment) },
     showPricing: Boolean(f.showPricing),
+    additionalServices: f.additionalServices || '',
+    importantNotes: f.importantNotes || '',
     contacts: CONTACT_ROLES.map(([key, label]) => ({ key, label, name: String(f.contacts?.[key]?.name ?? '').trim(), numbers: contactNumbersOf(f.contacts?.[key]) })).filter((c) => c.name || c.numbers.length),
     notes: f.notes || '',
     customFields: f.customFields.filter((d) => d.label.trim()).map((d) => ({ label: d.label.trim(), value: d.value.trim() }))

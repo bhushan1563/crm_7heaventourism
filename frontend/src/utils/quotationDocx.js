@@ -563,11 +563,20 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     }
   }
 
-  // ---- policies ----
-  if ((quotation.importantNotes || []).filter((x) => x).length) children.push(heading('Important Notes'), ...numbered(quotation.importantNotes));
-  if ((quotation.paymentPolicy || []).filter((x) => x).length) children.push(heading('Payment Policy'), ...bullets(quotation.paymentPolicy));
-  if ((quotation.cancellationPolicy || []).filter((x) => x).length) children.push(heading('Cancellation Policy'), ...bullets(quotation.cancellationPolicy));
-  if ((quotation.exclusions || []).filter((x) => x).length) children.push(heading('Exclusions'), ...bullets(quotation.exclusions));
+  // ---- general policy (the last page): what the booking adds, then the standard terms, the policies and the exclusions ----
+  const bookingTexts = [['Additional Services', view?.additionalServices], ['Important Notes', view?.importantNotes]]
+    .map(([title, html]) => [title, htmlToParagraphs(html || '')])
+    .filter(([, paragraphs]) => paragraphs.length);
+  const hasStandard = ['importantNotes', 'paymentPolicy', 'cancellationPolicy', 'exclusions'].some((key) => (quotation[key] || []).filter((x) => x).length);
+  if (bookingTexts.length || hasStandard) children.push(new d.Paragraph({ children: [], pageBreakBefore: true }), heading('General Policy'));
+  for (const [title, paragraphs] of bookingTexts) {
+    children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run(title, { bold: true, color: BRAND })] }));
+    for (const p of paragraphs) children.push(new d.Paragraph({ spacing: { after: 30 }, children: [run(p)] }));
+  }
+  if ((quotation.importantNotes || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Terms', { bold: true, color: BRAND })] }), ...numbered(quotation.importantNotes));
+  if ((quotation.paymentPolicy || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Payment Policy', { bold: true, color: BRAND })] }), ...bullets(quotation.paymentPolicy));
+  if ((quotation.cancellationPolicy || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Cancellation Policy', { bold: true, color: BRAND })] }), ...bullets(quotation.cancellationPolicy));
+  if ((quotation.exclusions || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Exclusions', { bold: true, color: BRAND })] }), ...bullets(quotation.exclusions));
 
   const filename = `7Heaven_Confirmation_${(quotation.destination || 'Trip').replace(/[^a-zA-Z0-9]/g, '_')}_${info.no || confirmation?.confirmationNo || 'Doc'}.docx`;
   const doc = new d.Document({

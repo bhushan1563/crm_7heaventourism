@@ -38,6 +38,25 @@ describe('BookingEditor', () => {
     expect(screen.getByText('Balance to pay').parentElement).toHaveTextContent('Rs 1,20,000');
   });
 
+  it('has a place for the additional services and one for the important notes, each kept as typed', async () => {
+    const seen = vi.fn();
+    render(<Harness initial={start()} onState={seen} />);
+    expect(screen.getByRole('heading', { name: 'Additional services' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Important notes' })).toBeInTheDocument();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Additional services' }), 'Airport transfer');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Important notes' }), 'Carry a passport');
+    expect(seen.mock.lastCall[0].additionalServices).toBe('Airport transfer');
+    expect(seen.mock.lastCall[0].importantNotes).toBe('Carry a passport');
+    expect(seen.mock.lastCall[0].notes).toBe(''); // the notes are a separate place
+  });
+
+  it('shows what was saved in them, and cannot change it where the booking is read-only', () => {
+    render(<Harness initial={start({ additionalServices: 'Saved services', importantNotes: 'Saved notes' })} readOnly />);
+    expect(screen.getByRole('textbox', { name: 'Additional services' })).toHaveValue('Saved services');
+    expect(screen.getByRole('textbox', { name: 'Important notes' })).toHaveValue('Saved notes');
+    expect(screen.getByRole('textbox', { name: 'Additional services' })).toBeDisabled();
+  });
+
   it('has a switch for showing the prices on the voucher, off to start with', async () => {
     const seen = vi.fn();
     render(<Harness initial={start()} onState={seen} />);

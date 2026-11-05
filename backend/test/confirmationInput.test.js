@@ -50,6 +50,19 @@ test('contact problems name the person and the number', () => {
   assert.match(bad({ contacts: { coordinator: { numbers: Array.from({ length: L.contactNumbers + 1 }, (_, i) => `98765 4321${i}`) } } }), /tour coordinator can have at most 5 numbers/);
 });
 
+test('the additional services and the important notes are formatted text, cleaned, and empty when nothing is visible', () => {
+  const d = ok({ additionalServices: '<p>Airport <strong>transfer</strong></p><script>steal()</script>', importantNotes: '<p onclick="x()">Carry a passport</p>', notes: '<p>Note</p>' });
+  assert.match(d.additionalServices, /<strong>transfer<\/strong>/);
+  assert.doesNotMatch(d.additionalServices, /script|steal/);
+  assert.doesNotMatch(d.importantNotes, /onclick/);
+  assert.match(d.importantNotes, /Carry a passport/);
+  assert.equal(ok({ additionalServices: '<p><br></p>', importantNotes: '' }).importantNotes, '');
+  assert.equal(ok({ additionalServices: '<p> </p>' }).additionalServices, '');
+  assert.equal('additionalServices' in ok({ notes: '' }), false, 'not sent: not changed');
+  assert.match(bad({ importantNotes: 'x'.repeat(L.notes + 1) }), /important notes/i);
+  assert.match(bad({ additionalServices: 5 }), /additional services/i);
+});
+
 test('whether the voucher shows the prices is yes or no, and only that', () => {
   assert.equal(ok({ showPricing: true }).showPricing, true);
   assert.equal(ok({ showPricing: false }).showPricing, false);

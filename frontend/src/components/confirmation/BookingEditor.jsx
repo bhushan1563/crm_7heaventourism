@@ -242,6 +242,18 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, h
         </div>
       </section>
 
+      <section className="glass-panel edit-section" aria-labelledby="be-services">
+        <h3 id="be-services" className="edit-section-title">Additional services</h3>
+        <p className="edit-hint">Extra services for this trip (a transfer, a meal, an activity, a visa...). Printed on the last page of the confirmation, under "General Policy".</p>
+        <LazyRichTextEditor value={form.additionalServices || ''} onChange={(additionalServices) => onChange({ additionalServices })} maxLength={L.notes} minHeight={90} ariaLabel="Additional services" placeholder="e.g. Private transfer from the airport. Candle-light dinner on the second night." disabled={readOnly} />
+      </section>
+
+      <section className="glass-panel edit-section" aria-labelledby="be-important">
+        <h3 id="be-important" className="edit-section-title">Important notes</h3>
+        <p className="edit-hint">What the guests must know for this trip. Printed on the last page of the confirmation, under "General Policy", above the standard terms and policies.</p>
+        <LazyRichTextEditor value={form.importantNotes || ''} onChange={(importantNotes) => onChange({ importantNotes })} maxLength={L.notes} minHeight={90} ariaLabel="Important notes" placeholder="e.g. Carry a valid passport. Reach the airport three hours before departure." disabled={readOnly} />
+      </section>
+
       <section className="glass-panel edit-section" aria-labelledby="be-notes">
         <h3 id="be-notes" className="edit-section-title">Notes</h3>
         <p className="edit-hint">Printed on the confirmation, for the client. Use bold, colour or highlight for what matters.</p>

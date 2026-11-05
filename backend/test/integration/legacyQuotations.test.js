@@ -137,6 +137,21 @@ test('a booking does not show prices on its voucher until it is told to, and the
   assert.ok(!old.showPricing);
 });
 
+test('a booking keeps its additional services and its important notes', async () => {
+  const q = await legacy('GENPOL-001');
+  const made = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: String(q._id) } })).body;
+  assert.equal(made.success, true, made.message);
+  assert.equal(made.data.additionalServices, '');
+  assert.equal(made.data.importantNotes, '');
+  const id = made.data._id;
+  const saved = (await app.call(`/api/confirmations/${id}`, { method: 'PUT', token: admin.token, json: { additionalServices: '<p>Airport transfer</p>', importantNotes: '<p>Carry a <strong>passport</strong></p>' } })).body;
+  assert.equal(saved.success, true, saved.message);
+  const shown = (await app.call(`/api/confirmations/${id}`, { token: admin.token })).body.data;
+  assert.equal(shown.additionalServices, '<p>Airport transfer</p>');
+  assert.match(shown.importantNotes, /<strong>passport<\/strong>/);
+  assert.equal((await app.call(`/api/confirmations/${id}`, { method: 'PUT', token: admin.token, json: { importantNotes: '' } })).body.data.additionalServices, '<p>Airport transfer</p>', 'changing one leaves the other');
+});
+
 test('the company\'s own saved text is used when there is one, list by list', async () => {
   await MasterTextModel.create({ key: 'quotation-text', importantNotes: ['Carry your ID.'], paymentPolicy: ['Half now, half later.'] });
   try {

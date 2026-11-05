@@ -57,6 +57,24 @@ describe('the Word file of a booking confirmation', () => {
     expect(paragraph).toMatch(/w:color w:val="1D4ED8"/i);
   });
 
+  it('ends with "General Policy": the booking\'s additional services and important notes first, then the standard terms and policies', async () => {
+    const plain = await open(booking({
+      additionalServices: '<p>Airport transfer</p><p>Candle-light dinner</p>',
+      importantNotes: '<ul><li>Carry a passport</li></ul>',
+      quote: { ...booking().quote, importantNotes: ['Standard term one.'], paymentPolicy: ['25% advance.'], cancellationPolicy: ['10% fee.'], exclusions: ['Airfare'] }
+    }));
+    const at = ['General Policy', 'Additional Services', 'Airport transfer', 'Candle-light dinner', 'Important Notes', 'Carry a passport', 'Terms', 'Standard term one.', 'Payment Policy', '25% advance.', 'Cancellation Policy', '10% fee.', 'Exclusions', 'Airfare'].map((t) => plain.lastIndexOf(t));
+    expect(at.every((n) => n >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(plain.lastIndexOf('General Policy')).toBeGreaterThan(plain.indexOf('Hotel Sunrise')); // after the trip, on the last page
+  });
+
+  it('has no General Policy section when there is nothing to put in it', async () => {
+    const plain = await open(booking());
+    expect(plain).not.toContain('General Policy');
+    expect(plain).not.toContain('Additional Services');
+  });
+
   it('has them when the booking says the voucher shows prices', async () => {
     const plain = await open(booking({ showPricing: true }));
     for (const text of ['Payment', 'Total amount', 'Rs 1,20,000', 'Balance to pay', 'Rs 80,000', 'Advance by cheque', 'Pricing', 'Grand Total', 'Rs 50,000']) expect(plain).toContain(text);

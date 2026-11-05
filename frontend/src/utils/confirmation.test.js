@@ -31,7 +31,7 @@ describe('the form and the payload', () => {
     expect(p.customFields).toEqual([{ label: 'Driver', value: 'Raju' }]);
   });
   it('copes with a confirmation that has nothing yet', () => {
-    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', supplier: '', note: '' }, contacts: { coordinator: { name: '', numbers: [''] }, emergency: { name: '', numbers: [''] } }, showPricing: false, hotelBookings: [], notes: '', customFields: [] });
+    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', supplier: '', note: '' }, contacts: { coordinator: { name: '', numbers: [''] }, emergency: { name: '', numbers: [''] } }, showPricing: false, hotelBookings: [], notes: '', additionalServices: '', importantNotes: '', customFields: [] });
     expect(toDateInput(null)).toBe('');
   });
   it('keeps the tour coordinator and the emergency contact with several numbers, leaving a blank box to type in', () => {
@@ -53,6 +53,18 @@ describe('the form and the payload', () => {
     expect(quotationOf({ quote: {} }).confirmationInfo.showPricing).toBe(false);
     expect(quotationOf({ quote: {}, showPricing: true }).confirmationInfo.showPricing).toBe(true);
     expect(quotationOf({ quote: {}, showPricing: true }, { showPricing: false }).confirmationInfo.showPricing).toBe(false); // an unsaved switch wins in the preview
+  });
+  it('keeps the additional services and the important notes of the booking: in the form, the payload, the preview and the printed view', () => {
+    const c = { additionalServices: '<p>Airport transfer</p>', importantNotes: '<p>Carry a passport</p>' };
+    const f = formFromConfirmation(c);
+    expect([f.additionalServices, f.importantNotes]).toEqual(['<p>Airport transfer</p>', '<p>Carry a passport</p>']);
+    expect(formFromConfirmation({}).additionalServices).toBe('');
+    const p = bookingPayload(f);
+    expect([p.additionalServices, p.importantNotes]).toEqual(['<p>Airport transfer</p>', '<p>Carry a passport</p>']);
+    expect(bookingPayload(form()).additionalServices).toBe(''); // a form that never heard of it sends nothing
+    expect(quotationOf({ quote: {}, ...c }).confirmationInfo).toMatchObject(c);
+    expect(quotationOf({ quote: {}, ...c }, { additionalServices: '<p>Typed now</p>', importantNotes: '' }).confirmationInfo).toMatchObject({ additionalServices: '<p>Typed now</p>', importantNotes: '' }); // an unsaved edit wins in the preview
+    expect(bookingView({}, form(c)).additionalServices).toBe('<p>Airport transfer</p>');
   });
   it('says which number is wrong, and allows a form that has no contacts at all', () => {
     const wrong = bookingErrors(form({ contacts: { coordinator: { name: 'Ravi', numbers: ['98765 43210', 'call me'] }, emergency: { name: '', numbers: [''] } } }));

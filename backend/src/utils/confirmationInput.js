@@ -215,10 +215,12 @@ export const normalizeBookingInput = (body, current = {}) => {
     data.hotelBookings = hotels;
   }
 
-  if (body.notes !== undefined) {
-    const r = sanitizeRich(body.notes, { label: 'The notes', maxText: L.notes });
+  // The notes, and the two texts printed under "General Policy" on the last page: formatted text, cleaned here; nothing visible means empty.
+  for (const [key, label] of [['notes', 'The notes'], ['additionalServices', 'The additional services'], ['importantNotes', 'The important notes']]) {
+    if (body[key] === undefined) continue;
+    const r = sanitizeRich(body[key], { label, maxText: L.notes });
     if (!r.ok) return r;
-    data.notes = richToText(r.value).trim() ? r.value : '';
+    data[key] = richToText(r.value).trim() ? r.value : '';
   }
 
   if (body.customFields !== undefined) {

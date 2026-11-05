@@ -951,6 +951,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // quotation (it has its own checklist, fees and inclusions), so a visa never prints it.
   const showBackPages = (!pageNumber || pageNumber === 3) && !isVisaQuotation;
   const hasPoliciesPage = hasPaymentPolicy || hasCancellationPolicy;
+  // The two texts a booking adds to its last page (its additional services and its important notes); a quotation has none.
+  const bookingTexts = !isConfirmation ? [] : [['ADDITIONAL SERVICES', confirmationInfo.additionalServices], ['IMPORTANT NOTES', confirmationInfo.importantNotes]]
+    .filter(([, text]) => richToPlainText(text || '').trim())
+    .map(([title, text]) => ({ title, pieces: splitDisplayBlocks(toDocumentHtml(text)) }));
   const hasExclusionsPage = hasExclusions || hasVehicleNotes;
 
   const SectionBanner = ({ title, accent }) => (
@@ -1613,12 +1617,17 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
       )}
 
       {/* ================= TERMS, POLICIES, EXCLUSIONS & GUIDELINES — one A4 page ================= */}
-      {showBackPages && (hasImportantNotes || hasPoliciesPage || hasExclusionsPage) && (
+      {showBackPages && (hasImportantNotes || hasPoliciesPage || hasExclusionsPage || bookingTexts.length > 0) && (
         <div className="quotation-page" id={`${id}-page-terms`} style={pageContainerStyle}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <DocumentHeader />
-            <SectionBanner title="TERMS, POLICIES, EXCLUSIONS & GUIDELINES" accent="#b91c1c" />
+            <SectionBanner title={isConfirmation ? 'GENERAL POLICY' : 'TERMS, POLICIES, EXCLUSIONS & GUIDELINES'} accent="#b91c1c" />
             <div className="quotation-flow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {/* What this booking adds (a confirmation only): its additional services and its important notes, above the standard terms and policies. */}
+              {bookingTexts.map(({ title, pieces }) => [
+                <div key={`${title}-title`} className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0369a1', marginTop: '4px' }}>{title}</div>,
+                ...pieces.map((html, i) => <div key={`${title}-${i}`} className="quotation-keep qd-rich qd-part" style={{ fontSize: '10px', lineHeight: 1.45, color: '#000000', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: html }} />)
+              ])}
               {hasImportantNotes && (
                 <div className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
                   TERMS
