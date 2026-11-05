@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink, MapPin, Moon, Plane, Users, Wallet } from 'lucide-react';
+import { CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink, MapPin, Moon, Plane, Trash2, Users, Wallet } from 'lucide-react';
 import Modal from '../Modal';
 import {
   KINDS, addDays, addMonths, agendaDays, buildIcs, dayNumber, daysBetween, endOfMonth, eventLabel, eventsOnDay, fullShortDate, isCancelled, longDate,
@@ -190,7 +190,7 @@ const googleLink = (e) => {
 };
 
 /** Everything about one trip, with a way into its record, to Google Calendar, and to an .ics file. */
-export const EventDialog = ({ event, onClose, onGo }) => {
+export const EventDialog = ({ event, onClose, onGo, onDelete }) => {
   if (!event) return null;
   const rows = [
     ['Type', KINDS[event.kind]?.one + (event.type ? ` (${event.type})` : '')],
@@ -217,7 +217,10 @@ export const EventDialog = ({ event, onClose, onGo }) => {
         ))}
       </dl>
       <div className="cal-detail-actions">
-        <button type="button" className="btn btn-primary" onClick={() => onGo(event)}><ExternalLink size={15} /> Open {event.kind === 'payment' ? 'booking' : KINDS[event.kind]?.one.toLowerCase()}</button>
+        {event.isManual
+          ? <button type="button" className="btn btn-danger" onClick={() => onDelete(event)}><Trash2 size={15} /> Delete event</button>
+          : <button type="button" className="btn btn-primary" onClick={() => onGo(event)}><ExternalLink size={15} /> Open {event.kind === 'payment' ? 'booking' : KINDS[event.kind]?.one.toLowerCase()}</button>
+        }
         <a className="btn btn-outline" href={googleLink(event)} target="_blank" rel="noopener noreferrer"><CalendarPlus size={15} /> Add to Google Calendar</a>
         <button type="button" className="btn btn-outline" onClick={() => saveBlob(new Blob([buildIcs([event])], { type: 'text/calendar;charset=utf-8' }), `${(event.ref || event.title).replace(/[^a-zA-Z0-9-]+/g, '_')}.ics`)}><Download size={15} /> Download .ics</button>
       </div>

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Download, Loader2, RefreshCw, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, Loader2, Plus, RefreshCw, Search, X } from 'lucide-react';
 import calendarService from '../services/calendarService';
 import { getErrorMessage } from '../services/api';
 import { saveBlob } from '../utils/download';
@@ -47,6 +47,9 @@ export const TravelCalendarPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [opened, setOpened] = useState(null);
+  const [addForm, setAddForm] = useState(null); // null = closed, {} = open
+  const [addError, setAddError] = useState('');
+  const [adding, setAdding] = useState(false);
   const searchRef = useRef(null);
   const latest = useRef(0);
 
@@ -125,6 +128,26 @@ export const TravelCalendarPage = () => {
     return () => window.removeEventListener('keydown', onKey);
   });
 
+  const handleAddEvent = async () => {
+    setAddError('');
+    if (!addForm?.title?.trim()) { setAddError('Guest name is required.'); return; }
+    if (!addForm?.start) { setAddError('Date is required.'); return; }
+    setAdding(true);
+    try {
+      const res = await calendarService.createManual({ ...addForm, end: addForm.end || addForm.start });
+      if (res.success) { setAddForm(null); load(); }
+      else setAddError(res.message || 'Could not save.');
+    } catch { setAddError('Could not save.'); }
+    finally { setAdding(false); }
+  };
+
+  const handleDeleteEvent = async (event) => {
+    if (!window.confirm(`Delete "${event.title}" from the calendar?`)) return;
+    try { await calendarService.deleteManual(event.recordId); } catch { /* ignore */ }
+    setOpened(null);
+    load();
+  };
+
   const exportIcs = () => {
     if (!visible.length) return;
     saveBlob(new Blob([buildIcs(visible)], { type: 'text/calendar;charset=utf-8' }), `7Heaven_travel_calendar_${range.from}_to_${range.to}.ics`);
@@ -182,6 +205,53 @@ export const TravelCalendarPage = () => {
             </select>
           </div>
           {hiddenSources.length > 0 && <p className="cal-note">{hiddenSources.join(', ')} are not shown: you do not have access to them.</p>}
+
+          {addForm === null
+            ? <button type="button" className="btn btn-outline btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => { setAddForm({ kind: 'payment', start: anchor }); setAddError(''); }}><Plus size={14} /> Add event</button>
+            : (
+              <div className="cal-add-form">
+                <div className="cal-add-head"><strong>Add event</strong><button type="button" className="btn-icon" onClick={() => setAddForm(null)} aria-label="Close"><X size={15} /></button></div>
+                <div className="form-group">
+                  <label className="form-label">Kind</label>
+                  <select className="form-select" value={addForm.kind} onChange={(e) => setAddForm({ ...addForm, kind: e.target.value })}>
+                    <option value="payment">Payment Deadline</option>
+                    <option value="confirmation">Travel</option>
+                    <option value="quotation">Quotation</option>
+                    <option value="guest">Inquiry</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Guest name *</label>
+                  <input className="form-input" value={addForm.title || ''} onChange={(e) => setAddForm({ ...addForm, title: e.target.value })} placeholder="Name" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">{addForm.kind === 'payment' ? 'Deadline date *' : 'Start date *'}</label>
+                  <input className="form-input" type="date" value={addForm.start || ''} onChange={(e) => setAddForm({ ...addForm, start: e.target.value, end: addForm.end || e.target.value })} />
+                </div>
+                {addForm.kind !== 'payment' && (
+                  <div className="form-group">
+                    <label className="form-label">End date</label>
+                    <input className="form-input" type="date" value={addForm.end || addForm.start || ''} onChange={(e) => setAddForm({ ...addForm, end: e.target.value })} />
+                  </div>
+                )}
+                <div className="form-group">
+                  <label className="form-label">Destination</label>
+                  <input className="form-input" value={addForm.destination || ''} onChange={(e) => setAddForm({ ...addForm, destination: e.target.value })} placeholder="e.g. Goa" />
+                </div>
+                {addForm.kind === 'payment' && (
+                  <div className="form-group">
+                    <label className="form-label">Amount</label>
+                    <input className="form-input" value={addForm.amount || ''} onChange={(e) => setAddForm({ ...addForm, amount: e.target.value })} placeholder="e.g. Rs 10,000" />
+                  </div>
+                )}
+                {addError && <p className="cal-add-error">{addError}</p>}
+                <div className="cal-add-actions">
+                  <button type="button" className="btn btn-outline btn-sm" onClick={() => setAddForm(null)}>Cancel</button>
+                  <button type="button" className="btn btn-primary btn-sm" onClick={handleAddEvent} disabled={adding}>{adding ? 'Saving…' : 'Save'}</button>
+                </div>
+              </div>
+            )
+          }
         </aside>
 
         <section className="glass-panel cal-main" aria-label="Calendar">
@@ -222,7 +292,7 @@ export const TravelCalendarPage = () => {
         </section>
       </div>
 
-      <EventDialog event={opened} onClose={() => setOpened(null)} onGo={(e) => navigate(e.link)} />
+      <EventDialog event={opened} onClose={() => setOpened(null)} onGo={(e) => navigate(e.link)} onDelete={handleDeleteEvent} />
     </div>
   );
 };

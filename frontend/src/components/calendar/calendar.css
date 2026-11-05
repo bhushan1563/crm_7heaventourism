@@ -139,4 +139,14 @@
   .cal-row-where, .cal-row-range { display: none; }
   .cal-detail > div { grid-template-columns: 100px minmax(0, 1fr); }
 }
+/* ---- add-event form in sidebar ---- */
+.cal-add-form { background: var(--surface-2); border: 1px solid var(--border-color); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.cal-add-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2px; }
+.cal-add-head strong { font-size: 0.84rem; }
+.cal-add-form .form-group { margin: 0; }
+.cal-add-form .form-label { font-size: 0.74rem; }
+.cal-add-form .form-input, .cal-add-form .form-select { font-size: 0.82rem; padding: 5px 8px; }
+.cal-add-actions { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
+.cal-add-error { margin: 0; font-size: 0.75rem; color: var(--error, #f04438); }
+
 @media (prefers-reduced-motion: reduce) { .cal-body { transition: none; } }

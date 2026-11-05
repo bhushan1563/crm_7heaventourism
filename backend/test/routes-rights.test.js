@@ -34,6 +34,8 @@ const NO_RIGHTS_TAG = {
   'auth PUT /avatar': 'a person changes their own picture',
   'auth DELETE /avatar': 'a person removes their own picture',
   'calendar GET /': 'reads three modules: each source of events is left out unless the person may read it (see calendar.test.js)',
+  'calendar POST /manual': 'any logged-in user may add a manual calendar entry',
+  'calendar DELETE /manual/:id': 'any logged-in user may delete their own manual calendar entry',
   'media POST /': 'guarded by requireMediaRights: what the photo is for decides the module, and it runs before the file is read (see media.test.js)'
 };
 
