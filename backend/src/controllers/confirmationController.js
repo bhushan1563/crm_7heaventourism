@@ -23,10 +23,14 @@ const clampInt = (value, min, max, fallback) => {
 const GUEST_STATUSES_BEFORE_CONFIRMATION = ['Under Process', 'Follow up', 'Quoted'];
 const QUOTATION_STATUSES_THAT_CANNOT_BE_CONFIRMED = ['Cancelled', 'Expired'];
 
-/** The record as the web app receives it (the balance is calculated here, never stored). */
-const present = (doc) => {
+/**
+ * The record as the web app receives it (the balance is calculated here, never stored). A booking made from an old quotation (one from
+ * the export) keeps a frozen copy with no notes or policies at all: it is shown with the company's standard ones, like the quotation is.
+ */
+const present = async (doc) => {
   const { __v, ...rest } = doc.toObject ? doc.toObject() : doc;
-  return { ...rest, balance: balanceOf(rest.payment) };
+  const quote = rest.quote && isMissingStandardText(rest.quote) ? withStandardText(rest.quote, await loadMasterText()) : rest.quote;
+  return { ...rest, quote, balance: balanceOf(rest.payment) };
 };
 
 /** Used by the ownership check and the routes. Accepts the database id or the confirmation number. */
@@ -96,7 +100,7 @@ export const getConfirmationById = async (req, res) => {
   try {
     const doc = await findConfirmationDocument(req.params.id);
     if (!doc) return fail(res, 'Confirmation not found.');
-    res.json({ success: true, data: present(doc) });
+    res.json({ success: true, data: await present(doc) });
   } catch (error) {
     fail(res, friendlyMessage(error));
   }
@@ -183,7 +187,7 @@ export const createConfirmation = async (req, res) => {
       if (!doc) throw new Error('Could not number the confirmation');
 
       await QuotationModel.updateOne({ _id: claimed._id }, { $set: { confirmationId: String(doc._id), confirmationNo: doc.confirmationNo } });
-      res.json({ success: true, message: `Booking confirmed as ${doc.confirmationNo}. The quotation is now locked.`, data: present(doc) });
+      res.json({ success: true, message: `Booking confirmed as ${doc.confirmationNo}. The quotation is now locked.`, data: await present(doc) });
     } catch (error) {
       await undoClaim().catch(() => {});
       if (error?.code === 11000) return fail(res, 'This quotation was just confirmed by someone else. Please reload the list.');
@@ -223,7 +227,7 @@ export const updateConfirmation = async (req, res) => {
       const guest = await findGuestDocument(updated.guestId);
       if (guest?.status === 'Confirmed') await GuestModel.updateOne({ _id: guest._id, status: 'Confirmed' }, { $set: { status: 'Confirmed & Payment received' } });
     }
-    res.json({ success: true, message: 'Booking details saved.', data: present(updated) });
+    res.json({ success: true, message: 'Booking details saved.', data: await present(updated) });
   } catch (error) {
     fail(res, friendlyMessage(error, 'Failed to save the booking details'));
   }
@@ -274,7 +278,7 @@ export const cancelConfirmation = async (req, res) => {
       const guest = await findGuestDocument(cancelled.guestId);
       if (guest?.status === 'Confirmed') await GuestModel.updateOne({ _id: guest._id, status: 'Confirmed' }, { $set: { status: cancelled.previousGuestStatus } });
     }
-    res.json({ success: true, message: `Booking ${cancelled.confirmationNo} cancelled. The quotation can be edited again.`, data: present(cancelled) });
+    res.json({ success: true, message: `Booking ${cancelled.confirmationNo} cancelled. The quotation can be edited again.`, data: await present(cancelled) });
   } catch (error) {
     fail(res, friendlyMessage(error, 'Failed to cancel the booking'));
   }

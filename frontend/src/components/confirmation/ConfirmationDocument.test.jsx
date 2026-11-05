@@ -63,6 +63,18 @@ describe('the booking confirmation document', () => {
     expect(document.querySelector('[id$="-booking"]')).not.toHaveTextContent('Contacts');
   });
 
+  it('prints the terms, policies and exclusions page of the booking when its copy carries them, and not when it has none', () => {
+    const base = confirmation().quote;
+    const lists = { importantNotes: ['Carry your ID.'], paymentPolicy: ['25% Token advance.'], cancellationPolicy: ['10% if 30 days before.'], exclusions: ['Airfare unless specified'] };
+    const { container } = view(confirmation({ quote: { ...base, ...lists } }));
+    const terms = container.querySelector('[id$="-page-terms"]');
+    expect(terms).not.toBeNull();
+    for (const text of ['TERMS, POLICIES, EXCLUSIONS & GUIDELINES', 'Carry your ID.', '25% Token advance.', '10% if 30 days before.', 'Airfare unless specified']) expect(terms).toHaveTextContent(text);
+    cleanup();
+    const bare = view(confirmation());
+    expect(bare.container.querySelector('[id$="-page-terms"]')).toBeNull();
+  });
+
   it('says "Fully paid" once everything is received, and leaves out empty sections', () => {
     view(confirmation({ travellers: [], customFields: [], notes: '', payment: { totalAmount: 5000, received: 5000, balanceDueDate: null, note: '' }, optionName: '' }));
     const page = document.querySelector('[id$="-booking"]');

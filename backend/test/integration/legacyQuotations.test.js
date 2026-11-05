@@ -74,6 +74,45 @@ test('confirming an old quotation keeps the standard notes and policies on the b
   assert.equal(stored.payment.totalAmount, 50000);
 });
 
+test('a booking made earlier from an old quotation (its frozen copy has no notes or policies) is shown with the standard ones', async () => {
+  const q = await legacy('OLD-005');
+  const made = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: String(q._id) } })).body;
+  assert.equal(made.success, true, made.message);
+  // As bookings confirmed before the fix were stored: the copy holds none of the lists.
+  await ConfirmationModel.updateOne({ _id: made.data._id }, { $set: Object.fromEntries(STANDARD_TEXT_KEYS.map((k) => [`quote.${k}`, []])) });
+  const stored = await ConfirmationModel.findById(made.data._id).lean();
+  assert.deepEqual(listsOf(stored.quote), Object.fromEntries(STANDARD_TEXT_KEYS.map((k) => [k, []])));
+
+  const shown = (await app.call(`/api/confirmations/${made.data._id}`, { token: admin.token })).body;
+  assert.equal(shown.success, true, shown.message);
+  assert.deepEqual(listsOf(shown.data.quote), STANDARD_TEXT);
+  assert.equal(shown.data.clientName, 'Aarav Mehta');
+  assert.equal(shown.data.payment.totalAmount, 50000);
+  assert.equal(shown.data.balance, 50000);
+  // Saving the booking details sends back the same, and stores nothing new in the copy.
+  const saved = (await app.call(`/api/confirmations/${made.data._id}`, { method: 'PUT', token: admin.token, json: { payment: { received: 10000 } } })).body;
+  assert.equal(saved.success, true, saved.message);
+  assert.deepEqual(listsOf(saved.data.quote), STANDARD_TEXT);
+  assert.deepEqual(listsOf((await ConfirmationModel.findById(made.data._id).lean()).quote), Object.fromEntries(STANDARD_TEXT_KEYS.map((k) => [k, []])));
+});
+
+test('a booking made from a full quotation keeps its own itinerary, hotels, inclusions and notes exactly', async () => {
+  const q = await legacy('NEW-001', {
+    itinerary: [{ dayNumber: 'Day 01', title: 'Arrival in Goa', description: 'Meet and greet' }],
+    packageDetails: { hotels: [{ hotelName: 'Sea View Resort', city: 'Goa', nights: '3 Nights' }], inclusions: ['Daily breakfast'] },
+    exclusions: ['Airfare'], importantNotes: ['Carry your ID'], paymentPolicy: ['25% now'], cancellationPolicy: ['10% fee'], vehicleNotes: ['AC off on ghats']
+  });
+  const made = (await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: String(q._id) } })).body;
+  assert.equal(made.success, true, made.message);
+  const shown = (await app.call(`/api/confirmations/${made.data._id}`, { token: admin.token })).body.data.quote;
+  assert.equal(shown.itinerary[0].title, 'Arrival in Goa');
+  assert.equal(shown.packageDetails.hotels[0].hotelName, 'Sea View Resort');
+  assert.deepEqual(shown.packageDetails.inclusions, ['Daily breakfast']);
+  assert.deepEqual(shown.exclusions, ['Airfare']);
+  assert.deepEqual(shown.importantNotes, ['Carry your ID']);
+  assert.deepEqual(shown.paymentPolicy, ['25% now']);
+});
+
 test('the company\'s own saved text is used when there is one, list by list', async () => {
   await MasterTextModel.create({ key: 'quotation-text', importantNotes: ['Carry your ID.'], paymentPolicy: ['Half now, half later.'] });
   try {
