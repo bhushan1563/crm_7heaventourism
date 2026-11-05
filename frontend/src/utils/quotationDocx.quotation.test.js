@@ -50,6 +50,15 @@ describe('the Word file of an older quotation says everything the PDF says', () 
     for (const t of ['Flight Details', 'Pricing Breakdown', 'Payment Policy', 'Exclusions', 'Terms']) expect(plain).not.toContain(t);
   });
 
+  it('has each day heading in bold blue without a yellow highlight', async () => {
+    const { xml } = await open(oldPackage());
+    const at = xml.indexOf('Day 01: Arrival in Bali');
+    const paragraph = xml.slice(xml.lastIndexOf('<w:p>', at), xml.indexOf('</w:p>', at));
+    expect(paragraph).toContain('<w:b/>');
+    expect(paragraph).toMatch(/w:color w:val="1D4ED8"/i);
+    expect(paragraph).not.toMatch(/w:shd/); // no highlight behind it
+  });
+
   it('prints the vehicle notes of a package, but not those of a hotel quotation', async () => {
     const notes = { vehicleNotes: ['Opening and closing kilometres are counted garage to garage'] };
     const pkg = (await open(oldPackage(notes))).plain;

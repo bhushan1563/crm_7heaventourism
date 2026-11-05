@@ -43,6 +43,20 @@ describe('the Word file of a booking confirmation', () => {
     for (const text of ['Payment', 'Total amount', 'Balance to pay', 'Rs 1,20,000', 'Rs 80,000', 'Advance by cheque', 'Pricing', 'Grand Total', 'Rs 50,000']) expect(plain).not.toContain(text);
   });
 
+  it('has each itinerary day heading in bold blue', async () => {
+    const { blob } = await generateConfirmationDocx(
+      quotationOf(booking({ quote: { ...booking().quote, quotationType: 'Package', itinerary: [{ dayNumber: 'Day 01', title: 'Arrival in Udaipur', description: 'Meet and greet' }] } })),
+      bookingView(booking()),
+      booking()
+    );
+    const xml = strFromU8(unzipSync(await read(blob))['word/document.xml']);
+    const at = xml.indexOf('Day 01: Arrival in Udaipur');
+    expect(at).toBeGreaterThan(-1);
+    const paragraph = xml.slice(xml.lastIndexOf('<w:p>', at), xml.indexOf('</w:p>', at));
+    expect(paragraph).toContain('<w:b/>');
+    expect(paragraph).toMatch(/w:color w:val="1D4ED8"/i);
+  });
+
   it('has them when the booking says the voucher shows prices', async () => {
     const plain = await open(booking({ showPricing: true }));
     for (const text of ['Payment', 'Total amount', 'Rs 1,20,000', 'Balance to pay', 'Rs 80,000', 'Advance by cheque', 'Pricing', 'Grand Total', 'Rs 50,000']) expect(plain).toContain(text);

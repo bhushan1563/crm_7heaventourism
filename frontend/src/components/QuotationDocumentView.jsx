@@ -36,7 +36,10 @@ const DAY_TEXT_CSS = `
 /** A line of a list on the document. Plain text from older quotations prints exactly as before; formatted text keeps its bold, colour, highlight and size. */
 const Line = ({ value }) => <span className="qd-rich qd-line" dangerouslySetInnerHTML={{ __html: toDocumentHtml(value) }} />;
 
-const photoCrossOrigin = API_ORIGIN ? 'anonymous' : undefined;
+/** The heading of each itinerary day ("Day 02: …"): bold blue text, no highlight. */
+const DAY_HEADING_BLUE = '#1d4ed8';
+
+const photoCrossOrigin =API_ORIGIN ? 'anonymous' : undefined;
 
 /** The photos of one day: small rows, each row one height, wide photos on their own row. Scales with the page width. */
 const DayPhotos = ({ photos, maxRowHeight = 150 }) => {
@@ -1136,12 +1139,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                         <span
                           style={{
                             display: 'inline-block',
-                            backgroundColor: '#fde047',
-                            padding: '2px 8px',
-                            borderRadius: '3px',
-                            fontWeight: 700,
-                            fontSize: '10.5px',
-                            color: '#000000'
+                            fontWeight: 800,
+                            fontSize: '11px',
+                            color: DAY_HEADING_BLUE
                           }}
                         >
                           {day.dayNumber || `Day 0${idx + 1}`}: {day.title || 'Sightseeing & Excursions'}

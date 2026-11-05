@@ -22,6 +22,9 @@ const CELL_MARGINS = { top: 60, bottom: 60, left: 100, right: 100 };
 // Control characters (a stray character pasted from a PDF, say) are not allowed in a Word file and can stop Word opening it.
 // eslint-disable-next-line no-control-regex
 const xmlSafe = (value) => String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F￾￿]/g, '');
+/** The heading of each itinerary day ("Day 02: …"): bold blue text, no highlight (the same blue as on the page and the PDF). */
+const DAY_HEADING_BLUE = '1D4ED8';
+
 const money = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 const styleOf = (element) => {
@@ -550,7 +553,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     children.push(heading('Itinerary'));
     for (const day of itinerary) {
       const title2 = [plainText(day.dayNumber), plainText(day.title)].filter(Boolean).join(': ');
-      children.push(new d.Paragraph({ spacing: { before: 120, after: 40 }, children: [run(title2, { bold: true, color: BRAND })] }));
+      children.push(new d.Paragraph({ spacing: { before: 120, after: 40 }, children: [run(title2, { bold: true, color: DAY_HEADING_BLUE })] }));
       if (day.description) {
         const descParagraphs = htmlToParagraphs(day.description);
         for (const p of (descParagraphs.length ? descParagraphs : [plainText(day.description)])) {
@@ -678,7 +681,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     children.push(heading(quotationType === 'Events / Corporate' ? 'Event & Tour Schedule' : 'Itinerary'));
     if (itinerary.length) {
       itinerary.forEach((day, idx) => {
-        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 30 }, shading: { type: d.ShadingType.CLEAR, fill: 'FEF9C3', color: 'auto' }, children: [text(`${plainOf(day.dayNumber) || `Day 0${idx + 1}`}: ${plainOf(day.title) || 'Sightseeing & Excursions'}`, { bold: true, color: '0F172A' })] }));
+        children.push(new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 30 }, children: [text(`${plainOf(day.dayNumber) || `Day 0${idx + 1}`}: ${plainOf(day.title) || 'Sightseeing & Excursions'}`, { bold: true, color: DAY_HEADING_BLUE })] }));
         const meta = dayMeta(day);
         if (meta) children.push(new d.Paragraph({ keepNext: true, spacing: { after: 30 }, children: [text(meta, { italics: true, size: 18, color: '000000' })] }));
         if (day.description) children.push(...paragraphs(day.description));

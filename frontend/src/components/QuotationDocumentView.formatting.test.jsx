@@ -23,6 +23,15 @@ describe('a long itinerary day can run on over the page', () => {
   const lines = ['6:30AM Pick up at the hotel', '7:15AM ETA in Pier 1', '8:00AM Take the ferry', '10:00AM ETA in Tagbilaran'];
   const day = (description, over = {}) => ({ dayNumber: 'Day 04', title: 'CEBU - BOHOL - CEBU', description, ...over });
 
+  it('has its day heading in bold blue, with no yellow highlight', () => {
+    show(base({ itinerary: [day('Meet'), day('Free', { dayNumber: 'Day 05', title: 'FREE TIME' })] }));
+    for (const text of [/Day 04: CEBU - BOHOL - CEBU/, /Day 05: FREE TIME/]) {
+      const heading = screen.getByText(text);
+      expect(heading).toHaveStyle({ color: '#1d4ed8', fontWeight: '800' });
+      expect(heading.getAttribute('style')).not.toMatch(/background/i);
+    }
+  });
+
   it('is laid out in pieces: the heading with the first line, then one piece for each following line, in order', () => {
     const { container } = show(base({ itinerary: [day(`<p>${lines.join('<br>')}</p>`), { dayNumber: 'Day 05', title: 'Free time', description: 'The day is free.' }] }));
     const pieces = [...container.querySelectorAll('.quotation-flow > .quotation-keep')].map((el) => el.textContent);
