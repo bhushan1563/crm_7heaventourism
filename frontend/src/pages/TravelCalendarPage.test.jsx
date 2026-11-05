@@ -12,7 +12,7 @@ import TravelCalendarPage from './TravelCalendarPage';
 const event = (over) => ({ id: 'confirmation:c1', kind: 'confirmation', recordId: 'c1', title: 'Pujan', ref: '7H-CF-1', destination: 'Vietnam', status: 'Confirmed', start: '2026-11-10', end: '2026-11-13', nights: 3, pax: '6 Adults', sales: 'Bhushan', ops: 'Jigisha', link: '/confirmations/c1', ...over });
 const EVENTS = [
   event(),
-  event({ id: 'payment:c1', kind: 'payment', title: 'Pujan', start: '2026-11-03', end: '2026-11-03', nights: 0, amount: 'Rs 5,000', status: 'Payment due', travelStart: '2026-11-10' }),
+  event({ id: 'payment:c1', kind: 'payment', title: 'Pujan', start: '2026-11-03', end: '2026-11-03', nights: 0, amount: 'Rs 5,000', supplier: 'Taj Hotels', status: 'Payment due', travelStart: '2026-11-10' }),
   event({ id: 'quotation:q1', kind: 'quotation', title: 'Nihar', ref: '7H-QT-1', destination: 'Andaman', status: 'Draft', start: '2026-11-20', end: '2026-11-22', link: '/quotations/q1/edit' }),
   event({ id: 'guest:g1', kind: 'guest', title: 'Aarav', ref: 'G-1', destination: 'Goa', status: 'Under Process', start: '2026-11-25', end: '2026-11-25', nights: 0 })
 ];
@@ -59,6 +59,8 @@ describe('the travel calendar', () => {
     expect(travel.style.getPropertyValue('--cal')).toBe('#12B76A');
     expect(pay.style.getPropertyValue('--cal')).toBe('#FACC15');
     expect(pay.style.getPropertyValue('--cal-ink')).toBe('#422006'); // dark writing on yellow
+    expect(within(pay).getByText('Taj Hotels')).toBeInTheDocument(); // the supplier is named under the deadline
+    expect(within(travel).queryByText('Taj Hotels')).toBeNull();
     expect(screen.getByText('Payment deadlines')).toBeInTheDocument();
     expect(screen.getByText('Travel (bookings)')).toBeInTheDocument();
   });

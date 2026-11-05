@@ -110,7 +110,7 @@ export const filterEvents = (events, { kinds, showCancelled = false, person = ''
     if (!showCancelled && isCancelled(e)) return false;
     if (person && e.sales !== person && e.ops !== person) return false;
     if (!words.length) return true;
-    const hay = [e.title, e.ref, e.destination, e.status, e.sales, e.ops, e.pax, e.amount, KINDS[e.kind]?.one].join(' ').toLowerCase();
+    const hay = [e.title, e.ref, e.destination, e.status, e.sales, e.ops, e.pax, e.amount, e.supplier, KINDS[e.kind]?.one].join(' ').toLowerCase();
     return words.every((w) => hay.includes(w));
   });
 };

@@ -17,6 +17,14 @@
 .cf-cancel-btn:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .be-remove:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 .be-pay-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 14px; }
+.be-contacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
+.be-contact { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--border-color); border-radius: 10px; background: var(--surface-2); }
+.be-contact-title { font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
+.be-contact .form-group { margin: 0; }
+.be-numbers { display: flex; flex-direction: column; gap: 6px; align-items: stretch; }
+.be-number-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.be-number-row .field-error { grid-column: 1 / -1; margin: 0; }
+.be-add-number { align-self: flex-start; }
 .be-balance { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border: 1px solid #fcd34d; border-radius: 10px; background: #fef9c3; color: #78350f; font-size: 0.9rem; }
 .be-balance strong { font-size: 1.15rem; }
 .be-balance.is-over { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
@@ -76,6 +84,7 @@
   .be-hotel-grid { grid-template-columns: 1fr 1fr; }
   .be-detail .be-remove { margin-top: 0; justify-self: end; }
   .be-pay-grid { grid-template-columns: 1fr; }
+  .be-contacts { grid-template-columns: 1fr; }
 }
 
 /* Alerts, shared by the dialogs and the editor. */

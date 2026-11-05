@@ -27,6 +27,7 @@ const manualEventOf = (doc) => ({
   nights: doc.kind !== 'payment' ? Math.max(0, daysBetween(doc.start, doc.end || doc.start)) : 0,
   pax: null,
   amount: doc.amount || null,
+  supplier: doc.supplier || '',
   travelStart: null,
   sales: null,
   ops: null,
@@ -79,7 +80,7 @@ export const getCalendar = async (req, res) => {
 /** POST /api/calendar/manual — save a manually-added event. */
 export const createManual = async (req, res) => {
   try {
-    const { title, kind, start, end, destination, amount, notes } = req.body;
+    const { title, kind, start, end, destination, amount, supplier, notes } = req.body;
     if (!title?.trim()) return res.status(400).json({ success: false, message: 'Guest name is required.' });
     if (!isIsoDate(start)) return res.status(400).json({ success: false, message: 'Date is required (YYYY-MM-DD).' });
     const validKind = ['payment', 'confirmation', 'quotation', 'guest'].includes(kind) ? kind : 'payment';
@@ -90,6 +91,7 @@ export const createManual = async (req, res) => {
       end: isIsoDate(end) ? end : start,
       destination: destination?.trim() || '',
       amount: amount?.trim() || '',
+      supplier: typeof supplier === 'string' ? supplier.trim().slice(0, 100) : '',
       notes: notes?.trim() || '',
       createdBy: req.user._id
     });

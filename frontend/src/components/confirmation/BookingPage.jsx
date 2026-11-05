@@ -31,6 +31,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
   ].filter(([, value]) => value);
   const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#1f2937' };
   const travellerColumns = '0.4fr 3fr 0.7fr 1.6fr 2.2fr';
+  const contactColumns = '1.4fr 2.4fr 2.2fr';
   const pay = view.payment;
 
   return (
@@ -74,6 +75,28 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
                   <div style={cell}>{t.age ?? '–'}</div>
                   <div style={cell}>{t.passportNo || '–'}</div>
                   <div style={cell}>{t.notes || '–'}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {view.contacts?.length > 0 && (
+          <>
+            <Heading>Contacts</Heading>
+            <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: contactColumns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                {['Role', 'Name', 'Contact number'].map((h) => (
+                  <div key={h} style={{ padding: '5px 6px' }}>{h}</div>
+                ))}
+              </div>
+              {view.contacts.map((c, i) => (
+                <div key={c.key || c.label} style={{ display: 'grid', gridTemplateColumns: contactColumns, borderTop: '1px solid #e2e8f0', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff' }}>
+                  <div style={{ ...cell, fontWeight: 700, color: '#0f172a' }}>{c.label}</div>
+                  <div style={cell}>{c.name || '–'}</div>
+                  <div style={cell}>
+                    {c.numbers.length ? c.numbers.map((n, k) => <div key={k}>{n}</div>) : '–'}
+                  </div>
                 </div>
               ))}
             </div>

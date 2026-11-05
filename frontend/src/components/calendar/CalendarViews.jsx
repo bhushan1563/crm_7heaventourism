@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink, MapPin, Moon, Plane, Trash2, Users, Wallet } from 'lucide-react';
+import { Building2, CalendarPlus, ChevronLeft, ChevronRight, Download, ExternalLink, MapPin, Moon, Plane, Trash2, Users, Wallet } from 'lucide-react';
 import Modal from '../Modal';
 import {
   KINDS, addDays, addMonths, agendaDays, buildIcs, dayNumber, daysBetween, endOfMonth, eventLabel, eventsOnDay, fullShortDate, isCancelled, longDate,
@@ -24,6 +24,7 @@ const EventChip = ({ event, day, onOpen }) => {
     <button type="button" className={`cal-chip${isCancelled(event) ? ' is-cancelled' : ''}`} style={styleOf(event)} onClick={() => onOpen(event)} title={summary(event)}>
       <strong>{eventLabel(event)}</strong>
       {event.destination && <span>{event.destination}</span>}
+      {event.kind === 'payment' && event.supplier && <span>Supplier: {event.supplier}</span>}
       {total > 1 && <small>Day {daysBetween(event.start, day) + 1} of {total}</small>}
     </button>
   );
@@ -54,11 +55,12 @@ export const MonthView = ({ anchor, events, weekStart, today, onOpen, onDay }) =
                     className={`cal-pill${isCancelled(e) ? ' is-cancelled' : ''}`}
                     style={styleOf(e)}
                     onClick={() => onOpen(e)}
-                    aria-label={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}`}
-                    title={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}`}
+                    aria-label={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}${e.kind === 'payment' && e.supplier ? ' · ' + e.supplier : ''}`}
+                    title={`${eventLabel(e)}${e.destination ? ' · ' + e.destination : ''}${e.kind === 'payment' && e.supplier ? ' · Supplier: ' + e.supplier : ''}`}
                   >
                     <span className="cal-pill-type">{e.kind === 'payment' ? 'Payment Deadline' : 'Travel'}</span>
                     <span className="cal-pill-name">{e.title}</span>
+                    {e.kind === 'payment' && e.supplier && <span className="cal-pill-supplier">{e.supplier}</span>}
                   </button>
                 ))}
                 {extra > 0 && <button type="button" className="cal-more-btn" onClick={() => onDay(d)}>+{extra} more</button>}
@@ -99,6 +101,7 @@ const Facts = ({ event }) => (
       {event.destination && <span><MapPin size={13} aria-hidden="true" /> {event.destination}</span>}
       {event.pax && <span><Users size={13} aria-hidden="true" /> {event.pax}</span>}
       {event.amount && <span><Wallet size={13} aria-hidden="true" /> {event.amount} to pay</span>}
+      {event.supplier && <span><Building2 size={13} aria-hidden="true" /> Supplier: {event.supplier}</span>}
       {event.kind === 'payment' && event.travelStart && <span><Plane size={13} aria-hidden="true" /> Travels {fullShortDate(event.travelStart)}</span>}
     </div>
   </>
@@ -184,7 +187,7 @@ export const MiniMonth = ({ cursor, onCursor, anchor, today, weekStart, events, 
 
 const googleLink = (e) => {
   const flat = (iso) => iso.replace(/-/g, '');
-  const details = [KINDS[e.kind]?.one, e.ref && `Ref ${e.ref}`, e.amount && `Balance due: ${e.amount}`, e.status && `Status: ${e.status}`, e.pax && `Guests: ${e.pax}`, e.sales && `Sales: ${e.sales}`, e.ops && `Ops: ${e.ops}`].filter(Boolean).join('\n');
+  const details = [KINDS[e.kind]?.one, e.ref && `Ref ${e.ref}`, e.amount && `Balance due: ${e.amount}`, e.supplier && `Supplier: ${e.supplier}`, e.status && `Status: ${e.status}`, e.pax && `Guests: ${e.pax}`, e.sales && `Sales: ${e.sales}`, e.ops && `Ops: ${e.ops}`].filter(Boolean).join('\n');
   const params = new URLSearchParams({ action: 'TEMPLATE', text: `${e.kind === 'payment' ? 'Payment due: ' : ''}${e.title}${e.destination ? ` - ${e.destination}` : ''}`, dates: `${flat(e.start)}/${flat(addDays(e.end, 1))}`, details, location: e.destination || '' });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 };
@@ -198,6 +201,7 @@ export const EventDialog = ({ event, onClose, onGo, onDelete }) => {
     ['Status', event.status],
     [event.kind === 'payment' ? 'Payment due on' : 'Travel dates', rangeText(event)],
     ['Balance to pay', event.amount],
+    ['Supplier', event.supplier],
     ['Travels on', event.kind === 'payment' && event.travelStart ? fullShortDate(event.travelStart) : ''],
     ['Nights', event.nights > 0 ? String(event.nights) : ''],
     ['Destination', event.destination],

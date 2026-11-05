@@ -92,7 +92,7 @@ describe('ConfirmationEditorPage', () => {
     await waitFor(() => expect(confirmationService.update).toHaveBeenCalled());
     const [id, payload] = confirmationService.update.mock.calls[0];
     expect(id).toBe('c1');
-    expect(payload.payment).toEqual({ totalAmount: 120000, received: 90000, balanceDueDate: '2027-03-01', note: '' });
+    expect(payload.payment).toEqual({ totalAmount: 120000, received: 90000, balanceDueDate: '2027-03-01', supplier: '', note: '' });
     expect(payload.updatedAt).toBe('2026-11-01T10:00:00.000Z');
     expect(payload.travellers).toEqual([{ name: 'Aarav Mehta', age: 41, passportNo: 'Z1', notes: '' }]);
     expect(payload).not.toHaveProperty('status');

@@ -42,6 +42,15 @@ const hotelBookingSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// A person the guests can call during the trip (the tour coordinator, the emergency contact): a name and one or more numbers.
+const contactSchema = new mongoose.Schema(
+  {
+    name: { type: String, default: '' },
+    numbers: { type: [String], default: [] }
+  },
+  { _id: false }
+);
+
 const confirmationSchema = new mongoose.Schema(
   {
     confirmationNo: { type: String, required: true },
@@ -71,7 +80,12 @@ const confirmationSchema = new mongoose.Schema(
       totalAmount: { type: Number, default: 0 },
       received: { type: Number, default: 0 },
       balanceDueDate: { type: Date, default: null, set: parseDateValue },
+      supplier: { type: String, default: '' }, // who the balance is paid to; shown on the travel calendar's payment deadline
       note: { type: String, default: '' }
+    },
+    contacts: {
+      coordinator: { type: contactSchema, default: () => ({}) },
+      emergency: { type: contactSchema, default: () => ({}) }
     },
     hotelBookings: { type: [hotelBookingSchema], default: [] }, // per hotel of the copy: its confirmation number, contact number and times
     notes: { type: String, default: '' }, // formatted text (sanitised on the server), printed on the confirmation

@@ -1,7 +1,7 @@
 // Booking confirmations: the booking information added when a quotation is confirmed (travellers, payment, notes, additional
 // details). Pure functions (no network, no React) so every rule can be tested. The server repeats these checks.
 
-export const CONFIRMATION_LIMITS = { travellers: 50, name: 100, passport: 30, note: 200, maxAge: 120, customFields: 30, label: 60, value: 500, paymentNote: 300, notes: 5000, reason: 300, hotels: 50, hotelNo: 60, hotelPhone: 40, maxAmount: 1_000_000_000 };
+export const CONFIRMATION_LIMITS = { travellers: 50, name: 100, passport: 30, note: 200, maxAge: 120, customFields: 30, label: 60, value: 500, paymentNote: 300, supplier: 100, contactNumbers: 5, notes: 5000, reason: 300, hotels: 50, hotelNo: 60, hotelPhone: 40, maxAmount: 1_000_000_000 };
 
 const TIME = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 const HOTEL_PHONE = /^[0-9+\-().\s]{5,40}$/;
@@ -16,6 +16,15 @@ export const isFullyPaid = (payment) => (Number(payment?.totalAmount) || 0) > 0 
 export const blankTraveller = () => ({ name: '', age: '', passportNo: '', notes: '' });
 export const blankDetail = () => ({ label: '', value: '' });
 export const blankHotelBooking = () => ({ confirmationNo: '', contactNumber: '', checkInTime: '', checkOutTime: '' });
+
+/** The people the guests can call during the trip: the key each is kept under, and how it is named on screen and on the page. */
+export const CONTACT_ROLES = [['coordinator', 'Tour coordinator'], ['emergency', 'Emergency contact']];
+
+/** One contact as the form holds it: a name and a list of numbers (always at least one box, so there is a place to type). */
+const contactForm = (c) => ({ name: c?.name || '', numbers: Array.isArray(c?.numbers) && c.numbers.length ? c.numbers.map((n) => String(n ?? '')) : [''] });
+const contactsForm = (contacts) => Object.fromEntries(CONTACT_ROLES.map(([key]) => [key, contactForm(contacts?.[key])]));
+const contactNumbersOf = (c) => (Array.isArray(c?.numbers) ? c.numbers : []).map((n) => String(n ?? '').trim()).filter(Boolean);
+const contactsPayload = (contacts) => Object.fromEntries(CONTACT_ROLES.map(([key]) => [key, { name: String(contacts?.[key]?.name ?? '').trim(), numbers: contactNumbersOf(contacts?.[key]) }]));
 
 /** The hotels of the copy of the quotation a booking was made from (the booking keeps one entry of details for each, in this order). */
 export const hotelsOfQuote = (quote) => (Array.isArray(quote?.packageDetails?.hotels) ? quote.packageDetails.hotels : []);
@@ -47,7 +56,8 @@ export const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
 export const formFromConfirmation = (c) => ({
   travelDate: toDateInput(c?.travelDate),
   travellers: (c?.travellers || []).map((t) => ({ name: t.name || '', age: t.age ?? '', passportNo: t.passportNo || '', notes: t.notes || '' })),
-  payment: { totalAmount: c?.payment?.totalAmount ?? 0, received: c?.payment?.received ?? 0, balanceDueDate: toDateInput(c?.payment?.balanceDueDate), note: c?.payment?.note || '' },
+  payment: { totalAmount: c?.payment?.totalAmount ?? 0, received: c?.payment?.received ?? 0, balanceDueDate: toDateInput(c?.payment?.balanceDueDate), supplier: c?.payment?.supplier || '', note: c?.payment?.note || '' },
+  contacts: contactsForm(c?.contacts),
   hotelBookings: hotelBookingsOf(c),
   notes: c?.notes || '',
   customFields: (c?.customFields || []).map((f) => ({ label: f.label || '', value: f.value || '' }))
@@ -57,7 +67,8 @@ export const formFromConfirmation = (c) => ({
 export const bookingPayload = (form) => ({
   travelDate: form.travelDate || '',
   travellers: form.travellers.map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
-  payment: { totalAmount: Number(form.payment.totalAmount) || 0, received: Number(form.payment.received) || 0, balanceDueDate: form.payment.balanceDueDate || '', note: form.payment.note.trim() },
+  payment: { totalAmount: Number(form.payment.totalAmount) || 0, received: Number(form.payment.received) || 0, balanceDueDate: form.payment.balanceDueDate || '', supplier: (form.payment.supplier || '').trim(), note: form.payment.note.trim() },
+  contacts: contactsPayload(form.contacts),
   hotelBookings: (form.hotelBookings || []).map((h) => ({ confirmationNo: h.confirmationNo.trim(), contactNumber: h.contactNumber.trim(), checkInTime: h.checkInTime, checkOutTime: h.checkOutTime })),
   notes: form.notes,
   customFields: form.customFields.map((f) => ({ label: f.label.trim(), value: f.value.trim() }))
@@ -103,6 +114,19 @@ export const bookingErrors = (form) => {
   }
   if (form.payment.balanceDueDate && !isRealDate(form.payment.balanceDueDate)) add('payment-date', 'Please enter the balance due date as a real date.');
 
+  for (const [key, label] of CONTACT_ROLES) {
+    const person = form.contacts?.[key];
+    if (!person) continue;
+    const name = String(person.name ?? '').trim();
+    if (name.length > L.name) add(`contact-${key}-name`, `The name of the ${label.toLowerCase()} is too long (the limit is ${L.name} characters).`);
+    const numbers = contactNumbersOf(person);
+    if (numbers.length > L.contactNumbers) add(`contact-${key}-numbers`, `The ${label.toLowerCase()} can have at most ${L.contactNumbers} numbers.`);
+    (person.numbers || []).forEach((raw, i) => {
+      const number = String(raw ?? '').trim();
+      if (number && !HOTEL_PHONE.test(number)) add(`contact-${key}-number-${i}`, `Number ${i + 1} of the ${label.toLowerCase()} can only have digits, spaces and + - ( ) . characters (5 to ${L.hotelPhone} of them).`);
+    });
+  }
+
   (form.hotelBookings || []).forEach((h, i) => {
     const n = i + 1;
     if (h.confirmationNo.trim().length > L.hotelNo) add(`hotel-${i}-no`, `The confirmation number of hotel ${n} is too long (the limit is ${L.hotelNo} characters).`);
@@ -126,7 +150,7 @@ export const bookingErrors = (form) => {
 
 /** The first field with an error, in the order the page shows them (for moving focus there). */
 export const firstErrorKey = (errors, form) => {
-  const order = ['travelDate', ...form.travellers.flatMap((_, i) => [`traveller-${i}-name`, `traveller-${i}-age`, `traveller-${i}-passport`]), ...(form.hotelBookings || []).flatMap((_, i) => [`hotel-${i}-no`, `hotel-${i}-phone`, `hotel-${i}-in`, `hotel-${i}-out`]), 'payment-total', 'payment-received', 'payment-date', ...form.customFields.flatMap((_, i) => [`detail-${i}-label`, `detail-${i}-value`])];
+  const order = ['travelDate', ...form.travellers.flatMap((_, i) => [`traveller-${i}-name`, `traveller-${i}-age`, `traveller-${i}-passport`]), ...(form.hotelBookings || []).flatMap((_, i) => [`hotel-${i}-no`, `hotel-${i}-phone`, `hotel-${i}-in`, `hotel-${i}-out`]), ...CONTACT_ROLES.flatMap(([key]) => [`contact-${key}-name`, ...(form.contacts?.[key]?.numbers || []).map((_, i) => `contact-${key}-number-${i}`), `contact-${key}-numbers`]), 'payment-total', 'payment-received', 'payment-date', ...form.customFields.flatMap((_, i) => [`detail-${i}-label`, `detail-${i}-value`])];
   return order.find((key) => errors[key]) || Object.keys(errors)[0] || null;
 };
 
@@ -162,6 +186,7 @@ export const bookingView = (confirmation, form) => {
     travelDate: f.travelDate || '',
     travellers: f.travellers.filter((t) => t.name.trim()).map((t) => ({ name: t.name.trim(), age: t.age === '' || t.age === null ? null : Number(t.age), passportNo: t.passportNo.trim(), notes: t.notes.trim() })),
     payment: { ...payment, balance: balanceOf(payment) },
+    contacts: CONTACT_ROLES.map(([key, label]) => ({ key, label, name: String(f.contacts?.[key]?.name ?? '').trim(), numbers: contactNumbersOf(f.contacts?.[key]) })).filter((c) => c.name || c.numbers.length),
     notes: f.notes || '',
     customFields: f.customFields.filter((d) => d.label.trim()).map((d) => ({ label: d.label.trim(), value: d.value.trim() }))
   };

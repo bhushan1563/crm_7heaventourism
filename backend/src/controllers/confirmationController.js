@@ -160,7 +160,7 @@ export const createConfirmation = async (req, res) => {
             previousQuotationLocked: Boolean(claimed.isLocked),
             previousGuestStatus,
             ...booking.data,
-            payment: { totalAmount: snapshot.totalAmount, received: 0, balanceDueDate: null, note: '' },
+            payment: { totalAmount: snapshot.totalAmount, received: 0, balanceDueDate: null, supplier: '', note: '' },
             sales: claimed.sales || '',
             salesId: claimed.salesId ? String(claimed.salesId) : '',
             ops: claimed.ops || '',
@@ -195,7 +195,7 @@ export const updateConfirmation = async (req, res) => {
     if (!existing) return fail(res, 'Confirmation not found.');
     if (existing.status === 'Cancelled') return fail(res, 'This confirmation was cancelled and can no longer be changed.');
 
-    const input = normalizeBookingInput(req.body, { payment: existing.payment });
+    const input = normalizeBookingInput(req.body, { payment: existing.payment, contacts: existing.contacts });
     if (!input.ok) return fail(res, input.message);
 
     // Two people editing the same booking: the second save must not silently overwrite the first.

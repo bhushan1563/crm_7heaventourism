@@ -240,6 +240,12 @@ export const TravelCalendarPage = () => {
                 </div>
                 {addForm.kind === 'payment' && (
                   <div className="form-group">
+                    <label className="form-label" htmlFor="cal-add-supplier">Supplier</label>
+                    <input id="cal-add-supplier" className="form-input" value={addForm.supplier || ''} maxLength={100} onChange={(e) => setAddForm({ ...addForm, supplier: e.target.value })} placeholder="Who the payment is due to" />
+                  </div>
+                )}
+                {addForm.kind === 'payment' && (
+                  <div className="form-group">
                     <label className="form-label">Amount</label>
                     <input className="form-input" value={addForm.amount || ''} onChange={(e) => setAddForm({ ...addForm, amount: e.target.value })} placeholder="e.g. Rs 10,000" />
                   </div>

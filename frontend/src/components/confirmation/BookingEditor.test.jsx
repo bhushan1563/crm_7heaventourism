@@ -38,6 +38,31 @@ describe('BookingEditor', () => {
     expect(screen.getByText('Balance to pay').parentElement).toHaveTextContent('Rs 1,20,000');
   });
 
+  it('keeps the supplier the balance is paid to', async () => {
+    const seen = vi.fn();
+    render(<Harness initial={start()} onState={seen} />);
+    await userEvent.type(screen.getByLabelText(/Supplier \(who the balance is paid to\)/), 'Taj Hotels');
+    expect(seen.mock.lastCall[0].payment.supplier).toBe('Taj Hotels');
+  });
+
+  it('takes a name and as many numbers as needed for the tour coordinator and the emergency contact', async () => {
+    const seen = vi.fn();
+    render(<Harness initial={start()} onState={seen} />);
+    const coordinator = screen.getByRole('group', { name: 'Tour coordinator' });
+    await userEvent.type(within(coordinator).getByLabelText('Tour coordinator name'), 'Ravi Shah');
+    await userEvent.type(within(coordinator).getByLabelText('Tour coordinator number 1'), '+91 98765 43210');
+    await userEvent.click(within(coordinator).getByRole('button', { name: /Add another number/ }));
+    await userEvent.type(within(coordinator).getByLabelText('Tour coordinator number 2'), '0294 242 8800');
+    const emergency = screen.getByRole('group', { name: 'Emergency contact' });
+    await userEvent.type(within(emergency).getByLabelText('Emergency contact name'), 'Office');
+    await userEvent.type(within(emergency).getByLabelText('Emergency contact number 1'), '+91 99999 11111');
+    expect(seen.mock.lastCall[0].contacts).toEqual({ coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }, emergency: { name: 'Office', numbers: ['+91 99999 11111'] } });
+    await userEvent.click(within(coordinator).getByRole('button', { name: 'Remove tour coordinator number 1' }));
+    expect(seen.mock.lastCall[0].contacts.coordinator.numbers).toEqual(['0294 242 8800']);
+    await userEvent.click(within(coordinator).getByRole('button', { name: 'Remove tour coordinator number 1' }));
+    expect(seen.mock.lastCall[0].contacts.coordinator.numbers).toEqual(['']); // one empty box is always left to type in
+  });
+
   it('adds travellers, keeps what is typed and removes a line', async () => {
     const seen = vi.fn();
     render(<Harness initial={start()} onState={seen} />);

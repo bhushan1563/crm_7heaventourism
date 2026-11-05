@@ -7,6 +7,7 @@ const schema = new mongoose.Schema({
   end:         { type: String, required: true }, // YYYY-MM-DD (same as start for single-day events)
   destination: { type: String, trim: true, default: '' },
   amount:      { type: String, trim: true, default: '' }, // e.g. "Rs 10,000"
+  supplier:    { type: String, trim: true, default: '' }, // who the payment is due to
   notes:       { type: String, trim: true, default: '' },
   createdBy:   { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });

@@ -65,6 +65,7 @@
 .cal-pill.is-cancelled .cal-pill-name { text-decoration: line-through; }
 .cal-pill-type { font-size: 0.6rem; font-weight: 600; opacity: 0.88; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-pill-name { font-size: 0.72rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-pill-supplier { font-size: 0.64rem; font-weight: 600; opacity: 0.9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-top: 1px solid color-mix(in srgb, var(--cal-ink, #fff) 28%, transparent); padding-top: 1px; margin-top: 1px; }
 .cal-more-btn { border: 0; background: transparent; padding: 0 2px; font-size: 0.69rem; font-weight: 700; color: var(--text-secondary); cursor: pointer; text-align: left; }
 .cal-more-btn:hover { color: var(--text-primary, inherit); }
 .cal-chip.is-cancelled, .cal-card.is-cancelled, .cal-row.is-cancelled { opacity: 0.55; }
@@ -127,7 +128,7 @@
 @media (max-width: 700px) {
   .cal-day { min-height: 80px; padding: 4px 2px; gap: 2px; }
   .cal-pill { padding: 2px 4px; }
-  .cal-pill-type { display: none; }
+  .cal-pill-type, .cal-pill-supplier { display: none; }
   .cal-pill-name { font-size: 0.65rem; }
   .cal-heads div { padding: 5px 2px; text-align: center; font-size: 0.64rem; }
   .cal-weekview { grid-template-columns: 1fr; }

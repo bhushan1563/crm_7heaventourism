@@ -49,7 +49,7 @@ export const paymentEventOf = (doc, balance) => {
   const amount = `Rs ${Number(balance).toLocaleString('en-IN')}`;
   return {
     id: `payment:${id}`, kind: 'payment', recordId: id, start: due, end: due, nights: 0, title: text(doc.clientName) || 'Booking', ref: text(doc.confirmationNo),
-    destination: text(doc.destination), status: 'Payment due', amount, travelStart: toIso(doc.travelDate), sales: text(doc.sales), ops: text(doc.ops), pax: text(doc.paxDetails), link: `/confirmations/${id}`
+    destination: text(doc.destination), status: 'Payment due', amount, supplier: text(doc.payment?.supplier), travelStart: toIso(doc.travelDate), sales: text(doc.sales), ops: text(doc.ops), pax: text(doc.paxDetails), link: `/confirmations/${id}`
   };
 };
 

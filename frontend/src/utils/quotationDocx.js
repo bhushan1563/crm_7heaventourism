@@ -409,6 +409,20 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     ], cols));
   }
 
+  // ---- contacts (tour coordinator, emergency): the numbers of one person stacked in a single cell ----
+  if (view?.contacts?.length) {
+    const cols = [Math.round(CONTENT * 0.28), Math.round(CONTENT * 0.40)];
+    cols.push(CONTENT - cols[0] - cols[1]);
+    children.push(heading('Contacts'), tbl([
+      trow(['Role', 'Name', 'Contact number'].map((h, i) => hcell(h, cols[i])), { header: true }),
+      ...view.contacts.map((c) => trow([
+        cell([run(c.label, { bold: true })], { width: cols[0] }),
+        cell([run(c.name || '–')], { width: cols[1] }),
+        cell((c.numbers.length ? c.numbers : ['–']).map((n, k) => run(n, k ? { break: 1 } : {})), { width: cols[2] }),
+      ]))
+    ], cols));
+  }
+
   // ---- payment ----
   {
     const totalAmt = Number(pay.totalAmount) || 0;

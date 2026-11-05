@@ -14,6 +14,8 @@ export const CONFIRMATION_LIMITS = {
   label: 60,
   value: 500,
   paymentNote: 300,
+  supplier: 100,
+  contactNumbers: 5,
   notes: 5000,
   reason: 300,
   hotels: 50,
@@ -115,7 +117,7 @@ export const normalizeBookingInput = (body, current = {}) => {
     if (!isPlainObject(body.payment)) return fail('The payment details must be a set of fields.');
     const p = body.payment;
     const stored = current.payment || {};
-    const payment = { totalAmount: Number(stored.totalAmount) || 0, received: Number(stored.received) || 0, balanceDueDate: stored.balanceDueDate ?? null, note: stored.note || '' };
+    const payment = { totalAmount: Number(stored.totalAmount) || 0, received: Number(stored.received) || 0, balanceDueDate: stored.balanceDueDate ?? null, supplier: stored.supplier || '', note: stored.note || '' };
     if (p.totalAmount !== undefined) {
       const r = amountInput(p.totalAmount, 'the total amount');
       if (!r.ok) return r;
@@ -131,6 +133,11 @@ export const normalizeBookingInput = (body, current = {}) => {
       if (!r.ok) return r;
       payment.balanceDueDate = r.value;
     }
+    if (p.supplier !== undefined) {
+      const r = line(p.supplier, 'the supplier name', L.supplier);
+      if (!r.ok) return r;
+      payment.supplier = r.value;
+    }
     if (p.note !== undefined) {
       const r = line(p.note, 'the payment note', L.paymentNote);
       if (!r.ok) return r;
@@ -138,6 +145,43 @@ export const normalizeBookingInput = (body, current = {}) => {
     }
     if (payment.received > payment.totalAmount) return fail(`The amount received (${rs(payment.received)}) cannot be more than the total amount (${rs(payment.totalAmount)}).`);
     data.payment = payment;
+  }
+
+  // The people to call during the trip: the tour coordinator and the emergency contact, each a name and up to a few numbers.
+  // A person that is not sent keeps what is stored; blank numbers are dropped.
+  if (body.contacts !== undefined) {
+    if (!isPlainObject(body.contacts)) return fail('The contact details must be a set of fields.');
+    const stored = current.contacts || {};
+    const contacts = {};
+    for (const [key, label] of [['coordinator', 'tour coordinator'], ['emergency', 'emergency contact']]) {
+      const kept = stored[key] || {};
+      const entry = { name: kept.name || '', numbers: [...(kept.numbers || [])] };
+      const raw = body.contacts[key];
+      if (raw !== undefined) {
+        if (!isPlainObject(raw)) return fail(`The details of the ${label} are not valid.`);
+        if (raw.name !== undefined) {
+          const r = line(raw.name, `the name of the ${label}`, L.name);
+          if (!r.ok) return r;
+          entry.name = r.value;
+        }
+        if (raw.numbers !== undefined) {
+          if (!Array.isArray(raw.numbers)) return fail(`The numbers of the ${label} must be a list.`);
+          if (raw.numbers.length > L.contactNumbers * 4) return fail(`The ${label} can have at most ${L.contactNumbers} numbers.`);
+          const numbers = [];
+          for (const [index, item] of raw.numbers.entries()) {
+            const r = line(item, `number ${index + 1} of the ${label}`, L.hotelPhone);
+            if (!r.ok) return r;
+            if (!r.value) continue;
+            if (!HOTEL_PHONE.test(r.value)) return fail(`Number ${index + 1} of the ${label} can only have digits, spaces and + - ( ) . characters (5 to ${L.hotelPhone} of them).`);
+            numbers.push(r.value);
+          }
+          if (numbers.length > L.contactNumbers) return fail(`The ${label} can have at most ${L.contactNumbers} numbers (there are ${numbers.length}).`);
+          entry.numbers = numbers;
+        }
+      }
+      contacts[key] = entry;
+    }
+    data.contacts = contacts;
   }
 
   // What each hotel gave once the room was booked (the hotel's own confirmation number, its contact number and the times), in the

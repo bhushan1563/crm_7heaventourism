@@ -27,6 +27,29 @@ test('travellers are tidied; age and passport are optional', () => {
   assert.deepEqual(ok({ travellers: [] }).travellers, []);
 });
 
+test('the tour coordinator and the emergency contact keep a name and several numbers; blanks are dropped', () => {
+  const d = ok({ contacts: { coordinator: { name: '  Ravi   Shah ', numbers: [' +91 98765 43210 ', '', '0294 242 8800'] }, emergency: { name: 'Office', numbers: ['+91 99999 11111'] } } });
+  assert.deepEqual(d.contacts, { coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }, emergency: { name: 'Office', numbers: ['+91 99999 11111'] } });
+  assert.deepEqual(ok({ contacts: {} }).contacts, { coordinator: { name: '', numbers: [] }, emergency: { name: '', numbers: [] } });
+});
+
+test('a contact that is not sent keeps what is stored; one that is sent can be cleared', () => {
+  const current = { contacts: { coordinator: { name: 'Ravi', numbers: ['+91 98765 43210'] }, emergency: { name: 'Office', numbers: ['+91 99999 11111'] } } };
+  const d = ok({ contacts: { emergency: { name: 'Home', numbers: [] } } }, current);
+  assert.deepEqual(d.contacts.coordinator, { name: 'Ravi', numbers: ['+91 98765 43210'] });
+  assert.deepEqual(d.contacts.emergency, { name: 'Home', numbers: [] });
+  assert.equal('contacts' in ok({ notes: '' }, current), false);
+});
+
+test('contact problems name the person and the number', () => {
+  assert.equal(bad({ contacts: 'Ravi' }), 'The contact details must be a set of fields.');
+  assert.match(bad({ contacts: { coordinator: 'Ravi' } }), /details of the tour coordinator are not valid/);
+  assert.match(bad({ contacts: { coordinator: { name: 'x'.repeat(L.name + 1) } } }), /name of the tour coordinator is too long/i);
+  assert.match(bad({ contacts: { emergency: { numbers: 'call me' } } }), /numbers of the emergency contact must be a list/);
+  assert.match(bad({ contacts: { emergency: { numbers: ['12345', 'call me'] } } }), /Number 2 of the emergency contact can only have digits/);
+  assert.match(bad({ contacts: { coordinator: { numbers: Array.from({ length: L.contactNumbers + 1 }, (_, i) => `98765 4321${i}`) } } }), /tour coordinator can have at most 5 numbers/);
+});
+
 test('traveller problems name the traveller', () => {
   assert.equal(bad({ travellers: [{ name: 'A' }, { name: '  ' }] }), 'Please enter the name of traveller 2.');
   assert.match(bad({ travellers: [{ name: 'A', age: -1 }] }), /age of traveller 1 must be a whole number from 0 to 120/);

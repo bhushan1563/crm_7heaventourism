@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import LazyRichTextEditor from '../LazyRichTextEditor';
-import { CONFIRMATION_LIMITS as L, balanceOf, blankDetail, blankTraveller } from '../../utils/confirmation';
+import { CONFIRMATION_LIMITS as L, CONTACT_ROLES, balanceOf, blankDetail, blankTraveller } from '../../utils/confirmation';
 import '../../pages/itineraries.css';
 import './confirmation.css';
 
@@ -123,6 +123,50 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, h
         </section>
       )}
 
+      <section className="glass-panel edit-section" aria-labelledby="be-contacts">
+        <h3 id="be-contacts" className="edit-section-title">Contacts on the trip</h3>
+        <p className="edit-hint">Who the guests can call during the trip. They are printed on the confirmation, each person's numbers one under the other. Add as many numbers as needed (up to {L.contactNumbers}).</p>
+        <div className="be-contacts">
+          {CONTACT_ROLES.map(([key, label]) => {
+            const person = form.contacts?.[key] || { name: '', numbers: [''] };
+            const numbers = person.numbers?.length ? person.numbers : [''];
+            const setPerson = (patch) => onChange({ contacts: { ...form.contacts, [key]: { ...person, numbers, ...patch } } });
+            const setNumber = (i, value) => setPerson({ numbers: numbers.map((n, k) => (k === i ? value : n)) });
+            const removeNumber = (i) => setPerson({ numbers: numbers.length > 1 ? numbers.filter((_, k) => k !== i) : [''] });
+            return (
+              <div className="be-contact" key={key} role="group" aria-label={label}>
+                <div className="be-contact-title">{label}</div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor={`contact-${key}-name`}>{label} name</label>
+                  <input id={`contact-${key}-name`} type="text" className="form-input" value={person.name} maxLength={L.name} disabled={readOnly} placeholder="Full name" onChange={(e) => setPerson({ name: e.target.value })} {...invalid(`contact-${key}-name`)} />
+                  {error(`contact-${key}-name`)}
+                </div>
+                <div className="be-numbers">
+                  <span className="form-label" id={`contact-${key}-numbers-label`}>Contact numbers</span>
+                  {numbers.map((n, i) => (
+                    <div className="be-number-row" key={i}>
+                      <input id={`contact-${key}-number-${i}`} type="tel" className="form-input" value={n} maxLength={L.hotelPhone + 20} disabled={readOnly} placeholder="e.g. +91 98765 43210" aria-label={`${label} number ${i + 1}`} onChange={(e) => setNumber(i, e.target.value)} {...invalid(`contact-${key}-number-${i}`)} />
+                      {!readOnly && (
+                        <button type="button" className="btn-icon btn-outline" onClick={() => removeNumber(i)} aria-label={`Remove ${label.toLowerCase()} number ${i + 1}`} title="Remove this number">
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                      {error(`contact-${key}-number-${i}`)}
+                    </div>
+                  ))}
+                  {error(`contact-${key}-numbers`)}
+                  {!readOnly && (
+                    <button type="button" className="btn btn-outline-azure btn-sm be-add-number" onClick={() => setPerson({ numbers: [...numbers, ''] })} disabled={numbers.length >= L.contactNumbers}>
+                      <Plus size={14} /> <span>Add another number</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="glass-panel edit-section" aria-labelledby="be-payment">
         <h3 id="be-payment" className="edit-section-title">Payment</h3>
         <p className="edit-hint">The total starts as the price of the quotation. Change it if the final price was agreed differently.</p>
@@ -146,6 +190,10 @@ export const BookingEditor = ({ form, errors = {}, onChange, readOnly = false, h
         <div className={`be-balance${balance > 0 ? '' : balance < 0 ? ' is-over' : ' is-clear'}`} aria-live="polite">
           <span>{balance > 0 ? 'Balance to pay' : balance < 0 ? 'Received is more than the total by' : (Number(form.payment.totalAmount) || 0) > 0 ? 'Fully paid' : 'No amount due'}</span>
           <strong>{money(Math.abs(balance))}</strong>
+        </div>
+        <div className="form-group">
+          <label className="form-label" htmlFor="payment-supplier">Supplier (who the balance is paid to)</label>
+          <input id="payment-supplier" type="text" className="form-input" value={form.payment.supplier || ''} maxLength={L.supplier} disabled={readOnly} placeholder="e.g. Taj Hotels, or the tour operator's name" onChange={(e) => setPayment({ supplier: e.target.value })} />
         </div>
         <div className="form-group">
           <label className="form-label" htmlFor="payment-note">Payment note</label>

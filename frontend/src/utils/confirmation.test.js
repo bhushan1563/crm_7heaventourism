@@ -27,12 +27,28 @@ describe('the form and the payload', () => {
     expect(f.payment.balanceDueDate).toBe('2027-03-01');
     const p = bookingPayload(f);
     expect(p.travellers).toEqual([{ name: 'Aarav', age: 41, passportNo: 'Z1', notes: '' }, { name: 'Anaya', age: null, passportNo: '', notes: '' }]);
-    expect(p.payment).toEqual({ totalAmount: 5000, received: 1000, balanceDueDate: '2027-03-01', note: 'Cheque' });
+    expect(p.payment).toEqual({ totalAmount: 5000, received: 1000, balanceDueDate: '2027-03-01', supplier: '', note: 'Cheque' });
     expect(p.customFields).toEqual([{ label: 'Driver', value: 'Raju' }]);
   });
   it('copes with a confirmation that has nothing yet', () => {
-    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', note: '' }, hotelBookings: [], notes: '', customFields: [] });
+    expect(formFromConfirmation(undefined)).toEqual({ travelDate: '', travellers: [], payment: { totalAmount: 0, received: 0, balanceDueDate: '', supplier: '', note: '' }, contacts: { coordinator: { name: '', numbers: [''] }, emergency: { name: '', numbers: [''] } }, hotelBookings: [], notes: '', customFields: [] });
     expect(toDateInput(null)).toBe('');
+  });
+  it('keeps the tour coordinator and the emergency contact with several numbers, leaving a blank box to type in', () => {
+    const f = formFromConfirmation({ contacts: { coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] } } });
+    expect(f.contacts.coordinator).toEqual({ name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] });
+    expect(f.contacts.emergency).toEqual({ name: '', numbers: [''] });
+    const typed = { ...f, contacts: { coordinator: { name: ' Ravi Shah ', numbers: [' +91 98765 43210 ', '', '0294 242 8800'] }, emergency: { name: '', numbers: [''] } } };
+    expect(bookingPayload(typed).contacts).toEqual({ coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }, emergency: { name: '', numbers: [] } });
+    expect(bookingView(null, typed).contacts).toEqual([{ key: 'coordinator', label: 'Tour coordinator', name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }]);
+    expect(bookingView(null, form()).contacts).toEqual([]);
+  });
+  it('says which number is wrong, and allows a form that has no contacts at all', () => {
+    const wrong = bookingErrors(form({ contacts: { coordinator: { name: 'Ravi', numbers: ['98765 43210', 'call me'] }, emergency: { name: '', numbers: [''] } } }));
+    expect(wrong['contact-coordinator-number-1']).toMatch(/Number 2 of the tour coordinator can only have digits/);
+    expect(wrong['contact-coordinator-number-0']).toBeUndefined();
+    expect(firstErrorKey(wrong, form({ contacts: { coordinator: { name: '', numbers: ['', ''] }, emergency: { name: '', numbers: [''] } } }))).toBe('contact-coordinator-number-1');
+    expect(bookingErrors(form())).toEqual({});
   });
   it('trims what is typed', () => {
     const p = bookingPayload(form({ travellers: [{ name: '  Aarav  ', age: '', passportNo: ' Z1 ', notes: ' vegan ' }], customFields: [{ label: ' A ', value: ' b ' }] }));

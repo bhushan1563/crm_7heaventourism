@@ -50,6 +50,19 @@ describe('the booking confirmation document', () => {
     expect(page.querySelector('strong')).not.toBeNull();
   });
 
+  it('prints the tour coordinator and the emergency contact with their numbers one under the other, and nothing when there are none', () => {
+    const contacts = { coordinator: { name: 'Ravi Shah', numbers: ['+91 98765 43210', '0294 242 8800'] }, emergency: { name: 'Office', numbers: ['+91 99999 11111'] } };
+    view(confirmation({ contacts }));
+    const page = document.querySelector('[id$="-booking"]');
+    expect(page).toHaveTextContent('Contacts');
+    for (const text of ['Tour coordinator', 'Ravi Shah', '+91 98765 43210', '0294 242 8800', 'Emergency contact', 'Office', '+91 99999 11111']) expect(page).toHaveTextContent(text);
+    const numbers = [...page.querySelectorAll('div')].find((el) => el.children.length === 2 && el.textContent === '+91 98765 43210' + '0294 242 8800');
+    expect(numbers).toBeTruthy(); // both numbers sit in the one cell
+    cleanup();
+    view(confirmation());
+    expect(document.querySelector('[id$="-booking"]')).not.toHaveTextContent('Contacts');
+  });
+
   it('says "Fully paid" once everything is received, and leaves out empty sections', () => {
     view(confirmation({ travellers: [], customFields: [], notes: '', payment: { totalAmount: 5000, received: 5000, balanceDueDate: null, note: '' }, optionName: '' }));
     const page = document.querySelector('[id$="-booking"]');
