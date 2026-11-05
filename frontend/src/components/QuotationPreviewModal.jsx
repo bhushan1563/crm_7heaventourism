@@ -16,6 +16,8 @@ import QuotationDocumentView from './QuotationDocumentView';
 import { generateQuotationPDF, printQuotation } from '../utils/quotationPdfGenerator';
 import { useToast } from '../context/ToastContext';
 import { saveBlob } from '../utils/download';
+import { NEW_VERSION_MESSAGE } from '../services/api';
+import { isChunkError } from '../utils/lazyWithReload';
 
 // The document is laid out at A4 width (96dpi). On narrow screens start zoomed out so the whole page width is visible.
 const DOC_WIDTH_PX = 794;
@@ -52,7 +54,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
       showToast(`${documentLabel} PDF generated and downloaded successfully!`, 'success');
     } catch (err) {
       console.error('PDF generation error:', err);
-      showToast('Failed to generate PDF: ' + err.message, 'error');
+      showToast('Failed to generate PDF: ' + (isChunkError(err) ? NEW_VERSION_MESSAGE : err.message), 'error');
     } finally {
       setIsGenerating(false);
       setProgressMsg('');
@@ -81,7 +83,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
       showToast(`${documentLabel} Word document downloaded!`, 'success');
     } catch (err) {
       console.error('Word generation error:', err);
-      showToast('Failed to generate Word file: ' + err.message, 'error');
+      showToast('Failed to generate Word file: ' + (isChunkError(err) ? NEW_VERSION_MESSAGE : err.message), 'error');
     } finally {
       setIsWordGenerating(false);
     }

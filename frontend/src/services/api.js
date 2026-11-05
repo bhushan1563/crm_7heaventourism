@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isChunkError } from '../utils/lazyWithReload';
 
 // Empty / unset = same origin (the API and the web app are served together). Set REACT_APP_APIURL at build time to
 // point at an API hosted elsewhere.
@@ -43,8 +44,15 @@ api.interceptors.response.use(
 );
 
 /** Best human-readable message for a failed request (server message, then a plain-language fallback). */
+/**
+ * What to tell a person whose tab was left open while the app was updated. The PDF, Word and Excel libraries are fetched only when
+ * a file is made, under names that change with every update, so such a tab asks for files that no longer exist.
+ */
+export const NEW_VERSION_MESSAGE = 'A new version of the CRM was released while this page was open. Please refresh the page (Ctrl + Shift + R) and try again.';
+
 export const getErrorMessage = (error, fallback = 'Something went wrong. Please try again.') => {
   if (error?.response?.data?.message) return error.response.data.message;
+  if (isChunkError(error)) return NEW_VERSION_MESSAGE;
   if (error?.code === 'ECONNABORTED') return 'The request timed out. Please check your connection and try again.';
   if (error?.request && !error?.response) return 'Cannot reach the server. Please check your connection.';
   return fallback;
