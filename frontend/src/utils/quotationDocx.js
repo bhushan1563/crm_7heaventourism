@@ -74,7 +74,7 @@ const richKit = (d) => {
     const blocks = richBlocks(value);
     return blocks.length ? blocks.flatMap((b, i) => [...(i ? [new d.TextRun({ break: 1 })] : []), ...runsFrom(htmlNodes(b.tag === 'p' ? b.html : b.html.replace(/<\/?(ul|ol|li)[^>]*>/g, ' ')), format)]) : [];
   };
-  const paragraphs = (value, { after = 60, format } = {}) => {
+  const paragraphs = (value, { after = 70, format } = {}) => {
     const out = [];
     for (const b of richBlocks(value)) {
       if (b.tag === 'p') {
@@ -82,7 +82,7 @@ const richKit = (d) => {
       } else {
         const items = Array.from(htmlNodes(b.html)[0]?.childNodes || []).filter((n) => n.nodeType === 1 && n.tagName === 'LI');
         items.forEach((li, i) => out.push(new d.Paragraph({
-          spacing: { after: 30 },
+          spacing: { after: 36 },
           ...(b.tag === 'ul' ? { bullet: { level: 0 } } : { indent: { left: 360, hanging: 360 } }),
           children: [...(b.tag === 'ol' ? [new d.TextRun({ text: `${i + 1}.  ` })] : []), ...runsFrom(li.childNodes, format)]
         })));
@@ -229,7 +229,7 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
     title: xmlSafe(`Visa quotation ${quotation.quotationNo || ''} ${title}`.trim()),
     description: xmlSafe([quotation.clientName, title].filter(Boolean).join(' - ')),
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22 } } },
+      default: { document: { run: { font: 'Calibri', size: 24 } } },
       paragraphStyles: [
         { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 44, bold: true, color: '0F172A' } },
         { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 26, bold: true, color: BRAND } }
@@ -529,14 +529,15 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
         const grandCols = [cols[0] + cols[1] + cols[2] + cols[3], cols[4]];
         children.push(tbl([headerRow, ...bodyRows, trow([cell([run('Grand Total', { bold: true })], { width: grandCols[0], fill: 'FEF9C3' }), rcell(rs(grandTotal), grandCols[1], { bold: true, size: 24 })])], cols));
       } else {
-        const sheetCols2 = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
+        const hasColumnData = (key) => (quotation?.priceTables || [pt]).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
+        const sheetCols2 = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
         const colCount = 2 + sheetCols2.length + 2;
         const baseW = Math.round(CONTENT / colCount);
         const cols = Array(colCount - 1).fill(baseW);
         cols.push(CONTENT - baseW * (colCount - 1));
         const headerRow = trow(['Sr No', ...sheetCols2.map(([, t]) => t), 'Total', 'PAX', 'Final Price'].map((t, i) => hcell(t, cols[i])), { header: true });
         const bodyRows = (pt.rows || []).map((row) => {
-          const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
+          const tot = rowTotal(row);
           const final = rowFinal(row);
           return trow([cell([run(row.label || '', { bold: true })], { width: cols[0] }), ...sheetCols2.map(([key], si) => rcell(Number(row[key]) > 0 ? rs(row[key]) : '', cols[1 + si])), rcell(tot > 0 ? rs(tot) : '', cols[1 + sheetCols2.length]), rcell(Number(row.pax) > 0 ? String(row.pax) : '', cols[2 + sheetCols2.length]), rcell(final > 0 ? rs(final) : '', cols[3 + sheetCols2.length], { bold: true })]);
         });
@@ -584,7 +585,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
     title: xmlSafeStr(`Booking Confirmation ${info.no || ''} ${quotation.destination || ''}`.trim()),
     description: xmlSafeStr([quotation.clientName, quotation.destination].filter(Boolean).join(' - ')),
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22 } } },
+      default: { document: { run: { font: 'Calibri', size: 24 } } },
       paragraphStyles: [
         { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 44, bold: true, color: '0F172A' } },
         { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 26, bold: true, color: BRAND } }
@@ -720,16 +721,17 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       });
       return [table([tableRow(['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((t, i) => hcell(t, w[i])), { header: true }), ...body, totalRow('Grand Total', rs(P.tableTotal(pt, quotation)), w)], w), new d.Paragraph({ spacing: { after: 60 } })];
     }
-    const amounts = isHotelOnly ? P.AMOUNT_COLUMNS.filter(([key]) => key === 'package') : P.AMOUNT_COLUMNS;
+    const hasColumnData = (key) => (quotation?.priceTables || [pt]).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
+    const amounts = isHotelOnly ? P.AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : P.AMOUNT_COLUMNS;
     const labelShare = 0.2;
     const share = (1 - labelShare) / (amounts.length + 3);
     const w = widthsOf([labelShare, ...Array(amounts.length + 3).fill(share)]);
     const body = (pt.rows || []).map((row) => {
-      const tot = isHotelOnly ? Number(row.package) || 0 : P.rowTotal(row);
+      const tot = P.rowTotal(row);
       const final = round2(tot * (Number(row.pax) || 0));
       return tableRow([cell([text(row.label || '', { bold: true })], { width: w[0] }), ...amounts.map(([key], i) => rcell(P.cellText(row[key]), w[1 + i])), rcell(P.cellText(tot), w[1 + amounts.length]), rcell(Number(row.pax) > 0 ? String(Number(row.pax)) : '', w[2 + amounts.length]), rcell(P.cellText(final), w[3 + amounts.length], { bold: true })]);
     });
-    const grand = isHotelOnly ? round2((pt.rows || []).reduce((sum, r) => sum + round2((Number(r.package) || 0) * (Number(r.pax) || 0)), 0)) : P.tableTotal(pt, quotation);
+    const grand = P.tableTotal(pt, quotation);
     return [table([tableRow(['Sr No', ...amounts.map(([, t]) => t), 'Total', 'PAX', 'Final Price'].map((t, i) => hcell(t, w[i])), { header: true }), ...body, totalRow('Grand Total', rs(grand), w)], w), new d.Paragraph({ spacing: { after: 60 } })];
   };
 
@@ -854,7 +856,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     title: xmlSafe(`${quotationType} quotation ${quotation.quotationNo || ''} ${quotation.destination || ''}`.trim()),
     description: xmlSafe([quotation.clientName, quotation.destination].filter(Boolean).join(' - ')),
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22 } } },
+      default: { document: { run: { font: 'Calibri', size: 24 } } },
       paragraphStyles: [
         { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 44, bold: true, color: '0F172A' } },
         { id: 'Heading2', name: 'Heading 2', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 26, bold: true, color: BRAND } }

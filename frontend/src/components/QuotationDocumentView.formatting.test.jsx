@@ -68,7 +68,7 @@ describe('a long itinerary day can run on over the page', () => {
     expect(screen.getByText('Larger text').closest('span[style]').getAttribute('style')).toContain('font-size:1.286em');
     expect(screen.getByText('Five nights stay').closest('span[style]').getAttribute('style')).toContain('font-size:1em');
     expect(container.innerHTML).not.toMatch(/font-size:\s*1[48]px/);
-    expect(screen.getByText('Normal text').closest('.qd-rich')).toHaveStyle({ color: '#000000', fontSize: '9.5px' });
+    expect(screen.getByText('Normal text').closest('.qd-rich')).toHaveStyle({ color: '#000000', fontSize: '10.5px' });
   });
 
   it('has no grey text left in the itinerary, the day details or the lists', () => {

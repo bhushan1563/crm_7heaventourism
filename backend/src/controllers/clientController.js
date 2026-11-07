@@ -17,6 +17,55 @@ export const findFutureClient = async (req) => {
 };
 
 /**
+ * PUT /api/clients/current/contact
+ * Updates contact details (phone, email, name) for a current client across their guest inquiries and/or bookings.
+ */
+export const updateCurrentClientContact = async (req, res) => {
+  try {
+    const { guestId, confirmationId, name, phone, email } = req.body;
+    if (!guestId && !confirmationId) {
+      return fail(res, 'No guest or booking reference provided to update.');
+    }
+
+    const updates = [];
+    const updatePayload = {};
+    if (phone !== undefined) updatePayload.contactNumber = String(phone).trim();
+    if (email !== undefined) updatePayload.email = String(email).trim().toLowerCase();
+    if (name !== undefined && String(name).trim()) updatePayload.guestNames = String(name).trim();
+
+    if (guestId && mongoose.isValidObjectId(guestId)) {
+      updates.push(
+        GuestModel.findByIdAndUpdate(
+          guestId,
+          { $set: { ...updatePayload, updatedBy: req.user._id, updatedByName: fullName(req.user) } },
+          { new: true }
+        )
+      );
+    }
+
+    if (confirmationId && mongoose.isValidObjectId(confirmationId)) {
+      const confPayload = {};
+      if (phone !== undefined) confPayload.clientPhone = String(phone).trim();
+      if (email !== undefined) confPayload.clientEmail = String(email).trim().toLowerCase();
+      if (name !== undefined && String(name).trim()) confPayload.clientName = String(name).trim();
+
+      updates.push(
+        ConfirmationModel.findByIdAndUpdate(
+          confirmationId,
+          { $set: confPayload },
+          { new: true }
+        )
+      );
+    }
+
+    await Promise.all(updates);
+    res.json({ success: true, message: 'Client contact details updated.' });
+  } catch (error) {
+    fail(res, friendlyMessage(error, 'Failed to update client contact details'));
+  }
+};
+
+/**
  * GET /api/clients/current
  * Everyone who has an inquiry or a booking, one entry per person with all their e-mail addresses and numbers, each source only when
  * the person may read it.

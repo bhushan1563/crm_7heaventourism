@@ -57,6 +57,11 @@
 .cf-quote-hotel-name { font-weight: 700; font-size: 0.88rem; color: var(--text-primary); margin-bottom: 4px; }
 .cf-quote-hotel-name small { font-weight: 500; color: var(--text-muted); }
 .cf-quote-hotel-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 0.78rem; color: var(--text-secondary); }
+.cf-quote-inclusions { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--surface-2); }
+.cf-quote-inclusions-title { font-size: 0.82rem; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); }
+.cf-quote-inclusions-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 6px 14px; margin: 0; padding: 0; list-style: none; }
+.cf-quote-inclusion-item { display: flex; align-items: flex-start; gap: 6px; font-size: 0.82rem; color: var(--text-primary); }
+.cf-quote-check { color: #059669; font-weight: 800; flex-shrink: 0; }
 
 /* The list: rows on a wide screen, stacked cards on a phone. */
 .cf-table { width: 100%; }

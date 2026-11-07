@@ -46,6 +46,7 @@ export const ClientsPage = () => {
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [editing, setEditing] = useState(null); // { id, form } while the form is open; id is '' for a new client
+  const [editingCurrent, setEditingCurrent] = useState(null); // { client, name, phone, email } for editing current client contact
   const [shownErrors, setShownErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(null);
@@ -94,6 +95,31 @@ export const ClientsPage = () => {
       }
     } catch (err) {
       showToast(getErrorMessage(err, 'The client could not be saved.'), 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveCurrentContact = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      const res = await clientService.updateCurrentContact({
+        guestId: editingCurrent.client.guestId,
+        confirmationId: editingCurrent.client.confirmationId,
+        name: editingCurrent.name,
+        phone: editingCurrent.phone,
+        email: editingCurrent.email
+      });
+      if (res.success) {
+        showToast(res.message || 'Contact details saved.', 'success');
+        setEditingCurrent(null);
+        load();
+      } else {
+        showToast(res.message || 'The contact details could not be saved.', 'error');
+      }
+    } catch (err) {
+      showToast(getErrorMessage(err, 'The contact details could not be saved.'), 'error');
     } finally {
       setSaving(false);
     }
@@ -202,9 +228,22 @@ export const ClientsPage = () => {
                   </td>
                   <td data-label="Sales">{c.sales || none}</td>
                   <td data-label="">
-                    {c.confirmationId
-                      ? <Link to={`/confirmations/${c.confirmationId}`} className="cl-open"><ExternalLink size={13} /> Booking</Link>
-                      : c.guestId ? <Link to="/guests" className="cl-open"><ExternalLink size={13} /> Guest list</Link> : null}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                      {can('guest_list', 'canUpdate') && (
+                        <button
+                          type="button"
+                          className="btn-icon btn-outline btn-sm"
+                          onClick={() => setEditingCurrent({ client: c, name: c.name || '', phone: (c.phones || [])[0] || '', email: (c.emails || [])[0] || '' })}
+                          aria-label={`Edit contact for ${c.name}`}
+                          title="Edit contact details"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      {c.confirmationId
+                        ? <Link to={`/confirmations/${c.confirmationId}`} className="cl-open"><ExternalLink size={13} /> Booking</Link>
+                        : c.guestId ? <Link to="/guests" className="cl-open"><ExternalLink size={13} /> Guest list</Link> : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -279,6 +318,52 @@ export const ClientsPage = () => {
             <div className="cl-form-foot">
               <button type="button" className="btn btn-outline" onClick={() => setEditing(null)} disabled={saving}>Cancel</button>
               <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : editing.id ? 'Save changes' : 'Add client'}</button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      <Modal isOpen={Boolean(editingCurrent)} onClose={() => setEditingCurrent(null)} title="Edit contact details" subtitle="Update phone number, e-mail or name for this client." maxWidth="500px">
+        {editingCurrent && (
+          <form onSubmit={saveCurrentContact}>
+            <div className="form-group">
+              <label className="form-label" htmlFor="edit-curr-name">Client name *</label>
+              <input
+                id="edit-curr-name"
+                className="form-input"
+                value={editingCurrent.name}
+                onChange={(e) => setEditingCurrent((prev) => ({ ...prev, name: e.target.value }))}
+                required
+                autoFocus
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="edit-curr-phone">Phone / WhatsApp number</label>
+              <input
+                id="edit-curr-phone"
+                type="tel"
+                className="form-input"
+                placeholder="e.g. +91 98765 43210"
+                value={editingCurrent.phone}
+                onChange={(e) => setEditingCurrent((prev) => ({ ...prev, phone: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="edit-curr-email">E-mail address</label>
+              <input
+                id="edit-curr-email"
+                type="email"
+                className="form-input"
+                placeholder="name@example.com"
+                value={editingCurrent.email}
+                onChange={(e) => setEditingCurrent((prev) => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            <div className="cl-form-foot" style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+              <button type="button" className="btn btn-outline" onClick={() => setEditingCurrent(null)} disabled={saving}>Cancel</button>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Saving…' : 'Save contact'}
+              </button>
             </div>
           </form>
         )}

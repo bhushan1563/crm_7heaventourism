@@ -228,7 +228,7 @@ export const generateItineraryDocx = async (itinerary, { onProgress, fetchImage 
     title: facts.title,
     description: `${facts.where} ${facts.duration}`.trim(),
     styles: {
-      default: { document: { run: { font: 'Calibri', size: 22 } } },
+      default: { document: { run: { font: 'Calibri', size: 24 } } },
       paragraphStyles: [
         { id: 'Title', name: 'Title', basedOn: 'Normal', run: { size: 52, bold: true, color: '0F172A' } },
         { id: 'Heading1', name: 'Heading 1', basedOn: 'Normal', next: 'Normal', quickFormat: true, run: { size: 32, bold: true, color: BRAND } },

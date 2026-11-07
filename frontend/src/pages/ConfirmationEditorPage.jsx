@@ -234,7 +234,7 @@ export const ConfirmationEditorPage = () => {
       </dl>
 
       {/* Quotation snapshot: read-only overview of what was sold so team can see it while filling booking details */}
-      {record.quote && (hotelsOfQuote(record.quote).length > 0 || record.quote.pricing?.grandTotal > 0) && (
+      {record.quote && (hotelsOfQuote(record.quote).length > 0 || record.quote.pricing?.grandTotal > 0 || ((record.quote.packageDetails?.inclusions || record.quote.inclusions || []).filter(Boolean).length > 0)) && (
         <section className="glass-panel cf-quote-snapshot">
           <div className="cf-quote-snapshot-head">
             <h3 className="edit-section-title">Quotation snapshot</h3>
@@ -266,6 +266,19 @@ export const ConfirmationEditorPage = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+          {((record.quote.packageDetails?.inclusions || record.quote.inclusions || []).filter(Boolean).length > 0) && (
+            <div className="cf-quote-inclusions">
+              <div className="cf-quote-inclusions-title">Inclusions</div>
+              <ul className="cf-quote-inclusions-list">
+                {(record.quote.packageDetails?.inclusions || record.quote.inclusions || []).filter(Boolean).map((inc, i) => (
+                  <li key={i} className="cf-quote-inclusion-item">
+                    <span className="cf-quote-check">✓</span>
+                    <span>{inc}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
         </section>

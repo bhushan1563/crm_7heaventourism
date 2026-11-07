@@ -78,6 +78,24 @@ describe('ConfirmationEditorPage', () => {
     expect(snap).not.toHaveTextContent('Invalid Date');
   });
 
+  it('shows the inclusions of the sold quotation in the quotation snapshot', async () => {
+    const quote = {
+      packageDetails: {
+        hotels: [{ hotelName: 'Centara Pattaya Hotel' }],
+        inclusions: ['Breakfast included', 'Airport transfers', 'Coral Island tour with speed boat']
+      },
+      pricing: { grandTotal: 381812 }
+    };
+    confirmationService.get.mockResolvedValue({ success: true, data: stored({ quote }) });
+    show();
+    await screen.findByRole('heading', { name: '7H-CF-2026-001' });
+    const snap = document.querySelector('.cf-quote-snapshot');
+    expect(snap).toHaveTextContent('Inclusions');
+    expect(snap).toHaveTextContent('Breakfast included');
+    expect(snap).toHaveTextContent('Airport transfers');
+    expect(snap).toHaveTextContent('Coral Island tour with speed boat');
+  });
+
   it('saves only what changed in the booking, with the version it was loaded at, and shows the new balance', async () => {
     confirmationService.get.mockResolvedValue({ success: true, data: stored() });
     confirmationService.update.mockResolvedValue({ success: true, message: 'Booking details saved.', data: stored({ payment: { totalAmount: 120000, received: 90000, balanceDueDate: '2027-03-01T00:00:00.000Z', note: '' }, updatedAt: '2026-11-01T11:00:00.000Z' }) });

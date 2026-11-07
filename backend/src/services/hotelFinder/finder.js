@@ -97,17 +97,27 @@ export const findHotel = async (input, options = {}) => {
   const target = parseTarget(input, { allowPrivate });
   if (!target.ok) return fail(target.code, target.message);
 
+  const isMajorChain = /marriott\.com|hilton\.com|ihg\.com|hyatt\.com|accor\.com/i.test(target.host);
+
   // 1. What does the site ask of automatic readers?
   const robotsResult = await d.loadRobots(target.origin, readOptions());
   let { robots } = robotsResult;
   if (!isPathAllowed(robots, pathOf(target.url))) {
-    return fail('ROBOTS_DISALLOWED', `${target.host} asks automatic readers not to read this page (its robots.txt says so), and the finder respects that. You can open the page in your browser, copy its text, and paste it here instead.`, { canPaste: true });
+    const chainNote = isMajorChain ? ` Major hotel chain websites like ${target.host} use anti-bot protection and script-based loading.` : '';
+    return fail('ROBOTS_DISALLOWED', `${target.host} asks automatic readers not to read this page (its robots.txt says so), and the finder respects that.${chainNote} You can open the page in your browser, copy its text, and paste it here instead.`, { canPaste: true });
   }
 
   // 2. The page that was typed.
   const first = await d.readUrl(target.url, readOptions());
-  if (!first.ok) return fail(first.code, first.message, { canPaste: ['BLOCKED_BY_SITE', 'TIMEOUT', 'RATE_LIMITED', 'TLS_ERROR', 'SITE_ERROR', 'CONNECTION_LOST', 'NOT_A_PAGE', 'TOO_LARGE'].includes(first.code) });
-  if (first.blocked) return fail('BLOCKED_BY_SITE', `${target.host} showed a "prove you are not a robot" page instead of the hotel's page. The finder does not try to get past such pages. You can open the page in your browser, copy its text, and paste it here instead.`, { canPaste: true });
+  if (!first.ok) {
+    const sep = first.message.endsWith('.') ? '' : '.';
+    const chainNote = isMajorChain ? `${sep} Major hotel chains like ${target.host} block automated web readers.` : '';
+    return fail(first.code, `${first.message}${chainNote}`, { canPaste: ['BLOCKED_BY_SITE', 'TIMEOUT', 'RATE_LIMITED', 'TLS_ERROR', 'SITE_ERROR', 'CONNECTION_LOST', 'NOT_A_PAGE', 'TOO_LARGE', 'CONNECT_FAILED'].includes(first.code) || isMajorChain });
+  }
+  if (first.blocked) {
+    const chainNote = isMajorChain ? ` Hotel chains like ${target.host} block automatic reading.` : '';
+    return fail('BLOCKED_BY_SITE', `${target.host} showed a "prove you are not a robot" page instead of the hotel's page.${chainNote} The finder does not try to get past such pages. You can open the page in your browser, copy its text, and paste it here instead.`, { canPaste: true });
+  }
 
   // The page may have sent us to another site (a short link, a chain's own page): from here on the site is where we ended up.
   const finalTarget = parseTarget(first.url, { allowPrivate });
@@ -187,7 +197,8 @@ export const findHotel = async (input, options = {}) => {
   if (robotsResult.note) data.warnings.push(robotsResult.note);
 
   if (data.completeness.score < 20 && !data.likelyHotel) {
-    return fail('NOTHING_FOUND', "The page was read, but no hotel details could be found on it. It may not be a hotel's website, or it may draw its content with scripts. Try the hotel's Contact or About page, or paste the page's text.", { canPaste: true });
+    const chainNote = isMajorChain ? ` Major hotel chain websites like ${target.host} render their content with private client-side scripts.` : '';
+    return fail('NOTHING_FOUND', `The page was read, but no hotel details could be found on it.${chainNote} It may not be a hotel's website, or it may draw its content with scripts. Try the hotel's Contact or About page, or paste the page's text.`, { canPaste: true });
   }
   return { ok: true, data };
 };

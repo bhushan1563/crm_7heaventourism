@@ -4,9 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const h = vi.hoisted(() => ({ current: vi.fn(), future: vi.fn(), create: vi.fn(), update: vi.fn(), del: vi.fn(), showToast: vi.fn(), copy: vi.fn(), rights: { create: true, update: true, delete: true }, editable: true }));
+const h = vi.hoisted(() => ({ current: vi.fn(), future: vi.fn(), create: vi.fn(), update: vi.fn(), updateCurrent: vi.fn(), del: vi.fn(), showToast: vi.fn(), copy: vi.fn(), rights: { create: true, update: true, delete: true }, editable: true }));
 vi.mock('../services/clientService', () => ({
-  default: { getCurrent: (...a) => h.current(...a), getFuture: (...a) => h.future(...a), createFuture: (...a) => h.create(...a), updateFuture: (...a) => h.update(...a), deleteFuture: (...a) => h.del(...a) }
+  default: { getCurrent: (...a) => h.current(...a), getFuture: (...a) => h.future(...a), createFuture: (...a) => h.create(...a), updateFuture: (...a) => h.update(...a), updateCurrentContact: (...a) => h.updateCurrent(...a), deleteFuture: (...a) => h.del(...a) }
 }));
 vi.mock('../services/api', () => ({ getErrorMessage: (e, f) => e?.message || f, default: {} }));
 vi.mock('../context/AuthContext', () => ({
@@ -41,6 +41,7 @@ beforeEach(() => {
   h.future.mockResolvedValue({ success: true, data: FUTURE });
   h.create.mockResolvedValue({ success: true, message: 'Client added.', data: { _id: 'f2' } });
   h.update.mockResolvedValue({ success: true, message: 'Client saved.', data: FUTURE[0] });
+  h.updateCurrent.mockResolvedValue({ success: true, message: 'Contact details saved.' });
   h.del.mockResolvedValue({ success: true, message: 'Client removed.' });
   h.copy.mockResolvedValue(undefined);
   Object.defineProperty(navigator, 'clipboard', { value: { writeText: (...a) => h.copy(...a) }, configurable: true });
@@ -94,6 +95,32 @@ describe('the clients page: current clients', () => {
     h.current.mockResolvedValue({ success: true, data: CURRENT, sources: { guests: true, confirmations: false } });
     await userEvent.click(screen.getByRole('button', { name: /try again/i }));
     expect(await screen.findByText(/bookings are not included: you do not have access/)).toBeInTheDocument();
+  });
+
+  it('allows editing contact details for a current client and saves updates', async () => {
+    show();
+    const table = await screen.findByRole('table', { name: 'Current clients' });
+    const editBtn = within(table).getByRole('button', { name: /Edit contact for Aarav Mehta/i });
+    await userEvent.click(editBtn);
+
+    expect(await screen.findByRole('heading', { name: 'Edit contact details' })).toBeInTheDocument();
+    const phoneInput = screen.getByLabelText(/Phone \/ WhatsApp number/i);
+    await userEvent.clear(phoneInput);
+    await userEvent.type(phoneInput, '+91 99999 88888');
+
+    const emailInput = screen.getByLabelText(/E-mail address/i);
+    await userEvent.clear(emailInput);
+    await userEvent.type(emailInput, 'aarav.new@example.com');
+
+    await userEvent.click(screen.getByRole('button', { name: /Save contact/i }));
+    await waitFor(() => expect(h.updateCurrent).toHaveBeenCalledWith({
+      guestId: 'g1',
+      confirmationId: 'c1',
+      name: 'Aarav Mehta',
+      phone: '+91 99999 88888',
+      email: 'aarav.new@example.com'
+    }));
+    expect(h.showToast).toHaveBeenCalledWith('Contact details saved.', 'success');
   });
 });
 

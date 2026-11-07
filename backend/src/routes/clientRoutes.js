@@ -1,5 +1,5 @@
 import express from 'express';
-import { createFutureClient, deleteFutureClient, findFutureClient, getCurrentClients, getFutureClients, updateFutureClient } from '../controllers/clientController.js';
+import { createFutureClient, deleteFutureClient, findFutureClient, getCurrentClients, getFutureClients, updateCurrentClientContact, updateFutureClient } from '../controllers/clientController.js';
 import { protect } from '../middleware/auth.js';
 import { checkRecordOwnership, checkRights } from '../middleware/checkRights.js';
 
@@ -10,6 +10,7 @@ const router = express.Router();
 router.use(protect);
 
 router.get('/current', checkRights('guest_list', 'canRead'), getCurrentClients);
+router.put('/current/contact', checkRights('guest_list', 'canUpdate'), updateCurrentClientContact);
 router.get('/future', checkRights('guest_list', 'canRead'), getFutureClients);
 router.post('/future', checkRights('guest_list', 'canCreate'), createFutureClient);
 router.put('/future/:id', checkRights('guest_list', 'canUpdate'), checkRecordOwnership(findFutureClient), updateFutureClient);

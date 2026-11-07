@@ -6,7 +6,7 @@ import QuotationDocumentView from './QuotationDocumentView';
 
 afterEach(cleanup);
 
-const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
+const row = (label, over = {}) => ({ label, package: 30000, airfare: 0, visa: 0, tcs: 0, pax: 2, ...over });
 const sheet = () => [
   { name: 'Option 1', rows: [row('Adult'), row('Extra bed', { pax: 1 }), row('CWB', { tcs: 0, pax: 1 }), row('CNB', { pax: 0, package: 0, airfare: 0, visa: 0, tcs: 0 })] },
   { name: 'Option 2', rows: [row('Adult', { package: 36000 }), row('Extra bed', { pax: 0 }), row('CWB', { pax: 0 }), row('CNB', { pax: 0 })] }
@@ -72,13 +72,28 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
   it('works from what was typed in the form (text), so the preview matches the screen', () => {
     show(hotelQuotation({ priceTables: [{ name: 'Typed', rows: [{ label: 'Adult', package: '1000', airfare: '500', visa: '200', tcs: '100', pax: '3' }] }] }));
     const adult = screen.getByText('Adult').closest('tr');
-    // Only Hotel: only the Package column is shown (Airfare, Visa, TCS are hidden); Total = Package only
-    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '1,000', '3', '3,000']);
+    // Only Hotel: when Airfare, Visa, and TCS are entered, they are shown and included in Total and Final Price
+    expect(within(adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '500', '200', '100', '1,800', '3', '5,400']);
   });
 
   it('shows hostile text in a name as plain text', () => {
     const { container } = show(hotelQuotation({ priceTables: [{ name: '<img src=x onerror=alert(1)>', rows: [row('<b>Adult</b>')] }] }));
     expect(container).toHaveTextContent('<img src=x onerror=alert(1)>');
     expect(container.querySelector('img[onerror], b')).toBeNull();
+  });
+
+  it('shows Airfare column and adds it to Total when airfare is entered on a hotel quotation', () => {
+    const airfareSheet = [
+      { name: 'Option 1', rows: [{ label: 'Adult', package: 160000, airfare: 37500, visa: 0, tcs: 3200, pax: 2 }] },
+      { name: 'Option 2', rows: [{ label: 'Adult', package: 150000, airfare: 37500, visa: 0, tcs: 3000, pax: 2 }] }
+    ];
+    show(hotelQuotation({ priceTables: airfareSheet }));
+    const tables = screen.getAllByRole('table');
+    expect(tables).toHaveLength(2);
+    // Table headers should include Airfare and TCS, but not Visa (0)
+    expect(within(tables[0]).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'TCS', 'Total', 'PAX', 'Final Price']);
+    const opt2Adult = within(tables[1]).getByText('Adult').closest('tr');
+    // Adult: 150000 + 37500 + 3000 = Total 1,90,500; Final Price 3,81,000 for 2 Pax
+    expect(within(opt2Adult).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,50,000', '37,500', '3,000', '1,90,500', '2', '3,81,000']);
   });
 });

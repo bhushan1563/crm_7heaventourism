@@ -19,13 +19,13 @@ import { API_ORIGIN } from '../services/api';
 // Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
 // markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
 const DAY_TEXT_CSS = `
-.qd-rich p { margin: 0 0 3px; }
-.qd-rich ul, .qd-rich ol { margin: 0 0 3px; padding-left: 16px; text-align: left; }
-.qd-rich li { margin: 1px 0; }
+.qd-rich p { margin: 0 0 5px; }
+.qd-rich ul, .qd-rich ol { margin: 0 0 5px; padding-left: 18px; text-align: left; }
+.qd-rich li { margin: 2px 0; }
 .qd-rich li > p { margin: 0; }
 .qd-rich > :last-child { margin-bottom: 0; }
 /* One piece of a longer text, laid under the one before it: it keeps the space a paragraph has under it. */
-.qd-part > :last-child { margin-bottom: 3px; }
+.qd-part > :last-child { margin-bottom: 5px; }
 .qd-rich mark { padding: 0 1px; border-radius: 2px; color: #111827; }
 .qd-rich [style^="color:"] mark, .qd-rich [style*=";color:"] mark, .qd-rich [style*="; color:"] mark { color: inherit; }
 /* One line of a list (an inclusion, a policy, a note): formatted text that runs on like ordinary text. */
@@ -161,9 +161,11 @@ const PriceTablesSection = ({ tables, quotation }) => {
   const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
-  // Only Hotel shows only the Package amount; Airfare, Visa and TCS are not part of a hotel-only quotation.
+  // Only Hotel shows the Package amount, plus Airfare, Visa, and TCS whenever entered.
   const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
-  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
+  const allTables = quotation?.priceTables || tables || [];
+  const hasColumnData = (key) => allTables.some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
+  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
   const sheetColSpan = 2 + sheetCols.length + 1; // Sr No + amounts + PAX + Final Price → colSpan for Grand Total
   return (
     <div style={{ marginBottom: '14px' }}>
@@ -222,8 +224,7 @@ const PriceTablesSection = ({ tables, quotation }) => {
                     <td key={key} style={cell}>{cellText(row[key])}</td>
                   ))}
                   {(() => {
-                    // For Only Hotel: Total = Package only; Final Price = Package × PAX (Airfare/Visa/TCS excluded)
-                    const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
+                    const tot = rowTotal(row);
                     const final = Math.round(tot * (Number(row.pax) || 0) * 100) / 100;
                     return (<>
                       <td style={cell}>{cellText(tot)}</td>
@@ -236,9 +237,7 @@ const PriceTablesSection = ({ tables, quotation }) => {
               <tr>
                 <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
                 <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
-                  {rs(isHotelOnly
-                    ? Math.round((table.rows || []).reduce((sum, r) => sum + Math.round((Number(r.package) || 0) * (Number(r.pax) || 0) * 100) / 100, 0) * 100) / 100
-                    : tableTotal(table, quotation))}
+                  {rs(tableTotal(table, quotation))}
                 </td>
               </tr>
             </tbody>
@@ -259,7 +258,9 @@ const OptionPriceTable = ({ table, quotation }) => {
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
   const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
-  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package') : AMOUNT_COLUMNS;
+  const allTables = quotation?.priceTables || [table];
+  const hasColumnData = (key) => allTables.some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
+  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
   const sheetColSpan = 2 + sheetCols.length + 1;
 
   if (tableLayout(table) === 'rooms') {
@@ -315,7 +316,7 @@ const OptionPriceTable = ({ table, quotation }) => {
                 <td key={key} style={cell}>{cellText(row[key])}</td>
               ))}
               {(() => {
-                const tot = isHotelOnly ? (Number(row.package) || 0) : rowTotal(row);
+                const tot = rowTotal(row);
                 const final = Math.round(tot * (Number(row.pax) || 0) * 100) / 100;
                 return (<>
                   <td style={cell}>{cellText(tot)}</td>
@@ -328,9 +329,7 @@ const OptionPriceTable = ({ table, quotation }) => {
           <tr>
             <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
             <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
-              {rs(isHotelOnly
-                ? Math.round((table.rows || []).reduce((sum, r) => sum + Math.round((Number(r.package) || 0) * (Number(r.pax) || 0) * 100) / 100, 0) * 100) / 100
-                : tableTotal(table, quotation))}
+              {rs(tableTotal(table, quotation))}
             </td>
           </tr>
         </tbody>
@@ -369,9 +368,9 @@ const VisaSection = ({ visa, fees, documents, inclusions, trip = {}, hidePrices 
   const checklist = (title, items, tick) => (
     <div style={{ marginBottom: '10px' }}>
       <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>{title}</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5px', paddingLeft: '2px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingLeft: '2px' }}>
         {items.map((item, i) => (
-          <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#000000' }}>
+          <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.45 }}>
             <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>{tick}</span>
             <Line value={item} />
           </div>
@@ -486,9 +485,9 @@ const LandServiceSection = ({ vehicles, trip, inclusions, hidePrices = false }) 
       {inclusions.length > 0 && (
         <div>
           <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>Vehicle Inclusions</div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5px', paddingLeft: '2px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingLeft: '2px' }}>
             {inclusions.map((inc, i) => (
-              <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#000000' }}>
+              <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.45 }}>
                 <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>✓</span>
                 <Line value={inc} />
               </div>
@@ -1136,7 +1135,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {itinerary.length > 0 ? (
                 itinerary.flatMap((day, idx) => {
                   const [firstText, ...moreText] = day.description ? splitDisplayBlocks(toDocumentHtml(day.description)) : [];
-                  const textStyle = { fontSize: '9.5px', lineHeight: '1.45', color: '#000000', textAlign: 'left' };
+                  const textStyle = { fontSize: '10.5px', lineHeight: '1.5', color: '#000000', textAlign: 'left' };
                   return [
                     <div key={`${idx}-day`} className="quotation-keep" style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: idx ? '10px' : 0 }}>
                       <div>
@@ -1144,7 +1143,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                           style={{
                             display: 'inline-block',
                             fontWeight: 800,
-                            fontSize: '11px',
+                            fontSize: '11.5px',
                             color: DAY_HEADING_BLUE
                           }}
                         >
@@ -1152,7 +1151,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                         </span>
                       </div>
                       {dayMeta(day) && (
-                        <div style={{ fontSize: '8.5px', color: '#000000', fontStyle: 'italic' }}>{dayMeta(day)}</div>
+                        <div style={{ fontSize: '9.5px', color: '#000000', fontStyle: 'italic' }}>{dayMeta(day)}</div>
                       )}
                       {firstText && <div className="qd-rich qd-part" style={{ ...textStyle, margin: '2px 0 0 0' }} dangerouslySetInnerHTML={{ __html: firstText }} />}
                     </div>,
@@ -1406,9 +1405,9 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                     <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '4px' }}>
                       Inclusions
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5px', paddingLeft: '2px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', paddingLeft: '2px' }}>
                       {packageDetails.inclusions.map((inc, i) => (
-                        <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '9.5px', color: '#000000' }}>
+                        <div key={i} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.45 }}>
                           <span style={{ color: '#059669', fontWeight: 800, flexShrink: 0 }}>✓</span>
                           <Line value={inc} />
                         </div>
@@ -1626,7 +1625,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               {/* What this booking adds (a confirmation only): its additional services and its important notes, above the standard terms and policies. */}
               {bookingTexts.map(({ title, pieces }) => [
                 <div key={`${title}-title`} className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0369a1', marginTop: '4px' }}>{title}</div>,
-                ...pieces.map((html, i) => <div key={`${title}-${i}`} className="quotation-keep qd-rich qd-part" style={{ fontSize: '10px', lineHeight: 1.45, color: '#000000', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: html }} />)
+                ...pieces.map((html, i) => <div key={`${title}-${i}`} className="quotation-keep qd-rich qd-part" style={{ fontSize: '10.5px', lineHeight: 1.5, color: '#000000', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: html }} />)
               ])}
               {hasImportantNotes && (
                 <div className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
@@ -1634,7 +1633,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 </div>
               )}
               {importantNotes.map((note, i) => (
-                <div key={i} className="quotation-keep" style={{ fontSize: '10px', color: '#000000', lineHeight: 1.45 }}>
+                <div key={i} className="quotation-keep" style={{ fontSize: '10.5px', color: '#000000', lineHeight: 1.5 }}>
                   {richToPlainText(note).startsWith(`${i + 1}.`) ? '' : `${i + 1}. `}<Line value={note} />
                 </div>
               ))}
@@ -1650,7 +1649,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 </div>
               )}
               {paymentPolicy.map((item, i) => (
-                <div key={`pay-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#000000', lineHeight: 1.45 }}>
+                <div key={`pay-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.5 }}>
                   <span style={{ color: '#0284c7', fontWeight: 800, flexShrink: 0 }}>💳</span>
                   <Line value={item} />
                 </div>
@@ -1661,7 +1660,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 </div>
               )}
               {cancellationPolicy.map((item, i) => (
-                <div key={`can-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#000000', lineHeight: 1.45 }}>
+                <div key={`can-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.5 }}>
                   <span style={{ color: '#d97706', fontWeight: 800, flexShrink: 0 }}>⚠️</span>
                   <Line value={item} />
                 </div>
@@ -1678,7 +1677,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 </div>
               )}
               {exclusions.map((exc, i) => (
-                <div key={`exc-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#000000', lineHeight: 1.45 }}>
+                <div key={`exc-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.5 }}>
                   <span style={{ color: '#dc2626', fontWeight: 800, flexShrink: 0 }}>×</span>
                   <Line value={exc} />
                 </div>
@@ -1689,7 +1688,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 </div>
               )}
               {vehicleNotes.map((vn, i) => (
-                <div key={`vn-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10px', color: '#000000', lineHeight: 1.45 }}>
+                <div key={`vn-${i}`} className="quotation-keep" style={{ display: 'flex', alignItems: 'flex-start', gap: '5px', fontSize: '10.5px', color: '#000000', lineHeight: 1.5 }}>
                   <span style={{ color: '#0f172a', fontWeight: 700, flexShrink: 0 }}>❖</span>
                   <Line value={vn} />
                 </div>

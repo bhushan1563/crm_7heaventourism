@@ -45,7 +45,7 @@ const splitTallPages = (root) => {
     let guard = 0;
     let limit = a4HeightPx(current);
 
-    while (current && current.scrollHeight > limit + 8 && guard < 40) {
+    while (current && current.scrollHeight > limit && guard < 40) {
       guard += 1;
       const flow = current.querySelector('.quotation-flow');
       if (!flow) break;
@@ -54,7 +54,7 @@ const splitTallPages = (root) => {
       if (keeps().length <= 1) break;
 
       const overflow = [];
-      while (current.scrollHeight > limit + 8 && keeps().length > 1) {
+      while (current.scrollHeight > limit && keeps().length > 1) {
         const remaining = keeps();
         const last = remaining[remaining.length - 1];
         overflow.unshift(last);
@@ -254,11 +254,11 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
 
     // One A4 sheet when the section fits. A few millimetres over is scaled
     // onto the sheet; anything taller is continued on the next pages.
-    if (imgHeight <= a4PageHeight + 3) {
+    if (imgHeight <= a4PageHeight + 15) {
       if (!isFirstPdfPage) {
         pdf.addPage('a4', 'portrait');
       }
-      const drawHeight = imgHeight >= a4PageHeight - 8 ? a4PageHeight : imgHeight;
+      const drawHeight = imgHeight >= a4PageHeight - 8 ? a4PageHeight : Math.min(imgHeight, a4PageHeight);
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, drawHeight, undefined, 'FAST');
       isFirstPdfPage = false;
     } else {
@@ -267,7 +267,7 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
       let position = 0;
       let subPage = 0;
 
-      while (heightLeft > 5) {
+      while (heightLeft > 18) {
         if (!isFirstPdfPage) {
           pdf.addPage('a4', 'portrait');
         }
