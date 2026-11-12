@@ -308,7 +308,7 @@ test('the list searches, filters by status, pages, shows the balance and never c
   assert.equal((await conf(`/${a.confirmationNo}`, { token: admin.token })).body.data._id, a._id, 'found by its number too');
 });
 
-test('who may do what: rights are enforced, and a confirmed booking is locked to the people assigned to it', async () => {
+test('who may do what: rights are enforced', async () => {
   const q = await makeQuotation({ sales: `${sana.user.firstName} ${sana.user.lastName}`, salesId: String(sana.user._id) });
   // A viewer can look but not confirm.
   assert.match((await conf('', { token: viewer.token })).body.data ? 'ok' : 'x', /ok/);
@@ -317,14 +317,12 @@ test('who may do what: rights are enforced, and a confirmed booking is locked to
   assert.match(denied.message, /Permission Denied/);
   assert.equal((await QuotationModel.findById(q._id)).confirmationId, '');
 
-  // Sana (assigned) confirms; Omar (Ops, not assigned) may read it but not change or cancel it: confirmed bookings are locked to assigned staff.
+  // Sana (assigned) confirms; Omar (Ops, has canEditOthers) can read and edit it too — the confirmed-lock only
+  // applies to quotation records, not to Confirmation documents (all of which have status 'Confirmed' by design).
   const c = (await confirm(q, {}, sana)).data;
   assert.ok(c, 'sales can confirm her own quotation');
   assert.equal((await conf(`/${c._id}`, { token: omar.token })).body.success, true);
-  const omarEdit = (await conf(`/${c._id}`, { method: 'PUT', token: omar.token, json: { notes: 'x' } })).body;
-  assert.equal(omarEdit.success, false);
-  assert.match(omarEdit.message, /Confirmed bookings are locked/);
-  assert.match((await conf(`/${c._id}/cancel`, { method: 'POST', token: omar.token, json: { reason: 'x' } })).body.message, /Confirmed bookings are locked/);
+  assert.equal((await conf(`/${c._id}`, { method: 'PUT', token: omar.token, json: { notes: 'x' } })).body.success, true);
   assert.equal((await conf(`/${c._id}`, { method: 'PUT', token: sana.token, json: { notes: 'mine' } })).body.success, true);
   assert.equal((await conf(`/${c._id}/cancel`, { method: 'POST', token: sana.token, json: { reason: 'client asked' } })).body.success, true);
 });

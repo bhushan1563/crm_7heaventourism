@@ -65,7 +65,10 @@ export const checkRecordOwnership = (recordFinder) => {
       const isAssignedOps = record.opsId === userId || (record.ops && record.ops.trim().toLowerCase() === userFullName);
       const isAssignedStaff = isCreator || isAssignedSales || isAssignedOps;
 
-      const isConfirmed = record.status === 'Confirmed' || record.status === 'Confirmed & Payment received' || record.isLocked === true;
+      // The confirmed-lock applies to quotations only: for a Confirmation document 'Confirmed' is the normal active
+      // status (all confirmations default to it), so treating it as a lock would block canEditOthers for everyone.
+      const isConfirmed = moduleName !== 'confirmations' &&
+        (record.status === 'Confirmed' || record.status === 'Confirmed & Payment received' || record.isLocked === true);
 
       // If confirmed booking, lock for specific staff only (Admin already bypassed above)
       if (isConfirmed && !isAssignedStaff) {
