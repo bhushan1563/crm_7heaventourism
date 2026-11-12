@@ -159,7 +159,10 @@ export const AuthProvider = ({ children }) => {
     const isOps = record.opsId === user._id || (record.ops && record.ops.toLowerCase() === userFullName);
     const isAssignedStaff = isCreator || isSales || isOps;
 
-    const isConfirmedBooking = record.status === 'Confirmed' || record.status === 'Confirmed & Payment received' || record.isLocked === true;
+    // The confirmed-lock only applies to quotation records; for a Confirmation document,
+    // 'Confirmed' is the normal active status (all active confirmations default to it), not a lock.
+    const isConfirmedBooking = moduleName !== 'confirmations' &&
+      (record.status === 'Confirmed' || record.status === 'Confirmed & Payment received' || record.isLocked === true);
 
     // If booking is Confirmed / Locked, restrict exclusively to assigned staff and Admin
     if (isConfirmedBooking) {
