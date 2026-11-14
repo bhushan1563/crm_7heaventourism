@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { balanceOf, blankDetail, blankTraveller, bookingErrors, bookingPayload, bookingView, confirmBlockedReason, firstErrorKey, formFromConfirmation, isFullyPaid, needsOptionChoice, quotationOf, toDateInput } from './confirmation';
+import { balanceOf, blankDetail, blankTraveller, bookingErrors, bookingPayload, bookingView, confirmBlockedReason, firstErrorKey, formFromConfirmation, isFullyPaid, needsOptionChoice, quotationOf, returnDate, toDateInput } from './confirmation';
 
 const form = (over = {}) => ({ travelDate: '2027-04-10', travellers: [{ name: 'Aarav', age: '41', passportNo: 'Z1', notes: '' }], payment: { totalAmount: 120000, received: 40000, balanceDueDate: '2027-03-01', note: '' }, notes: '', customFields: [], ...over });
 
@@ -183,5 +183,33 @@ describe('durationText', () => {
     expect(durationText('4 Nights / 5 Days')).toBe('4 Nights / 5 Days');
     expect(durationText(undefined)).toBe('');
     expect(quotationOf({ quote: { duration: '7' } }).duration).toBe('7 Nights');
+  });
+});
+
+describe('returnDate', () => {
+  it('is the travel date plus the nights, whichever way the duration is written', () => {
+    expect(returnDate('2026-12-01', '7 Nights / 8 Days')).toBe('2026-12-08');
+    expect(returnDate('2026-12-01T00:00:00.000Z', '7 Nights / 8 Days')).toBe('2026-12-08');
+    expect(returnDate('2026-12-01', '7')).toBe('2026-12-08'); // a bare number is the nights
+    expect(returnDate('2026-12-01', '1 night')).toBe('2026-12-02');
+    expect(returnDate('2026-12-01', '8 Days')).toBe('2026-12-08'); // days are nights plus one
+    expect(returnDate('2026-12-28', '5 Nights / 6 Days')).toBe('2027-01-02'); // over the end of the year
+    expect(returnDate('2028-02-27', '3 Nights')).toBe('2028-03-01'); // over a leap day
+  });
+  it('is empty when the date or the length is missing or makes no sense', () => {
+    for (const [date, length] of [[null, '7 Nights'], ['', '7 Nights'], ['not a date', '7 Nights'], ['2026-12-01', ''], ['2026-12-01', 'a week'], ['2026-12-01', '0 Nights'], ['2026-12-01', '1 Day'], ['2026-12-01', '9999 Nights'], [undefined, undefined]]) {
+      expect(returnDate(date, length)).toBe('');
+    }
+  });
+  it('property: it never throws and is a later day than the travel date, or nothing', () => {
+    fc.assert(
+      fc.property(fc.oneof(fc.constant(null), fc.string(), fc.date({ min: new Date('2000-01-01'), max: new Date('2100-01-01') }).map((d) => d.toISOString())), fc.string(), (date, length) => {
+        const end = returnDate(date, length);
+        if (end) {
+          expect(end).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+          expect(end > String(date).slice(0, 10)).toBe(true);
+        }
+      })
+    );
   });
 });

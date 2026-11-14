@@ -49,6 +49,24 @@ export const durationText = (duration) => {
   return `${n} ${n === 1 ? 'Night' : 'Nights'}`;
 };
 
+const nightsOf = (duration) => {
+  const text = String(duration ?? '').trim();
+  const nights = text.match(/(\d+)\s*nights?\b/i);
+  if (nights) return Number(nights[1]);
+  if (/^\d+$/.test(text)) return Number(text); // a bare number is the nights, as durationText reads it
+  const days = text.match(/(\d+)\s*days?\b/i);
+  return days ? Number(days[1]) - 1 : 0;
+};
+
+/** The day the trip ends: the travel date plus the nights of the duration ("7 Nights / 8 Days", "7", "8 Days"), as yyyy-mm-dd; '' when either is not known. */
+export const returnDate = (travelDate, duration) => {
+  const start = String(travelDate ?? '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const nights = nightsOf(duration);
+  if (!start || nights < 1 || nights > 365) return '';
+  const end = new Date(Date.UTC(Number(start[1]), Number(start[2]) - 1, Number(start[3]) + nights));
+  return Number.isNaN(end.getTime()) ? '' : end.toISOString().slice(0, 10);
+};
+
 /** A stored date as the value of a date input (yyyy-mm-dd), or ''. */
 export const toDateInput = (value) => (value ? String(value).slice(0, 10) : '');
 

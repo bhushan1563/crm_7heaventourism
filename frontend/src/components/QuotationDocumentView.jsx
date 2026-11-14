@@ -15,6 +15,7 @@ import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableLayout
 import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../utils/roomTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
+import { HEADER_TAGLINE, headerTagline } from '../utils/companyHeader';
 
 // Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
 // markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
@@ -722,7 +723,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const company = quotation.companyDetails || {
     name: '7Heaven Tourism',
     tagline: 'Travel with Trust',
-    description: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings',
+    description: HEADER_TAGLINE,
     address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
     phone: '+91 7862829178',
     email: 'sales@7heaventourism.in',
@@ -833,7 +834,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
           border: '1px solid #ffe4e6'
         }}
       >
-        ★ {company.description || 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings'} ★
+        ★ {headerTagline(company.description)} ★
       </div>
     </div>
   );
@@ -1054,16 +1055,46 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     );
   };
 
+  // What goes ahead of the quotation (a booking confirmation's booking details) is laid at the top of the first page the quotation has, so the
+  // quotation follows straight under it. Only when the quotation has no such page does it get a page of its own.
+  const showsPage1 = (!pageNumber || pageNumber === 1) && !isVisaQuotation && (hasItinerary || quotationType !== 'Only Hotel');
+  const showsPage2 = (!pageNumber || pageNumber === 2) && (hasPackageSection || hasPriceTables || (hasPricingSection && !hasFlightSection));
+  const bookingHost = !before || pageNumber ? 0 : showsPage1 ? 1 : showsPage2 ? 2 : 0;
+  const bookingParts = { id, DocumentHeader, DocumentFooter, pageContainerStyle };
+  const bookingSection = (host) => (bookingHost === host ? before({ ...bookingParts, inline: true }) : null);
+
+  const itineraryBar = (style = {}) => (
+    <div
+      style={{
+        backgroundColor: '#fef08a',
+        border: '1px solid #facc15',
+        borderRadius: '4px',
+        padding: '5px 12px',
+        textAlign: 'center',
+        fontWeight: 800,
+        fontSize: '12px',
+        color: '#0f172a',
+        letterSpacing: '0.12em',
+        marginBottom: '12px',
+        ...style
+      }}
+    >
+      {quotationType === 'Events / Corporate' ? 'EVENT & TOUR SCHEDULE' : 'ITINERARY'}
+    </div>
+  );
+
   return (
     <div id={id} className="quotation-doc-container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '24px' }}>
-      {before && before({ id, DocumentHeader, DocumentFooter, pageContainerStyle })}
+      {before && !bookingHost && before(bookingParts)}
       {/* ================= PAGE 1: ITINERARY & TOUR OVERVIEW ================= */}
-      {(!pageNumber || pageNumber === 1) && !isVisaQuotation && (hasItinerary || quotationType !== 'Only Hotel') && (
+      {showsPage1 && (
         <div className="quotation-page" id={`${id}-page-1`} style={pageContainerStyle}>
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <DocumentHeader />
 
-            {/* Destination Header Banner */}
+            {/* Destination Header Banner and the client line: a booking confirmation has them in its booking details instead */}
+            {bookingHost !== 1 && (
+            <>
             <div style={{ textAlign: 'center', margin: '4px 0 12px 0' }}>
               <h2
                 style={{
@@ -1117,33 +1148,22 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
               </div>
             </div>
 
-            {/* ITINERARY Bar */}
-            <div
-              style={{
-                backgroundColor: '#fef08a',
-                border: '1px solid #facc15',
-                borderRadius: '4px',
-                padding: '5px 12px',
-                textAlign: 'center',
-                fontWeight: 800,
-                fontSize: '12px',
-                color: '#0f172a',
-                letterSpacing: '0.12em',
-                marginBottom: '12px'
-              }}
-            >
-              {quotationType === 'Events / Corporate' ? 'EVENT & TOUR SCHEDULE' : 'ITINERARY'}
-            </div>
+            {/* ITINERARY Bar (in a booking confirmation it travels with the first day, below the booking details) */}
+            {itineraryBar()}
+            </>
+            )}
 
             {/* Day-by-Day List. A day is laid out as pieces (its heading with the first lines, then the rest of its text a paragraph, a line or a list item at a time),
                 so a long day continues on the same page and over the next A4 pages instead of moving whole and leaving the page blank. */}
             <div className="quotation-flow" style={{ display: 'flex', flexDirection: 'column', marginBottom: '14px' }}>
+              {bookingSection(1)}
               {itinerary.length > 0 ? (
                 itinerary.flatMap((day, idx) => {
                   const [firstText, ...moreText] = day.description ? splitDisplayBlocks(toDocumentHtml(day.description)) : [];
                   const textStyle = { fontSize: '10.5px', lineHeight: '1.5', color: '#000000', textAlign: 'left' };
                   return [
                     <div key={`${idx}-day`} className="quotation-keep" style={{ display: 'flex', flexDirection: 'column', gap: '3px', marginTop: idx ? '10px' : 0 }}>
+                      {idx === 0 && bookingHost === 1 && itineraryBar({ marginTop: '14px', marginBottom: '9px' })}
                       <div>
                         <span
                           style={{
@@ -1180,6 +1200,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                     borderRadius: '6px'
                   }}
                 >
+                  {bookingHost === 1 && itineraryBar({ marginBottom: '10px', fontStyle: 'normal' })}
                   Detailed day-wise itinerary will be customized as per guest preference.
                 </div>
               )}
@@ -1221,7 +1242,8 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <DocumentHeader />
 
-            {/* Destination & Reference Sub-bar */}
+            {/* Destination & Reference Sub-bar (a booking confirmation that starts on this page has them in its booking details instead) */}
+            {bookingHost !== 2 && (
             <div
               style={{
                 display: 'flex',
@@ -1241,8 +1263,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 {quotation.paxDetails && <span> • Pax: <strong style={{ color: '#0f172a' }}>{quotation.paxDetails}</strong></span>}
               </div>
             </div>
+            )}
 
             <div className="quotation-flow" style={{ display: 'flex', flexDirection: 'column' }}>
+            {bookingSection(2)}
             {/* Section: Hotel / Package Details */}
             {hasPackageSection && (
               <div style={{ marginBottom: '14px' }}>

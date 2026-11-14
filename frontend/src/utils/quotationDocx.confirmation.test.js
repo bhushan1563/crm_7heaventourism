@@ -85,3 +85,14 @@ describe('the Word file of a booking confirmation', () => {
     for (const text of ['Payment', 'Total amount', 'Rs 1,20,000', 'Balance to pay', 'Rs 80,000', 'Advance by cheque', 'Pricing', 'Grand Total', 'Rs 50,000']) expect(plain).toContain(text);
   });
 });
+
+describe('the trip details of the Word file of a booking', () => {
+  it('are a "Trip Details" table in the order of the page: guest, destination, dates, duration, guests, confirmation number', async () => {
+    const plain = await open(booking({ duration: '7 Nights / 8 Days', travelDate: '2026-12-01T00:00:00.000Z', quote: { ...booking().quote, duration: '7 Nights / 8 Days' } }));
+    const table = plain.slice(plain.indexOf('Trip Details'));
+    const at = ['Trip Details', 'Guest', 'Destination', 'Travel date', '01 Dec 2026', 'Return date', '08 Dec 2026', 'Duration', '7 Nights / 8 Days', 'Guests', '2 Adults', 'Confirmation No.', '7H-CF-2026-001'].map((t) => table.indexOf(t));
+    expect(at.every((n) => n >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at);
+    expect(plain).not.toContain('Confirmation Details');
+  });
+});

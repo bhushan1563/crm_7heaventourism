@@ -24,22 +24,98 @@ const view = (c, form) => render(
 );
 
 describe('the booking confirmation document', () => {
-  it('opens with the booking page, then carries the quotation as it was sold, all numbered with the confirmation number', () => {
+  it('opens with the booking details at the top of the first page, the quotation as it was sold right under them, all numbered with the confirmation number', () => {
     const { container } = view(confirmation({ showPricing: true }));
     const pages = [...container.querySelectorAll('.quotation-page')];
-    expect(pages[0].id).toMatch(/-booking$/);
-    expect(pages.length).toBeGreaterThanOrEqual(3); // booking page, itinerary, package/price
+    expect(pages[0].id).toMatch(/-page-1$/); // no page of its own for the booking: it would stay half empty
+    expect(container.querySelectorAll('.quotation-page[id$="-booking"]')).toHaveLength(0);
+    expect(pages.length).toBeGreaterThanOrEqual(2); // itinerary with the booking on top, package/price
     expect(pages[0]).toHaveTextContent('Booking Confirmation');
-    expect(container).toHaveTextContent('Arrival in Jaipur');
+    expect(pages[0]).toHaveTextContent('Arrival in Jaipur'); // the itinerary starts on the same page
     expect(container).toHaveTextContent('Rs 60,000 Per person');
-    expect(container.querySelector('.quotation-doc-container > .quotation-page:first-child')).toBe(pages[0]); // the booking page is the first page, as the print rules expect
+    expect(container.querySelector('.quotation-doc-container > .quotation-page:first-child')).toBe(pages[0]);
     for (const p of pages) expect(p).toHaveTextContent('Ref: 7H-CF-2026-001');
+  });
+
+  it('lays the booking details, then the ITINERARY bar, then the days one under the other on the first page, without saying the destination twice', () => {
+    const { container } = view(confirmation({ travellers: [{ name: 'Aarav Mehta', age: 41, passportNo: 'Z1', notes: '' }], notes: '<p>Airport pick-up at 10:30</p>' }));
+    const first = container.querySelector('[id$="-page-1"]');
+    const text = first.textContent;
+    const order = ['Booking Confirmation', 'Trip Details', 'Travellers', 'Notes', 'ITINERARY', 'Day 01: Arrival in Jaipur'].map((t) => text.indexOf(t));
+    expect(order.every((n) => n >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(first.querySelectorAll('h2')).toHaveLength(1); // one title: Booking Confirmation (the destination banner of a quotation is left out)
+    expect(first.textContent.match(/Trip Details/g)).toHaveLength(1);
+    // every block is a direct part of the page's flow, so the PDF can carry it over to the next sheet when the page is full
+    const flow = first.querySelector('.quotation-flow');
+    const booking = first.querySelector('[id$="-booking"]');
+    expect(flow).toContainElement(booking);
+    expect(booking).toHaveStyle({ display: 'contents' });
+    expect(booking.querySelectorAll('.quotation-keep').length).toBeGreaterThan(3);
+    expect(first).toHaveTextContent('Mob:'); // the footer of the page is still there, once
+    expect(first.textContent.match(/Mob:/g)).toHaveLength(1);
+  });
+
+  it('shows the trip as a Trip Details table, larger than before: the name of each fact on the left, the fact on the right, one line each', () => {
+    const { container } = view(confirmation({ duration: '7 Nights / 8 Days', travelDate: '2026-12-01T00:00:00.000Z', optionName: '' }));
+    const first = container.querySelector('[id$="-booking"]');
+    const heading = [...first.querySelectorAll('h3')].find((h) => h.textContent === 'Trip Details');
+    expect(heading).toHaveStyle({ fontSize: '14px', textTransform: 'uppercase' });
+    const rows = [...first.querySelectorAll('.quotation-keep')].filter((el) => el.children.length === 2 && el.children[0].tagName === 'STRONG');
+    expect(rows.map((r) => [r.children[0].textContent, r.children[1].textContent])).toEqual([
+      ['Guest', 'Aarav Mehta'],
+      ['Destination', 'RAJASTHAN'],
+      ['Travel Date', '01 Dec 2026'],
+      ['Return Date', '08 Dec 2026'], // the travel date and the seven nights
+      ['Duration', '7 Nights / 8 Days'],
+      ['Guests', '2 Adults'],
+      ['Confirmation No.', '7H-CF-2026-001'],
+      ['Quotation No.', '7H-QT-2026-004'],
+      ['Confirmed On', '01 Nov 2026']
+    ]);
+    for (const row of rows) expect(row).toHaveStyle({ fontSize: '12.5px' });
+  });
+
+  it('leaves out the Return Date when the trip has no travel date or no length', () => {
+    const labels = (c) => {
+      const { container } = view(c);
+      const names = [...container.querySelectorAll('[id$="-booking"] .quotation-keep > strong')].map((s) => s.textContent);
+      cleanup();
+      return names;
+    };
+    expect(labels(confirmation({ travelDate: null, duration: '7 Nights / 8 Days' }))).not.toContain('Return Date');
+    expect(labels(confirmation({ travelDate: '2026-12-01T00:00:00.000Z', duration: '' }))).not.toContain('Return Date');
+    expect(labels(confirmation({ travelDate: '2026-12-01T00:00:00.000Z', duration: '7 Nights / 8 Days' }))).toContain('Return Date');
+  });
+
+  it('keeps the ITINERARY bar with the first day, so the PDF never leaves the bar alone at the bottom of a sheet', () => {
+    const { container } = view(confirmation());
+    const first = container.querySelector('[id$="-page-1"]');
+    const piece = [...first.querySelectorAll('.quotation-flow .quotation-keep')].find((el) => el.textContent.includes('Day 01'));
+    expect(piece).toHaveTextContent('ITINERARY');
+    expect(first.textContent.match(/ITINERARY/g)).toHaveLength(1);
+  });
+
+  it('starts on the package details page when the quotation has no itinerary page, and gives the booking a page of its own only when it has neither', () => {
+    const only = (quote) => view(confirmation({ quote: { quotationNo: '7H-QT-2026-004', quotationType: 'Only Hotel', clientName: 'Aarav Mehta', destination: 'UDAIPUR', paxDetails: '2 Adults', ...quote } }));
+    const stay = only({ packageDetails: { hotels: [{ hotelName: 'Hotel Sunrise', city: 'Udaipur', address: 'Lake Road', checkInDate: '2027-04-10', checkOutDate: '2027-04-12', nights: '2 Nights' }], inclusions: [] } });
+    const pages = [...stay.container.querySelectorAll('.quotation-page')];
+    expect(pages[0].id).toMatch(/-page-2$/);
+    expect(pages[0]).toHaveTextContent('Booking Confirmation');
+    expect(pages[0]).toHaveTextContent('Hotel Sunrise');
+    expect(stay.container.querySelectorAll('.quotation-page[id$="-booking"]')).toHaveLength(0);
+    cleanup();
+    const bare = only({ packageDetails: { hotels: [], inclusions: [] } });
+    const own = bare.container.querySelector('.quotation-page[id$="-booking"]');
+    expect(own).not.toBeNull(); // nothing to put it on: the old page of its own
+    expect(own).toHaveTextContent('Booking Confirmation');
+    expect(bare.container.querySelector('.quotation-doc-container > .quotation-page:first-child')).toBe(own);
   });
 
   it('leaves out the payment and every price unless the booking says the voucher shows them', () => {
     const { container } = view(confirmation());
     const page = document.querySelector('[id$="-booking"]');
-    for (const text of ['Aarav Mehta', 'Anaya Mehta', 'Booking Confirmation', 'Confirmation Details']) expect(page).toHaveTextContent(text);
+    for (const text of ['Aarav Mehta', 'Anaya Mehta', 'Booking Confirmation', 'Trip Details']) expect(page).toHaveTextContent(text);
     for (const text of ['Payment', 'Total amount', 'Received', 'Balance to pay', 'Fully paid', 'Rs 1,20,000', 'Rs 40,000', 'Rs 80,000', 'Balance due by', 'Advance by cheque']) expect(page).not.toHaveTextContent(text);
     expect(container).toHaveTextContent('Arrival in Jaipur'); // the trip itself is all there
     for (const text of ['Rs 60,000', 'Per person', 'Grand Total', 'Pricing Breakdown', '1,20,000']) expect(container).not.toHaveTextContent(text);

@@ -6,6 +6,7 @@ import { formatDate, formatLongDate } from './dateHelper';
 import { dayMeta, richBlocks } from './itineraryDoc';
 import { toDocxColor, toHalfPoints } from './itineraryDocx';
 import { shareFileName } from './shareContact';
+import { returnDate, toDateInput } from './confirmation';
 import { feeAmount, visaFeeTotal } from './visa';
 import { addressLine } from './hotelStay';
 import { shownPriceNote } from './pricingNote';
@@ -362,19 +363,21 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   children.push(new d.Paragraph({ spacing: { after: 160 }, children: [run(quotation.destination || '', { bold: true, size: 28, color: '0F172A' })] }));
 
   // ---- confirmation details ----
+  const tripStart = view?.travelDate || quotation.travelDate;
   const detailRows = [
-    ['Confirmation No', info.no || confirmation?.confirmationNo],
-    ['Client', quotation.clientName],
+    ['Guest', quotation.clientName],
     ['Destination', quotation.destination],
-    ['Guests', quotation.paxDetails],
-    ['Travel date', formatDate2(view?.travelDate || quotation.travelDate)],
+    ['Travel date', formatDate2(tripStart)],
+    ['Return date', formatDate2(returnDate(toDateInput(tripStart), quotation.duration))],
     ['Duration', quotation.duration],
+    ['Guests', quotation.paxDetails],
+    ['Confirmation No.', info.no || confirmation?.confirmationNo],
     ['Hotel option', info.optionName || confirmation?.optionName],
     ['Original quotation', confirmation?.quotationNo],
   ].filter(([, v]) => v);
   if (detailRows.length) {
-    const widths = [Math.round(CONTENT * 0.30), CONTENT - Math.round(CONTENT * 0.30)];
-    children.push(heading('Confirmation Details'), tbl(detailRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
+    const widths = [Math.round(CONTENT * 0.40), CONTENT - Math.round(CONTENT * 0.40)];
+    children.push(heading('Trip Details'), tbl(detailRows.map(([label, value]) => trow([cell([run(label, { bold: true, color: '000000' })], { width: widths[0], fill: 'F1F5F9' }), cell([run(value)], { width: widths[1] })])), widths));
   }
 
   // ---- hotels (with booking confirmation numbers) ----

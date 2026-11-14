@@ -198,7 +198,7 @@ const quotationSchema = new mongoose.Schema({
   companyDetails: {
     name: { type: String, default: '7HEAVEN TOURISM' },
     tagline: { type: String, default: 'Travel with Trust' },
-    description: { type: String, default: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings' },
+    description: { type: String, default: 'YOUR JOURNEY BEGINS HERE' },
     address: { type: String, default: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara' },
     phone: { type: String, default: '+91 7862829178' },
     email: { type: String, default: 'sales@7heaventourism.in' },

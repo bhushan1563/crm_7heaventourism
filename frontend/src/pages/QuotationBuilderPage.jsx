@@ -85,6 +85,7 @@ import hotelService from '../services/hotelService';
 import { detailsFrom, insertItinerary, mergeLines, plainLines } from '../utils/itineraryInsert';
 import { blankStay, hotelDestination, hotelQuotationProblem, isPlaceholderTitle, quotationFromHotel, stayFromHotel } from '../utils/hotelStay';
 import { AMENITY_RULES } from '../utils/hotel';
+import { HEADER_TAGLINE, headerTagline } from '../utils/companyHeader';
 import './quotationHotels.css';
 import '../components/confirmation/confirmation.css';
 
@@ -120,7 +121,7 @@ const tabsFor = (quotation) => {
 const DEFAULT_COMPANY = {
   name: '7HEAVEN TOURISM',
   tagline: 'Travel with the Trust',
-  description: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings',
+  description: HEADER_TAGLINE,
   address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
   phone: '+91 7862829178',
   email: 'sales@7heaventourism.in',
@@ -2910,7 +2911,7 @@ export const QuotationBuilderPage = () => {
                     <input
                       type="text"
                       className="form-input"
-                      value={formData.companyDetails?.description || 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings'}
+                      value={headerTagline(formData.companyDetails?.description)}
                       onChange={(e) => setFormData({
                         ...formData,
                         companyDetails: { ...formData.companyDetails, description: e.target.value }

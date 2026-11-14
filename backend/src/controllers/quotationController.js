@@ -355,7 +355,7 @@ export const convertFromInquiry = async (req, res) => {
       companyDetails: {
         name: '7HEAVEN TOURISM',
         tagline: 'Travel with Trust',
-        description: 'Tour Package, Visa Service, Flight Tickets, Cruises & Hotel Bookings',
+        description: 'YOUR JOURNEY BEGINS HERE',
         address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
         phone: '+91 7862829178',
         email: 'sales@7heaventourism.in',

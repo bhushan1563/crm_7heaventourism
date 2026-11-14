@@ -1,12 +1,12 @@
 import React from 'react';
 import { toDocumentHtml } from '../../utils/richText';
-import { formatDate } from '../../utils/dateHelper';
-import { durationText } from '../../utils/confirmation';
+import { formatDate, formatLongDate } from '../../utils/dateHelper';
+import { durationText, returnDate } from '../../utils/confirmation';
 
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
 const Heading = ({ children }) => (
-  <h3 className="quotation-keep" style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', borderBottom: '1.5px solid #e2e8f0', paddingBottom: '3px', margin: '14px 0 8px' }}>
+  <h3 className="quotation-keep" style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #cbd5e1', paddingBottom: '5px', margin: '18px 0 8px' }}>
     {children}
   </h3>
 );
@@ -15,55 +15,58 @@ const Heading = ({ children }) => (
  * The first page of a booking confirmation: who and where, the travellers, what has been paid and what is due, the additional
  * details and the notes. The quotation pages follow it. `DocumentHeader`, `DocumentFooter` and `pageContainerStyle` come from the
  * quotation document so the page looks like the rest; `view` is the booking information (see `bookingView`).
+ *
+ * `inline` draws only its content, with no page, header or footer of its own: the quotation document then puts it at the top of its first
+ * page, so the itinerary follows straight under the booking details instead of starting on a new sheet and leaving this one half empty.
  */
-export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFooter, pageContainerStyle }) => {
+export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFooter, pageContainerStyle, inline = false }) => {
   const cancelled = confirmation.status === 'Cancelled';
+  // The trip at a glance: one line for each fact, the name of the fact on the left and the fact on the right.
   const facts = [
-    ['Confirmation no', confirmation.confirmationNo],
-    ['Client', confirmation.clientName],
+    ['Guest', confirmation.clientName],
     ['Destination', confirmation.destination],
+    ['Travel Date', view.travelDate ? formatLongDate(view.travelDate) : ''],
+    ['Return Date', formatLongDate(returnDate(view.travelDate, confirmation.duration))],
     ['Duration', durationText(confirmation.duration)],
-    ['Travel date', view.travelDate ? formatDate(view.travelDate) : ''],
     ['Guests', confirmation.paxDetails],
-    ['Hotel option', confirmation.optionName],
-    ['Quotation', confirmation.quotationNo],
-    ['Confirmed on', confirmation.confirmedAt ? formatDate(confirmation.confirmedAt) : '']
+    ['Confirmation No.', confirmation.confirmationNo],
+    ['Hotel Option', confirmation.optionName],
+    ['Quotation No.', confirmation.quotationNo],
+    ['Confirmed On', confirmation.confirmedAt ? formatLongDate(confirmation.confirmedAt) : '']
   ].filter(([, value]) => value);
-  const cell = { padding: '4px 6px', fontSize: '9.5px', color: '#000000' };
+  const cell = { padding: '5px 7px', fontSize: '11px', color: '#000000' };
   const travellerColumns = '0.4fr 3fr 0.7fr 1.6fr 2.2fr';
   const contactColumns = '1.4fr 2.4fr 2.2fr';
   const pay = view.payment;
 
-  return (
-    <div className="quotation-page" id={`${id}-booking`} style={pageContainerStyle}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-        <DocumentHeader />
-
-        <div style={{ textAlign: 'center', margin: '4px 0 10px' }}>
+  const content = (
+    <>
+        <div className="quotation-keep" style={{ textAlign: 'center', margin: '4px 0 10px' }}>
           <h2 style={{ fontSize: '19px', fontWeight: 800, color: cancelled ? '#b91c1c' : '#047857', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>Booking Confirmation</h2>
           <div style={{ fontSize: '12px', fontWeight: 700, color: '#0f172a', marginTop: '3px' }}>{confirmation.destination}</div>
         </div>
 
         {cancelled && (
-          <div className="quotation-keep" style={{ marginBottom: '10px', padding: '6px 10px', border: '1.5px solid #fecaca', borderRadius: '6px', backgroundColor: '#fef2f2', color: '#b91c1c', fontSize: '10px', fontWeight: 700, textAlign: 'center' }}>
+          <div className="quotation-keep" style={{ marginBottom: '10px', padding: '6px 10px', border: '1.5px solid #fecaca', borderRadius: '6px', backgroundColor: '#fef2f2', color: '#b91c1c', fontSize: '11px', fontWeight: 700, textAlign: 'center' }}>
             THIS BOOKING WAS CANCELLED{confirmation.cancelReason ? `: ${confirmation.cancelReason}` : ''}
           </div>
         )}
 
-        <Heading>Confirmation Details</Heading>
-        <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '3px 14px', padding: '6px 9px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#000000' }}>
-          {facts.map(([label, value]) => (
-            <div key={label}>
-              <strong style={{ color: '#0f172a' }}>{label}:</strong> {value}
-            </div>
-          ))}
-        </div>
+        <h3 className="quotation-keep" style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '0.03em', textTransform: 'uppercase', color: '#0f172a', borderBottom: '1.5px solid #cbd5e1', paddingBottom: '5px', margin: '14px 0 0' }}>
+          Trip Details
+        </h3>
+        {facts.map(([label, value]) => (
+          <div key={label} className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: '40% 60%', alignItems: 'baseline', padding: '6px 4px', borderBottom: '1px solid #e2e8f0', fontSize: '12.5px', color: '#000000' }}>
+            <strong style={{ color: '#0f172a' }}>{label}</strong>
+            <span>{value}</span>
+          </div>
+        ))}
 
         {view.travellers.length > 0 && (
           <>
             <Heading>Travellers</Heading>
             <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: travellerColumns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: travellerColumns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 {['#', 'Name', 'Age', 'Passport no.', 'Note'].map((h) => (
                   <div key={h} style={{ padding: '5px 6px' }}>{h}</div>
                 ))}
@@ -85,7 +88,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
           <>
             <Heading>Contacts</Heading>
             <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: contactColumns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '8.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: contactColumns, backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9.5px', fontWeight: 800, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
                 {['Role', 'Name', 'Contact number'].map((h) => (
                   <div key={h} style={{ padding: '5px 6px' }}>{h}</div>
                 ))}
@@ -108,18 +111,18 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         <Heading>Payment</Heading>
         <div className="quotation-keep" style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
           {[['Total amount', rs(pay.totalAmount)], ['Received', rs(pay.received)]].map(([label, value], i) => (
-            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px', fontSize: '10px', borderTop: i ? '1px solid #e2e8f0' : 'none', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff' }}>
+            <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px', fontSize: '11.5px', borderTop: i ? '1px solid #e2e8f0' : 'none', backgroundColor: i % 2 ? '#f8fafc' : '#ffffff' }}>
               <span style={{ color: '#000000' }}>{label}</span>
               <strong style={{ color: '#0f172a' }}>{value}</strong>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', fontSize: '11.5px', fontWeight: 800, color: '#0f172a', borderTop: '2px solid #0f172a', backgroundColor: pay.balance > 0 ? '#fef9c3' : '#ecfdf5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 10px', fontSize: '12.5px', fontWeight: 800, color: '#0f172a', borderTop: '2px solid #0f172a', backgroundColor: pay.balance > 0 ? '#fef9c3' : '#ecfdf5' }}>
             <span>{pay.balance > 0 ? 'Balance to pay' : 'Fully paid'}</span>
             <span>{pay.balance > 0 ? rs(pay.balance) : rs(0)}</span>
           </div>
         </div>
         {(pay.balance > 0 && pay.balanceDueDate) || pay.note ? (
-          <div className="quotation-keep" style={{ fontSize: '9.5px', color: '#000000', marginTop: '4px' }}>
+          <div className="quotation-keep" style={{ fontSize: '11px', color: '#000000', marginTop: '4px' }}>
             {pay.balance > 0 && pay.balanceDueDate && <div><strong style={{ color: '#0f172a' }}>Balance due by:</strong> {formatDate(pay.balanceDueDate)}</div>}
             {pay.note && <div><strong style={{ color: '#0f172a' }}>Note:</strong> {pay.note}</div>}
           </div>
@@ -130,7 +133,7 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         {view.customFields.length > 0 && (
           <>
             <Heading>Additional Details</Heading>
-            <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '3px 14px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '9.5px', color: '#000000' }}>
+            <div className="quotation-keep" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '3px 14px', padding: '6px 9px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '11px', color: '#000000' }}>
               {view.customFields.map((f, i) => (
                 <div key={i}>
                   <strong style={{ color: '#0f172a' }}>{f.label}:</strong> {f.value || '–'}
@@ -143,9 +146,21 @@ export const BookingPage = ({ confirmation, view, id, DocumentHeader, DocumentFo
         {view.notes && (
           <>
             <Heading>Notes</Heading>
-            <div className="qd-rich" style={{ fontSize: '9.5px', lineHeight: '1.45', color: '#000000' }} dangerouslySetInnerHTML={{ __html: toDocumentHtml(view.notes) }} />
+            <div className="qd-rich" style={{ fontSize: '11px', lineHeight: '1.45', color: '#000000' }} dangerouslySetInnerHTML={{ __html: toDocumentHtml(view.notes) }} />
           </>
         )}
+    </>
+  );
+
+  // `display: contents` keeps the wrapper (and its id) out of the layout: each block is a direct part of the page's flow, so the PDF can
+  // carry it over to the next sheet when the page is full.
+  if (inline) return <div id={`${id}-booking`} style={{ display: 'contents' }}>{content}</div>;
+
+  return (
+    <div className="quotation-page" id={`${id}-booking`} style={pageContainerStyle}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <DocumentHeader />
+        {content}
       </div>
       <DocumentFooter />
     </div>
