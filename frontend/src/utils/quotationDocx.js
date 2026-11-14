@@ -509,6 +509,13 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
 
   if (inclusions.length) children.push(heading('Inclusions'), ...bullets(inclusions));
 
+  // ---- the booking's additional services: straight under the inclusions ----
+  const additionalServices = htmlToParagraphs(view?.additionalServices || '');
+  if (additionalServices.length) {
+    children.push(new d.Paragraph({ keepNext: true, spacing: { before: 140, after: 40 }, children: [run('Additional Services', { bold: true, color: BRAND })] }));
+    for (const p of additionalServices) children.push(new d.Paragraph({ spacing: { after: 20 }, children: [run(p)] }));
+  }
+
   // ---- pricing ----
   if (priceTables.length) {
     children.push(heading('Pricing'));
@@ -565,14 +572,14 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
   }
 
   // ---- general policy (the last page): what the booking adds, then the standard terms, the policies and the exclusions ----
-  const bookingTexts = [['Additional Services', view?.additionalServices], ['Important Notes', view?.importantNotes]]
+  const bookingTexts = [['Important Notes', view?.importantNotes]]
     .map(([title, html]) => [title, htmlToParagraphs(html || '')])
     .filter(([, paragraphs]) => paragraphs.length);
   const hasStandard = ['importantNotes', 'paymentPolicy', 'cancellationPolicy', 'exclusions'].some((key) => (quotation[key] || []).filter((x) => x).length);
   if (bookingTexts.length || hasStandard) children.push(new d.Paragraph({ children: [], pageBreakBefore: true }), heading('General Policy'));
   for (const [title, paragraphs] of bookingTexts) {
     children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run(title, { bold: true, color: BRAND })] }));
-    for (const p of paragraphs) children.push(new d.Paragraph({ spacing: { after: 30 }, children: [run(p)] }));
+    for (const p of paragraphs) children.push(new d.Paragraph({ spacing: { after: 20 }, children: [run(p)] }));
   }
   if ((quotation.importantNotes || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Terms', { bold: true, color: BRAND })] }), ...numbered(quotation.importantNotes));
   if ((quotation.paymentPolicy || []).filter((x) => x).length) children.push(new d.Paragraph({ keepNext: true, spacing: { before: 100, after: 40 }, children: [run('Payment Policy', { bold: true, color: BRAND })] }), ...bullets(quotation.paymentPolicy));

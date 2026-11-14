@@ -26,6 +26,9 @@ const DAY_TEXT_CSS = `
 .qd-rich > :last-child { margin-bottom: 0; }
 /* One piece of a longer text, laid under the one before it: it keeps the space a paragraph has under it. */
 .qd-part > :last-child { margin-bottom: 5px; }
+/* A booking's own lines (additional services, important notes) sit close together, one line under the next. */
+.qd-booking.qd-part > :last-child { margin-bottom: 1px; }
+.qd-booking li { margin: 0; }
 .qd-rich mark { padding: 0 1px; border-radius: 2px; color: #111827; }
 .qd-rich [style^="color:"] mark, .qd-rich [style*=";color:"] mark, .qd-rich [style*="; color:"] mark { color: inherit; }
 /* One line of a list (an inclusion, a policy, a note): formatted text that runs on like ordinary text. */
@@ -903,9 +906,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const visaDocuments = quotation.visaDocuments || [];
   const visaInclusions = quotation.visaInclusions || [];
   const hasInclusions = packageDetails.inclusions && packageDetails.inclusions.length > 0;
+  // A booking's own free texts (a confirmation only), one piece per line so a long text can run over the page.
+  const bookingPieces = (html) => (isConfirmation && richToPlainText(html || '').trim() ? splitDisplayBlocks(toDocumentHtml(html)) : []);
+  const additionalPieces = bookingPieces(confirmationInfo?.additionalServices);
   const hasPackageSection = isVisaQuotation
     ? true // a visa quotation always shows the visa; an empty one still says which country and who it is for
-    : isLand ? vehicles.length > 0 || vehicleInclusions.length > 0 : hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions;
+    : isLand ? vehicles.length > 0 || vehicleInclusions.length > 0 || additionalPieces.length > 0 : hasHotels || hasOptions || packageDetails.roomInfo || hasInclusions || additionalPieces.length > 0;
   const hasItinerary = itinerary && itinerary.length > 0;
 
   // Pricing check
@@ -950,10 +956,10 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // quotation (it has its own checklist, fees and inclusions), so a visa never prints it.
   const showBackPages = (!pageNumber || pageNumber === 3) && !isVisaQuotation;
   const hasPoliciesPage = hasPaymentPolicy || hasCancellationPolicy;
-  // The two texts a booking adds to its last page (its additional services and its important notes); a quotation has none.
-  const bookingTexts = !isConfirmation ? [] : [['ADDITIONAL SERVICES', confirmationInfo.additionalServices], ['IMPORTANT NOTES', confirmationInfo.importantNotes]]
-    .filter(([, text]) => richToPlainText(text || '').trim())
-    .map(([title, text]) => ({ title, pieces: splitDisplayBlocks(toDocumentHtml(text)) }));
+  // What a booking adds to its last page (its important notes); a quotation has none. Its additional services sit under the inclusions.
+  const importantPieces = bookingPieces(confirmationInfo?.importantNotes);
+  const bookingTexts = importantPieces.length ? [{ title: 'IMPORTANT NOTES', pieces: importantPieces }] : [];
+  const bookingTextProps = (html) => ({ className: 'quotation-keep qd-rich qd-part qd-booking', style: { fontSize: '12px', lineHeight: 1.4, color: '#000000', textAlign: 'left' }, dangerouslySetInnerHTML: { __html: html } });
   const hasExclusionsPage = hasExclusions || hasVehicleNotes;
 
   const SectionBanner = ({ title, accent }) => (
@@ -1415,6 +1421,14 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                     </div>
                   </div>
                 )}
+
+                {/* The booking's additional services (a confirmation only), straight under the inclusions. */}
+                {additionalPieces.length > 0 && (
+                  <div style={{ marginTop: '8px' }}>
+                    <div className="quotation-keep" style={{ fontWeight: 700, fontSize: '11px', color: '#0f172a', marginBottom: '3px' }}>Additional Services</div>
+                    {additionalPieces.map((html, i) => <div key={i} {...bookingTextProps(html)} />)}
+                  </div>
+                )}
               </div>
             )}
 
@@ -1623,10 +1637,12 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
             <SectionBanner title={isConfirmation ? 'GENERAL POLICY' : 'TERMS, POLICIES, EXCLUSIONS & GUIDELINES'} accent="#b91c1c" />
             <div className="quotation-flow" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
               {/* What this booking adds (a confirmation only): its additional services and its important notes, above the standard terms and policies. */}
-              {bookingTexts.map(({ title, pieces }) => [
-                <div key={`${title}-title`} className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0369a1', marginTop: '4px' }}>{title}</div>,
-                ...pieces.map((html, i) => <div key={`${title}-${i}`} className="quotation-keep qd-rich qd-part" style={{ fontSize: '10.5px', lineHeight: 1.5, color: '#000000', textAlign: 'left' }} dangerouslySetInnerHTML={{ __html: html }} />)
-              ])}
+              {bookingTexts.map(({ title, pieces }) => (
+                <div key={title}>
+                  <div className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0369a1', marginTop: '4px', marginBottom: '3px' }}>{title}</div>
+                  {pieces.map((html, i) => <div key={i} {...bookingTextProps(html)} />)}
+                </div>
+              ))}
               {hasImportantNotes && (
                 <div className="quotation-keep" style={{ fontSize: '11.5px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
                   TERMS

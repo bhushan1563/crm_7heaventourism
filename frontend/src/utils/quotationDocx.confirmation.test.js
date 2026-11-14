@@ -57,16 +57,21 @@ describe('the Word file of a booking confirmation', () => {
     expect(paragraph).toMatch(/w:color w:val="1D4ED8"/i);
   });
 
-  it('ends with "General Policy": the booking\'s additional services and important notes first, then the standard terms and policies', async () => {
+  it('ends with "General Policy": the booking\'s important notes first, then the standard terms and policies; the additional services sit under the inclusions', async () => {
     const plain = await open(booking({
       additionalServices: '<p>Airport transfer</p><p>Candle-light dinner</p>',
       importantNotes: '<ul><li>Carry a passport</li></ul>',
-      quote: { ...booking().quote, importantNotes: ['Standard term one.'], paymentPolicy: ['25% advance.'], cancellationPolicy: ['10% fee.'], exclusions: ['Airfare'] }
+      quote: { ...booking().quote, packageDetails: { ...booking().quote.packageDetails, inclusions: ['Daily breakfast'] }, importantNotes: ['Standard term one.'], paymentPolicy: ['25% advance.'], cancellationPolicy: ['10% fee.'], exclusions: ['Airfare'] }
     }));
-    const at = ['General Policy', 'Additional Services', 'Airport transfer', 'Candle-light dinner', 'Important Notes', 'Carry a passport', 'Terms', 'Standard term one.', 'Payment Policy', '25% advance.', 'Cancellation Policy', '10% fee.', 'Exclusions', 'Airfare'].map((t) => plain.lastIndexOf(t));
+    const at = ['General Policy', 'Important Notes', 'Carry a passport', 'Terms', 'Standard term one.', 'Payment Policy', '25% advance.', 'Cancellation Policy', '10% fee.', 'Exclusions', 'Airfare'].map((t) => plain.lastIndexOf(t));
     expect(at.every((n) => n >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at);
     expect(plain.lastIndexOf('General Policy')).toBeGreaterThan(plain.indexOf('Hotel Sunrise')); // after the trip, on the last page
+    const services = ['Inclusions', 'Daily breakfast', 'Additional Services', 'Airport transfer', 'Candle-light dinner'].map((t) => plain.indexOf(t));
+    expect(services.every((n) => n >= 0)).toBe(true);
+    expect([...services].sort((a, b) => a - b)).toEqual(services); // straight under the inclusions
+    expect(services[2]).toBeLessThan(plain.lastIndexOf('General Policy')); // not on the last page any more
+    expect(plain.lastIndexOf('Additional Services')).toBe(services[2]); // and only once
   });
 
   it('has no General Policy section when there is nothing to put in it', async () => {

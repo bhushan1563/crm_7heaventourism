@@ -1,6 +1,7 @@
 // Sharing a quotation with the client: the WhatsApp number and the e-mail address (checked, with problems told in plain words), the
 // message, the two links and the file name. Pure functions (no network, no React) so every rule can be tested.
 import { formatDate } from './dateHelper';
+import { formatDuration } from './itinerary';
 
 export const SHARE_LIMITS = { message: 1000, subject: 150, email: 254 };
 const DEFAULT_COUNTRY = '91'; // numbers typed without a country code are Indian
@@ -96,6 +97,24 @@ export const defaultConfirmationMessage = ({ confirmation, senderName = '', send
   if (reach) lines.push(reach);
   return lines.join('\n').slice(0, SHARE_LIMITS.message);
 };
+
+/** The message that goes with an itinerary from the library: what it is, where, how long, and who sends it. */
+export const defaultItineraryMessage = ({ itinerary, format = 'pdf', senderName = '', senderNumber = '', company = {} }) => {
+  const title = clip(itinerary?.title, 100);
+  const where = clip([itinerary?.destination, itinerary?.country].filter(Boolean).join(', '), 80);
+  const lines = [
+    'Hello,',
+    '',
+    `Greetings from ${company.name ? company.name.replace(/\s+/g, ' ') : '7Heaven Tourism'}! Please find the ${title || where || 'travel'} itinerary${title && where ? ` for ${where}` : ''} attached as a ${FORMAT_LABELS[format] || 'PDF'} file.`
+  ];
+  if (Number(itinerary?.nights) > 0) lines.push(`Duration: ${formatDuration(itinerary.nights)}`);
+  lines.push('', 'Please let us know if you would like any changes.', '', 'Warm regards,', clip(senderName, 60) || 'The 7Heaven Tourism team');
+  const reach = clip(senderNumber, 30) || company.phone;
+  if (reach) lines.push(reach);
+  return lines.join('\n').slice(0, SHARE_LIMITS.message);
+};
+
+export const itineraryEmailSubject = (itinerary) => clip(`7Heaven Tourism: ${itinerary?.title || itinerary?.destination || 'Travel'} itinerary`, SHARE_LIMITS.subject);
 
 export const confirmationEmailSubject = (confirmation) => clip(`7Heaven Tourism: Booking confirmation${confirmation?.confirmationNo ? ` ${confirmation.confirmationNo}` : ''} for ${confirmation?.destination || 'your trip'}`, SHARE_LIMITS.subject);
 

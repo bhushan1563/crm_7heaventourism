@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { formatDate } from './dateHelper';
-import { SHARE_LIMITS, confirmationEmailSubject, contactToSave, defaultConfirmationMessage, defaultEmailSubject, defaultShareMessage, emailAddress, mailtoLink, shareFileName, whatsappLink, whatsappNumber } from './shareContact';
+import { SHARE_LIMITS, confirmationEmailSubject, contactToSave, defaultConfirmationMessage, defaultEmailSubject, defaultItineraryMessage, defaultShareMessage, emailAddress, itineraryEmailSubject, mailtoLink, shareFileName, whatsappLink, whatsappNumber } from './shareContact';
 
 describe('whatsappNumber', () => {
   it.each([
@@ -163,6 +163,26 @@ describe('file name and messages', () => {
   });
   it('the e-mail subject names the visa and the number', () => {
     expect(defaultEmailSubject(q)).toBe('7Heaven Tourism: JAPAN TOURIST VISA quotation 7H-QT-2026-014');
+  });
+  it('writes the message for an itinerary: what it is, where, how long, the file kind and the sender', () => {
+    const itinerary = { title: 'Bali Honeymoon', destination: 'Bali', country: 'Indonesia', nights: 5 };
+    const text = defaultItineraryMessage({ itinerary, format: 'docx', senderName: 'Sana Tester', senderNumber: '+919876543210', company: { name: '7HEAVEN TOURISM', phone: '+91 7862829178' } });
+    expect(text).toMatch(/^Hello,/);
+    expect(text).toContain('Please find the Bali Honeymoon itinerary for Bali, Indonesia attached as a Word file.');
+    expect(text).toContain('Duration: 5 Nights / 6 Days');
+    expect(text.endsWith('Sana Tester\n+919876543210')).toBe(true);
+    expect(defaultItineraryMessage({ itinerary: {}, company: { phone: '1' } })).toContain('Please find the travel itinerary attached as a PDF file.');
+    expect(defaultItineraryMessage({ itinerary: { title: 'Day trip', nights: 0 } })).not.toContain('Duration');
+    expect(itineraryEmailSubject(itinerary)).toBe('7Heaven Tourism: Bali Honeymoon itinerary');
+    expect(itineraryEmailSubject({})).toBe('7Heaven Tourism: Travel itinerary');
+  });
+  it('property: an itinerary message and subject never go over the limits', () => {
+    fc.assert(
+      fc.property(fc.record({ title: fc.string({ maxLength: 500 }), destination: fc.string({ maxLength: 500 }), country: fc.string({ maxLength: 500 }), nights: fc.integer({ min: -5, max: 400 }) }), fc.string({ maxLength: 300 }), (itinerary, sender) => {
+        expect(defaultItineraryMessage({ itinerary, senderName: sender, company: { name: 'X', phone: '1' } }).length).toBeLessThanOrEqual(SHARE_LIMITS.message);
+        expect(itineraryEmailSubject(itinerary).length).toBeLessThanOrEqual(SHARE_LIMITS.subject);
+      })
+    );
   });
 });
 

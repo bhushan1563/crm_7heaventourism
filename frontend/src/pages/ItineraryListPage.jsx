@@ -253,7 +253,7 @@ export const ItineraryListPage = () => {
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/itineraries/${item._id}/edit`)}>
                     {editable ? <Edit2 size={13} /> : <Eye size={13} />} {editable ? 'Edit' : 'View'}
                   </button>
-                  <ItineraryExportButtons variant="icon" disabled={busy} getItinerary={() => loadForExport(item._id)} />
+                  <ItineraryExportButtons variant="icon" disabled={busy} summary={item} getItinerary={() => loadForExport(item._id)} />
                   {can('itineraries', 'canCreate') && (
                     <button type="button" className="btn-icon btn-outline" onClick={() => duplicate(item)} disabled={busy} title="Make a copy" aria-label={`Copy ${item.title}`}>
                       <Copy size={14} />

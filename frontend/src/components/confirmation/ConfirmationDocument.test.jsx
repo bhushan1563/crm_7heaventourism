@@ -107,7 +107,7 @@ describe('the booking confirmation document', () => {
     expect(bare.container.querySelector('[id$="-page-terms"]')).toBeNull();
   });
 
-  it('puts the additional services and the important notes of the booking on the last page, under "General Policy", above the standard terms', () => {
+  it('puts the additional services straight under the inclusions, and the important notes on the last page under "General Policy", above the standard terms', () => {
     const base = confirmation().quote;
     const lists = { importantNotes: ['Standard term one.'], paymentPolicy: ['25% advance.'], exclusions: ['Airfare unless specified'] };
     const { container } = view(confirmation({ quote: { ...base, ...lists }, additionalServices: '<p>Airport <strong>transfer</strong></p><p>Candle-light dinner</p>', importantNotes: '<ul><li>Carry a passport</li><li>Be early</li></ul>' }));
@@ -116,11 +116,37 @@ describe('the booking confirmation document', () => {
     expect(last.id).toMatch(/-page-terms$/); // the last page
     expect(last).toHaveTextContent('GENERAL POLICY');
     const text = last.textContent;
-    const order = ['ADDITIONAL SERVICES', 'Airport transfer', 'Candle-light dinner', 'IMPORTANT NOTES', 'Carry a passport', 'Be early', 'TERMS', 'Standard term one.', 'POLICIES', '25% advance.', 'EXCLUSIONS'].map((t) => text.indexOf(t));
+    const order = ['IMPORTANT NOTES', 'Carry a passport', 'Be early', 'TERMS', 'Standard term one.', 'POLICIES', '25% advance.', 'EXCLUSIONS'].map((t) => text.indexOf(t));
     expect(order.every((n) => n >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order); // in this order
-    expect([...last.querySelectorAll('strong')].some((el) => el.textContent === 'transfer')).toBe(true); // the formatting is kept
-    expect(pages[0]).not.toHaveTextContent('ADDITIONAL SERVICES'); // not on the booking page
+    expect(last).not.toHaveTextContent('Additional Services'); // no longer on the last page
+    expect(pages[0]).not.toHaveTextContent('Additional Services'); // nor on the booking page
+
+    const details = container.querySelector('[id$="-page-2"]');
+    const at = ['Inclusions', 'Breakfast', 'Additional Services', 'Airport transfer', 'Candle-light dinner'].map((t) => details.textContent.indexOf(t));
+    expect(at.every((n) => n >= 0)).toBe(true);
+    expect([...at].sort((a, b) => a - b)).toEqual(at); // straight under the inclusions list
+    expect([...details.querySelectorAll('strong')].some((el) => el.textContent === 'transfer')).toBe(true); // the formatting is kept
+  });
+
+  it('prints the additional services larger than the standard text and each line close under the one before', () => {
+    const { container } = view(confirmation({ additionalServices: '<p>Booking is confirmed for 12 pax</p><p>Safari pickup at 6 AM</p>' }));
+    const lines = ['Booking is confirmed for 12 pax', 'Safari pickup at 6 AM'].map((t) => screen.getByText(t).closest('.qd-booking'));
+    for (const line of lines) {
+      expect(line).not.toBeNull();
+      expect(line).toHaveStyle({ fontSize: '12px', color: '#000000' });
+    }
+    expect(lines[0]).not.toBe(lines[1]); // one piece per line, so a long text can run over the page
+    expect(container.querySelector('[id$="-page-2"]')).toContainElement(lines[0]);
+    expect(container.innerHTML).toMatch(/\.qd-booking\.qd-part > :last-child \{ margin-bottom: 1px; \}/); // the gap under a line is one pixel
+  });
+
+  it('shows the additional services even when the quotation has no inclusions, hotels or terms', () => {
+    const { container } = view(confirmation({ quote: { ...confirmation().quote, packageDetails: { hotels: [], inclusions: [] } }, additionalServices: '<p>Private airport transfer</p>' }));
+    const details = container.querySelector('[id$="-page-2"]');
+    expect(details).toHaveTextContent('Additional Services');
+    expect(details).toHaveTextContent('Private airport transfer');
+    expect(container.querySelector('[id$="-page-terms"]')).toBeNull(); // nothing for the last page
   });
 
   it('prints the booking\'s own texts even when the quotation has no policies at all, and leaves them out when empty', () => {

@@ -258,7 +258,7 @@ export const ItineraryEditorPage = () => {
         </div>
         <div className="page-actions">
           {/* Prints what is on screen right now, saved or not. */}
-          <ItineraryExportButtons getItinerary={async () => ({ ...form, nights: Number(form.nights) || 0 })} />
+          <ItineraryExportButtons summary={form} getItinerary={async () => ({ ...form, nights: Number(form.nights) || 0 })} />
           {isEdit && can('itineraries', 'canCreate') && (
             <button type="button" className="btn btn-outline" onClick={duplicate} disabled={dirty} title={dirty ? 'Save your changes first' : 'Make a copy'}>
               <Copy size={14} /> Copy
