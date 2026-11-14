@@ -38,8 +38,11 @@
 .itin-meta span { display: inline-flex; align-items: center; gap: 5px; }
 .itin-tags span { padding: 2px 9px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; color: var(--primary-text); background: var(--primary-tint); }
 .itin-updated { font-size: 0.74rem; color: var(--text-muted); margin-top: auto; padding-top: 4px; }
-.itin-actions { display: flex; align-items: center; gap: 8px; padding: 10px 16px 14px; }
-.itin-actions .btn { flex: 1; justify-content: center; }
+.itin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 16px 14px; }
+.itin-actions .btn { flex: 1 1 auto; min-width: 84px; justify-content: center; }
+/* The download and send icons stay together; when the card is too narrow for every icon, the row wraps instead of clipping the last one. */
+.itin-actions .export-buttons { flex: 0 0 auto; gap: 4px; }
+.itin-actions .btn-icon { min-width: 36px; min-height: 36px; }
 .itin-danger:hover:not(:disabled) { color: #dc2626; border-color: #fca5a5; }
 
 /* ---- Empty / error state, pager ---- */
