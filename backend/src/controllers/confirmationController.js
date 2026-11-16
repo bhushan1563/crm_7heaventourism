@@ -207,6 +207,19 @@ export const updateConfirmation = async (req, res) => {
     const input = normalizeBookingInput(req.body, { payment: existing.payment, contacts: existing.contacts });
     if (!input.ok) return fail(res, input.message);
 
+    let cleanItinerary = null;
+    if (Array.isArray(req.body.itinerary)) {
+      cleanItinerary = req.body.itinerary.map((day, idx) => ({
+        dayNumber: day.dayNumber || `Day ${String(idx + 1).padStart(2, '0')}`,
+        title: String(day.title || '').trim(),
+        description: String(day.description || '').trim(),
+        stay: String(day.stay || '').trim(),
+        meals: String(day.meals || '').trim(),
+        photos: Array.isArray(day.photos) ? day.photos : []
+      }));
+      input.data['quote.itinerary'] = cleanItinerary;
+    }
+
     // Two people editing the same booking: the second save must not silently overwrite the first.
     const conflict = () =>
       fail(res, `This confirmation was changed by ${existing.updatedByName || existing.createdByName || 'someone else'} while you were editing it. Please reload to see their changes before saving.`);
@@ -221,6 +234,14 @@ export const updateConfirmation = async (req, res) => {
       { new: true, runValidators: true }
     );
     if (!updated) return conflict();
+
+    // If itinerary was updated, sync to underlying quotation document as well
+    if (cleanItinerary && existing.quotationId) {
+      await QuotationModel.updateOne(
+        { _id: existing.quotationId },
+        { $set: { itinerary: cleanItinerary } }
+      ).catch((err) => console.error('Failed to sync quotation itinerary:', err));
+    }
 
     // Everything received: the guest moves on from "Confirmed" to "Confirmed & Payment received" (never the other way).
     if (isFullyPaid(updated.payment) && updated.guestId) {

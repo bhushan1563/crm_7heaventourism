@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { AlertCircle, ArrowLeft, Ban, Eye, Lock, RefreshCw, Save, Send } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Ban, Calendar, Eye, Lock, RefreshCw, Save, Send } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import confirmationService from '../services/confirmationService';
@@ -178,6 +178,22 @@ export const ConfirmationEditorPage = () => {
           <p className="page-subtitle">{record.clientName} · {record.destination}</p>
         </div>
         <div className="page-actions">
+          {record.quotationId && !cancelled && (
+            <button
+              type="button"
+              className="btn btn-outline"
+              onClick={() => {
+                if (dirty) {
+                  showToast('Please save your booking changes before editing the itinerary.', 'warning');
+                  return;
+                }
+                navigate(`/quotations/${record.quotationId}/edit?tab=itinerary`);
+              }}
+              title="Edit the day-by-day tour itinerary"
+            >
+              <Calendar size={15} /> <span>Edit Itinerary</span>
+            </button>
+          )}
           <button type="button" className="btn btn-outline-azure" onClick={() => setPreviewing(true)}>
             <Eye size={15} /> <span>Preview &amp; PDF</span>
           </button>
@@ -227,6 +243,7 @@ export const ConfirmationEditorPage = () => {
         {record.duration && <div><dt>Duration</dt><dd>{durationText(record.duration)}</dd></div>}
         <div><dt>Travel date</dt><dd>{form.travelDate ? formatDate(form.travelDate) : 'Not set'}</dd></div>
         <div><dt>Quotation</dt><dd>{can('quotations', 'canRead') ? <Link to={`/quotations/${record.quotationId}/edit`}>{record.quotationNo}</Link> : record.quotationNo}</dd></div>
+        {record.quotationId && !cancelled && <div><dt>Itinerary</dt><dd><Link to={`/quotations/${record.quotationId}/edit?tab=itinerary`}>Edit itinerary</Link></dd></div>}
         <div><dt>Total</dt><dd>{money(form.payment.totalAmount)}</dd></div>
         <div><dt>Received</dt><dd>{money(form.payment.received)}</dd></div>
         <div><dt>Balance</dt><dd className={balance > 0 ? 'cf-owing' : 'cf-clear'}>{balance > 0 ? money(balance) : (Number(form.payment.totalAmount) || 0) > 0 ? 'Fully paid' : '–'}</dd></div>
@@ -234,11 +251,11 @@ export const ConfirmationEditorPage = () => {
       </dl>
 
       {/* Quotation snapshot: read-only overview of what was sold so team can see it while filling booking details */}
-      {record.quote && (hotelsOfQuote(record.quote).length > 0 || record.quote.pricing?.grandTotal > 0 || ((record.quote.packageDetails?.inclusions || record.quote.inclusions || []).filter(Boolean).length > 0)) && (
+      {record.quote && (hotelsOfQuote(record.quote).length > 0 || record.quote.pricing?.grandTotal > 0 || ((record.quote.packageDetails?.inclusions || record.quote.inclusions || []).filter(Boolean).length > 0) || (Array.isArray(record.quote.itinerary) && record.quote.itinerary.length > 0)) && (
         <section className="glass-panel cf-quote-snapshot">
           <div className="cf-quote-snapshot-head">
             <h3 className="edit-section-title">Quotation snapshot</h3>
-            <span className="edit-hint" style={{ margin: 0 }}>Read-only: what was sold — hotels, pricing and package details from the original quotation.</span>
+            <span className="edit-hint" style={{ margin: 0 }}>Read-only: what was sold — hotels, pricing, itinerary and package details from the original quotation.</span>
           </div>
           {record.quote.pricing?.grandTotal > 0 && (
             <dl className="cf-quote-pricing">
@@ -276,6 +293,39 @@ export const ConfirmationEditorPage = () => {
                   <li key={i} className="cf-quote-inclusion-item">
                     <span className="cf-quote-check">✓</span>
                     <span>{inc}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {Array.isArray(record.quote.itinerary) && record.quote.itinerary.length > 0 && (
+            <div className="cf-quote-inclusions" style={{ marginTop: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <div className="cf-quote-inclusions-title" style={{ margin: 0 }}>
+                  Itinerary ({record.quote.itinerary.length} Days)
+                </div>
+                {record.quotationId && !cancelled && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-xs"
+                    onClick={() => {
+                      if (dirty) {
+                        showToast('Please save your booking changes before editing the itinerary.', 'warning');
+                        return;
+                      }
+                      navigate(`/quotations/${record.quotationId}/edit?tab=itinerary`);
+                    }}
+                    style={{ fontSize: '11px', padding: '2px 8px' }}
+                  >
+                    <Calendar size={12} style={{ marginRight: '4px' }} /> Edit itinerary
+                  </button>
+                )}
+              </div>
+              <ul className="cf-quote-inclusions-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '8px' }}>
+                {record.quote.itinerary.map((day, i) => (
+                  <li key={i} className="cf-quote-inclusion-item" style={{ alignItems: 'flex-start' }}>
+                    <span className="cf-quote-check" style={{ color: 'var(--primary, #0284c7)' }}>📅</span>
+                    <span><strong>{day.dayNumber || `Day ${i + 1}`}:</strong> {day.title || 'Sightseeing & Tour'}</span>
                   </li>
                 ))}
               </ul>

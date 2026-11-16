@@ -155,10 +155,15 @@ export const QuotationBuilderPage = () => {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const tabParam = searchParams.get('tab');
   const isEditMode = Boolean(id);
 
   // Active top-level tab in form builder
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'itinerary' | 'package' | 'flights' | 'pricing' | 'notes'
+  const [activeTab, setActiveTab] = useState(() => tabParam || 'overview'); // 'overview' | 'itinerary' | 'package' | 'flights' | 'pricing' | 'notes'
+
+  useEffect(() => {
+    if (tabParam) setActiveTab(tabParam);
+  }, [tabParam]);
   // Active pricing component subtab
   const [pricingActiveTab, setPricingActiveTab] = useState('pkg'); // 'pkg' | 'air' | 'oth' | custom id | 'total'
 
@@ -831,10 +836,6 @@ export const QuotationBuilderPage = () => {
 
   // Save Quotation
   const handleSave = async (downloadAfter = false) => {
-    if (formData.confirmationId) {
-      showToast(`This quotation is confirmed as ${formData.confirmationNo} and is locked. Cancel the booking first if the quotation has to change.`, 'warning');
-      return;
-    }
     if (!formData.clientName.trim()) {
       showToast('Please enter the client name.', 'warning');
       setActiveTab('overview');
@@ -901,7 +902,12 @@ export const QuotationBuilderPage = () => {
           showToast('Quotation PDF generated and downloaded!', 'success');
         }
 
-        navigate(toClientVisas ? '/visas?view=clients' : '/quotations');
+        if (formData.confirmationId) {
+          showToast(`Quotation & booking confirmation ${formData.confirmationNo} itinerary updated!`, 'success');
+          navigate(`/confirmations/${formData.confirmationId}`);
+        } else {
+          navigate(toClientVisas ? '/visas?view=clients' : '/quotations');
+        }
       }
       else {
         showToast(res.message, 'error');
@@ -981,10 +987,9 @@ export const QuotationBuilderPage = () => {
           <button
             onClick={() => handleSave(false)}
             className="btn btn-primary btn-sm"
-            disabled={saving || Boolean(formData.confirmationId)}
-            title={formData.confirmationId ? 'Confirmed quotations are locked' : undefined}
+            disabled={saving}
           >
-            {saving ? <Loader2 size={14} className="animate-spin" /> : formData.confirmationId ? <Lock size={14} /> : <Save size={14} />}
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             <span>{isEditMode ? 'Save Changes' : 'Save Quotation'}</span>
           </button>
         </div>
@@ -992,13 +997,13 @@ export const QuotationBuilderPage = () => {
 
       {formData.confirmationId && (
         <div className="cf-banner" role="status">
-          <Lock size={16} aria-hidden="true" />
+          <Calendar size={16} aria-hidden="true" />
           <span>
-            This quotation is confirmed as <strong>{formData.confirmationNo}</strong> and is locked, so what was sold cannot change. To change it, cancel the booking first; that unlocks the quotation.
+            This quotation is confirmed as <strong>{formData.confirmationNo}</strong>. You can edit the itinerary below; changes will automatically update the confirmation voucher.
           </span>
           {can('confirmations', 'canRead') && (
             <button type="button" className="btn btn-outline btn-sm" onClick={() => navigate(`/confirmations/${formData.confirmationId}`)}>
-              Open the booking
+              ← Back to booking
             </button>
           )}
         </div>

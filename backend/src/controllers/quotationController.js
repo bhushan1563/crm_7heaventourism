@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import QuotationModel from '../models/Quotation.js';
+import ConfirmationModel from '../models/Confirmation.js';
 import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
@@ -238,16 +239,43 @@ export const updateQuotation = async (req, res) => {
     if (!extras.ok) return res.status(200).json({ success: false, message: extras.message });
 
     const existing = await findQuotationDocument(req.params.id);
-    const locked = lockedMessage(existing, 'changed');
-    if (locked) return res.status(200).json({ success: false, message: locked });
+    if (!existing) {
+      return res.status(200).json({ success: false, message: 'Quotation not found.' });
+    }
+
+    if (existing.confirmationId) {
+      // Core sold contract details remain locked, but itinerary adjustments are permitted once confirmed
+      const isItineraryUpdate = Array.isArray(req.body.itinerary);
+      const nameChanged = req.body.clientName && req.body.clientName.trim() !== String(existing.clientName || '').trim();
+      const paxChanged = req.body.paxDetails && req.body.paxDetails.trim() !== String(existing.paxDetails || '').trim();
+      if (!isItineraryUpdate || nameChanged || paxChanged) {
+        return res.status(200).json({ success: false, message: lockedMessage(existing, 'changed') });
+      }
+    }
+
     const changes = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
       ...extras.overrides
     };
-    const updated = existing ? await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true }) : null;
+    const updated = await QuotationModel.findByIdAndUpdate(existing._id, changes, { new: true });
     if (!updated) {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
     }
+
+    // Keep the confirmed booking voucher snapshot in sync with itinerary and duration updates
+    if (existing.confirmationId) {
+      await ConfirmationModel.updateOne(
+        { _id: existing.confirmationId },
+        {
+          $set: {
+            'quote.itinerary': updated.itinerary,
+            ...(updated.duration ? { duration: updated.duration, 'quote.duration': updated.duration } : {}),
+            ...(updated.destination ? { destination: updated.destination, 'quote.destination': updated.destination } : {})
+          }
+        }
+      ).catch((err) => console.error('Failed to sync confirmation itinerary:', err));
+    }
+
     res.json({
       success: true,
       message: 'Quotation updated successfully.',
