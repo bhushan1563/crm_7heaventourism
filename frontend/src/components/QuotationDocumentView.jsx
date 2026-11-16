@@ -15,7 +15,7 @@ import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableLayout
 import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../utils/roomTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
-import { HEADER_TAGLINE, headerTagline } from '../utils/companyHeader';
+import { PRODUCTS_TAGLINE } from '../utils/companyHeader';
 
 // Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
 // markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
@@ -723,7 +723,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const company = quotation.companyDetails || {
     name: '7Heaven Tourism',
     tagline: 'Travel with Trust',
-    description: HEADER_TAGLINE,
+    description: PRODUCTS_TAGLINE,
     address: '405 (FOF) Kanha Capital, Above IDFC bank, Opp Express Tower Hotel, Alkapuri 390007, Vadodara',
     phone: '+91 7862829178',
     email: 'sales@7heaventourism.in',
@@ -819,23 +819,25 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         </div>
       </div>
 
-      {/* Tagline */}
-      <div
-        style={{
-          marginTop: '10px',
-          textAlign: 'center',
-          fontSize: '11px',
-          fontWeight: 800,
-          color: '#b91c1c',
-          letterSpacing: '0.04em',
-          padding: '4px 8px',
-          background: '#fff1f2',
-          borderRadius: '4px',
-          border: '1px solid #ffe4e6'
-        }}
-      >
-        ★ {headerTagline(company.description)} ★
-      </div>
+      {/* Tagline — "YOUR JOURNEY BEGINS HERE" on confirmation only; nothing on quotations */}
+      {isConfirmation && (
+        <div
+          style={{
+            marginTop: '10px',
+            textAlign: 'center',
+            fontSize: '11px',
+            fontWeight: 800,
+            color: '#b91c1c',
+            letterSpacing: '0.04em',
+            padding: '4px 8px',
+            background: '#fff1f2',
+            borderRadius: '4px',
+            border: '1px solid #ffe4e6'
+          }}
+        >
+          ★ YOUR JOURNEY BEGINS HERE ★
+        </div>
+      )}
     </div>
   );
 
