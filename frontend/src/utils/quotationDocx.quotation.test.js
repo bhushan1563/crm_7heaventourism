@@ -25,7 +25,7 @@ const oldPackage = (over = {}) => ({
     { dayNumber: 'Day 02', title: 'Temples', description: '<p>Visit <strong>Tanah Lot</strong>.</p><ul><li>Uluwatu</li><li>Kecak dance</li></ul>' }
   ],
   packageDetails: { roomInfo: '1 Double + 1 Single', inclusions: ['Daily breakfast', 'Airport transfers'], hotels: [{ hotelName: 'Ubud Palace', city: 'Ubud', address: 'Jl. Raya 1', starRating: '4 star', roomCategory: 'Deluxe', mealPlan: 'Breakfast', nights: '3 Nights', contactNumber: '+62 361 123', email: 'stay@ubud.example', amenities: ['Pool', 'Spa'] }] },
-  pricing: { items: [{ name: 'Land package', costPerPerson: 38500, note: 'Per person' }, { name: 'Hidden', costPerPerson: 1, isIncluded: false }], totalCostPerPerson: 38500, grandTotal: 115500, notes: 'GST extra' },
+  pricing: { items: [{ name: 'Land package', costPerPerson: 38500, note: 'Per person' }, { name: 'Hidden', costPerPerson: 0, isIncluded: false }], totalCostPerPerson: 38500, grandTotal: 115500, notes: 'GST extra' },
   flightDetails: [{ flightType: 'Departure', fromAirport: 'BOM', toAirport: 'DPS', airline: 'Garuda', flightNumber: 'GA 405', depTime: '10:20', arrTime: '19:05', baggageCheckIn: '20 kg' }],
   importantNotes: ['Rates are subject to availability'], paymentPolicy: ['50% advance'], cancellationPolicy: ['Non refundable within 7 days'], exclusions: ['Personal expenses'],
   ...over
@@ -144,5 +144,39 @@ describe('a quotation imported from the old export', () => {
     expect(plain).toContain('Total Package: Rs 1,95,200');
     expect(plain).toContain('Room Allocation: 2 Rooms');
     expect(plain).not.toContain('Rs 0 Per person');
+  });
+});
+
+describe('the price list in the Word file', () => {
+  const list = (items, over = {}) => oldPackage({ pricing: { items, totalCostPerPerson: 38500, grandTotal: 115500, notes: '' }, ...over });
+
+  it('prints an included Airfare, an optional extra with a price as an optional extra, and leaves out a line with nothing in it', async () => {
+    const { plain } = await open(list([
+      { id: 'pkg', name: '', costPerPerson: 0 },
+      { id: 'air', name: 'Airfare', costPerPerson: 5000, note: 'Per person' },
+      { id: 'add_1', name: 'Gala dinner', costPerPerson: 1200, note: 'Per person', isIncluded: false },
+      { id: 'add_2', name: 'Unpriced option', costPerPerson: 0, isIncluded: false }
+    ]));
+    expect(plain).toContain('Airfare: Rs 5,000 Per person');
+    expect(plain).not.toContain('Airfare: Rs 5,000 Per person (optional');
+    expect(plain).toContain('Gala dinner: Rs 1,200 Per person (optional, not in the total)');
+    expect(plain).not.toContain('Unpriced option');
+    expect(plain).not.toMatch(/: Rs 0 Per person/);
+  });
+
+  it('with hotel options prints what is typed on top of the package price, under the options, and not the package price', async () => {
+    const options = [{ name: 'Option 1', hotels: [{ hotelName: 'Hotel Sunrise', city: 'Ubud' }], pricePerPerson: 30000, totalPrice: 90000 }];
+    const { plain } = await open(list([
+      { id: 'pkg', name: 'Package Price', costPerPerson: 25000 },
+      { id: 'air', name: 'Airfare', costPerPerson: 5000, note: 'Per person' },
+      { id: 'oth', name: 'Other', costPerPerson: 0 }
+    ], { options }));
+    expect(plain).toContain('Additional Components');
+    expect(plain).toContain('Airfare: Rs 5,000 Per person');
+    expect(plain).not.toContain('Package Price');
+    expect(plain).not.toContain('Pricing Breakdown');
+    expect(plain.indexOf('Hotel Sunrise')).toBeLessThan(plain.indexOf('Additional Components'));
+    const none = (await open(list([{ id: 'pkg', name: 'Package Price', costPerPerson: 25000 }], { options }))).plain;
+    expect(none).not.toContain('Additional Components');
   });
 });

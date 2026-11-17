@@ -2224,7 +2224,7 @@ export const QuotationBuilderPage = () => {
                 <div className="cf-banner" role="note">
                   <span>{formData.quotationType === 'Only Hotel'
                     ? 'This quotation offers hotel options, so each hotel is priced in its own rate table under the options (per room per night, nights and rooms; the Grand Total of each option is counted from them). This price list is for a quotation with a single offer.'
-                    : 'This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer.'}</span>
+                    : 'This quotation offers hotel options, so each option is priced under its own hotels (price per person; the total is counted from the guests). This price list is for a quotation with a single offer; what is typed here on top of the package price (Airfare, Other, add-ons) is printed under the options as Additional Components.'}</span>
                   <button type="button" className="btn btn-outline btn-sm" onClick={() => setActiveTab('package')}>
                     Go to the hotel options
                   </button>
@@ -2457,6 +2457,11 @@ export const QuotationBuilderPage = () => {
                           {item.isIncluded !== false ? '✓ Included in Total' : '✕ Excluded / Optional'}
                         </button>
                       </div>
+                      {item.isIncluded === false && (
+                        <p className="edit-hint" role="note" style={{ margin: 0 }}>
+                          This component is optional: its price is not added to the total. {Number(item.costPerPerson) > 0 ? 'It is printed in the quotation as an optional extra.' : 'It has no price yet, so nothing is printed for it.'}
+                        </p>
+                      )}
                     </div>
                   );
                 })()
@@ -2520,7 +2525,7 @@ export const QuotationBuilderPage = () => {
                               {item.isIncluded !== false ? (
                                 <span style={{ color: 'var(--fg-059669)', fontSize: '0.75rem', fontWeight: 700 }}>✓ Included</span>
                               ) : (
-                                <span style={{ color: 'var(--fg-94A3B8)', fontSize: '0.75rem' }}>Optional</span>
+                                <span style={{ color: 'var(--fg-94A3B8)', fontSize: '0.75rem' }}>Optional (not in total)</span>
                               )}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>

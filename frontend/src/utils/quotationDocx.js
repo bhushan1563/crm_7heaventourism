@@ -10,6 +10,7 @@ import { returnDate, toDateInput } from './confirmation';
 import { feeAmount, visaFeeTotal } from './visa';
 import { addressLine } from './hotelStay';
 import { shownPriceNote } from './pricingNote';
+import { OPTIONAL_MARK, priceListLines } from './pricingLines';
 import { isDefaultOptionName } from './quotationOptions';
 import * as H from './hotelRates';
 import * as L from './landService';
@@ -669,7 +670,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
   const priceTables = P.tablesOf(quotation).filter(P.tableHasData);
   const defaults = R.roomDefaults(quotation);
   const pricing = quotation.pricing || {};
-  const pricingItems = (pricing.items || []).filter((item) => item.isIncluded !== false);
+  const hasPriceItems = (pricing.items || []).length > 0;
   const hasLegacyPricing = (pricing.items || []).length > 0 || pricing.packageCostPerPerson > 0 || pricing.airfareCostPerPerson > 0 || pricing.otherCostPerPerson > 0 || pricing.totalCostPerPerson > 0 || pricing.grandTotal > 0 || Boolean(pricing.totalCostNote);
   const flights = quotation.flightDetails || [];
   const hasFlights = Boolean(quotation.asPerFlightTicket) || flights.length > 0;
@@ -840,8 +841,8 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     priceTables.forEach((pt, i) => children.push(sub(pt.name || `Option ${i + 1}`), ...priceTableOf(pt)));
   } else if (hasLegacyPricing && !hasOptions && !isLand) {
     children.push(heading('Pricing Breakdown'));
-    const lines = pricingItems.length
-      ? pricingItems.map((item) => `${item.name}: ${rs(item.costPerPerson)} ${plainOf(item.note) || 'Per person'}`)
+    const lines = hasPriceItems
+      ? priceListLines(pricing).map((line) => `${line.name}: ${rs(line.cost)} ${plainOf(line.note) || 'Per person'}${line.optional ? ` ${OPTIONAL_MARK}` : ''}`)
       : [
           pricing.packageCostPerPerson > 0 && `Package: ${rs(pricing.packageCostPerPerson)} ${plainOf(pricing.packageCostNote) || `Per person X ${quotation.paxDetails || 'Pax'}`}`,
           pricing.airfareCostPerPerson > 0 && `Airfare: ${rs(pricing.airfareCostPerPerson)} ${plainOf(pricing.airfareCostNote) || `Per person X ${quotation.paxDetails || 'Pax'}`}`,
@@ -852,6 +853,13 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
     children.push(new d.Paragraph({ spacing: { before: 100, after: 60 }, shading: { type: d.ShadingType.CLEAR, fill: 'FDE047', color: 'auto' }, children: headline }));
     if (pricing.grandTotal > 0) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text(`${isHotelOnly ? 'Grand Total' : 'Total Package'}: ${rs(pricing.grandTotal)}`, { bold: true, color: '047857' })] }));
     if (plainOf(pricing.notes)) children.push(new d.Paragraph({ spacing: { after: 60 }, children: [text('Note: ', { italics: true, color: '000000' }), ...lineRuns(pricing.notes, { italics: true, color: '000000' })] }));
+  } else if (hasOptions && !isLand && !priceTables.length) {
+    // With hotel options each option carries its own package price; what is typed on top of it (Airfare, Other, add-ons) is still printed.
+    const extras = priceListLines(pricing, { extrasOnly: true });
+    if (extras.length) {
+      children.push(heading('Additional Components'));
+      children.push(...extras.map((line) => new d.Paragraph({ bullet: { level: 0 }, spacing: { after: 40 }, children: [text(`${line.name}: ${rs(line.cost)} ${plainOf(line.note) || 'Per person'}${line.optional ? ` ${OPTIONAL_MARK}` : ''}`)] })));
+    }
   }
 
   // ---- terms, policies, exclusions and vehicle notes ----

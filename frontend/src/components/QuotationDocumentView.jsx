@@ -16,6 +16,7 @@ import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../util
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
 import { PRODUCTS_TAGLINE, headerTagline } from '../utils/companyHeader';
+import { OPTIONAL_MARK, priceListLines } from '../utils/pricingLines';
 
 // Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
 // markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
@@ -80,6 +81,19 @@ const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.c
 
 /** A date and its time as a confirmation prints them: "07 Mar 2026, Time: 14:00", or "Time: ____" to write in when there is none yet. */
 const whenText = (date, time) => `${formatLongDate(date)}, Time: ${time || '____'}`;
+
+/** One line of the per-person price list: the component and its price. An optional extra (not in the total) says so. */
+const PriceListLine = ({ line }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', fontSize: '10px', color: '#000000' }}>
+    <span style={{ fontWeight: 600 }}>
+      • {line.name}:
+    </span>
+    <span style={{ fontWeight: 700, color: '#0369a1', textAlign: 'right' }}>
+      Rs {line.cost.toLocaleString('en-IN')} {line.note || 'Per person'}
+      {line.optional && <span style={{ fontWeight: 600, fontStyle: 'italic', color: '#000000' }}> {OPTIONAL_MARK}</span>}
+    </span>
+  </div>
+);
 
 /** Under the destination of a booking confirmation: its number and the day it was confirmed (nothing on a quotation). */
 const ConfirmationLine = ({ info, align = 'left' }) =>
@@ -988,7 +1002,23 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
     // When options are shown each carries its own inline price table; don't render a separate PRICING section.
     if (hasPriceTables && hasOptions) return null;
     if (hasPriceTables) return <PriceTablesSection tables={priceTables} quotation={quotation} />;
-    if (!hasPricingSection || hasOptions || isLand || isVisaQuotation) return null; // with options each option carries its own price; a land service's price is its vehicle table and a visa's its fee table
+    if (!hasPricingSection || isLand || isVisaQuotation) return null; // a land service's price is its vehicle table and a visa's its fee table
+    // With hotel options each option carries its own package price, so the price list is not printed as a whole; what is typed on top of the
+    // package price (Airfare, Other, the add-ons) still is: it would otherwise vanish from the quotation without a word.
+    if (hasOptions) {
+      const extras = priceListLines(pricing, { extrasOnly: true });
+      if (!extras.length) return null;
+      return (
+        <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
+          <h3 style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+            Additional Components: -
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {extras.map((line, i) => <PriceListLine key={i} line={line} />)}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="quotation-keep" style={{ marginBottom: '14px', backgroundColor: '#f8fafc', padding: '10px 14px', borderRadius: '6px', border: '1.5px solid #e2e8f0' }}>
         <h3 style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
@@ -996,16 +1026,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         </h3>
         {pricingItems.length > 0 ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '6px' }}>
-            {pricingItems.filter(item => item.isIncluded !== false).map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#000000' }}>
-                <span style={{ fontWeight: 600 }}>
-                  • {item.name}:
-                </span>
-                <span style={{ fontWeight: 700, color: '#0369a1' }}>
-                  Rs {item.costPerPerson?.toLocaleString('en-IN') || 0} {item.note || `Per person`}
-                </span>
-              </div>
-            ))}
+            {priceListLines(pricing).map((line, i) => <PriceListLine key={i} line={line} />)}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '10.5px', color: '#0369a1', fontWeight: 600, marginBottom: '6px' }}>
