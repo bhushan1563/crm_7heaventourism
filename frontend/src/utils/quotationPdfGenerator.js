@@ -1,5 +1,6 @@
 import { formatDate } from './dateHelper';
 import { toDisplayHtml } from './richText'; // the flight note can be formatted: this escapes plain text and cleans formatted text
+import { mediaUrl } from '../services/mediaService';
 
 // html2canvas and jspdf are large, so they are loaded only when a PDF is generated.
 
@@ -340,6 +341,13 @@ export const printFlightVoucher = (quotation) => {
 
   const flightDetails = quotation.flightDetails || [];
   const asPerTicket = quotation.asPerFlightTicket;
+  const screenshots = (quotation.flightImages || []).filter((photo) => photo && typeof photo.token === 'string');
+  // The screenshots of the flight, each one whole, one under the other (the token is part of an address, so it is encoded and escaped).
+  const screenshotsHtml = screenshots.map((photo) => `
+    <figure style="margin: 0 0 16px; text-align: center; break-inside: avoid;">
+      <img src="${esc(mediaUrl(photo.token))}" alt="${esc(photo.caption || 'Flight details')}" style="display: block; width: 100%; max-height: 640px; object-fit: contain; border: 1px solid #e2e8f0; border-radius: 6px;">
+      ${photo.caption ? `<figcaption style="margin-top: 4px; font-size: 11px; font-style: italic; color: #000000;">${esc(photo.caption)}</figcaption>` : ''}
+    </figure>`).join('');
 
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
@@ -396,11 +404,11 @@ export const printFlightVoucher = (quotation) => {
         <span>Class: <strong>${esc(f.cabinClass || 'Economy')}</strong></span>
       </div>
     </div>
-  `).join('') : `
+  `).join('') : (screenshots.length ? '' : `
     <div style="text-align: center; padding: 24px; color: #000000; font-style: italic;">
       No specific flight segments entered. Flight details will be as per confirmed flight ticket.
     </div>
-  `);
+  `));
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -451,6 +459,7 @@ export const printFlightVoucher = (quotation) => {
           <h3 style="font-size: 14px; font-weight: 800; color: #0f172a; margin-bottom: 12px; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px;">
             Flight Segment & Route Details
           </h3>
+          ${screenshotsHtml}
           ${flightCardsHtml}
         </div>
 

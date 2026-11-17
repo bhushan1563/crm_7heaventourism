@@ -224,6 +224,7 @@ export const QuotationBuilderPage = () => {
     flightTicketNote: 'Flight details will be as per confirmed flight ticket',
     flightTicketUrl: '',
     flightDetails: [],
+    flightImages: [],
     exclusions: [...DEFAULT_EXCLUSIONS],
     paymentPolicy: [...DEFAULT_PAYMENT_POLICY],
     cancellationPolicy: [...DEFAULT_CANCELLATION_POLICY],
@@ -1904,6 +1905,18 @@ export const QuotationBuilderPage = () => {
                 </div>
               </div>
 
+              {/* Screenshots of the flight: pasted or chosen here instead of typing every segment */}
+              <div style={{ padding: '14px 16px', borderRadius: '10px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                <PhotoGallery
+                  photos={formData.flightImages || []}
+                  onChange={(flightImages) => setFormData((prev) => ({ ...prev, flightImages }))}
+                  purpose="quotation"
+                  max={6}
+                  label="Flight screenshots"
+                  help="Instead of typing the flight, take a screenshot of the ticket or of the airline's page and paste it here (Ctrl+V), or choose or drop the image. It is shown on the flights page of the quotation and in its PDF."
+                />
+              </div>
+
               {/* Mode Toggle */}
               <div
                 style={{
@@ -1988,7 +2001,9 @@ export const QuotationBuilderPage = () => {
                       color: 'var(--text-muted)'
                     }}
                   >
-                    No flight segments added. Click &apos;Add Segment&apos; or switch to &apos;As per flight ticket&apos; mode.
+                    {formData.flightImages?.length
+                      ? "The flights page shows the screenshots above. You can also click 'Add Segment' to type a flight."
+                      : "No flight segments added. Paste a screenshot above, click 'Add Segment', or switch to 'As per flight ticket' mode."}
                   </div>
                 ) : (
                   formData.flightDetails.map((f, idx) => (

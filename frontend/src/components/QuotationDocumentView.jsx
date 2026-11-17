@@ -15,7 +15,7 @@ import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableLayout
 import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../utils/roomTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
-import { PRODUCTS_TAGLINE } from '../utils/companyHeader';
+import { PRODUCTS_TAGLINE, headerTagline } from '../utils/companyHeader';
 
 // Formatted day text. This document is copied into an isolated print frame for the PDF, which only receives its own
 // markup, so the styling travels with it (a <style> inside the document) instead of living in a global stylesheet.
@@ -734,6 +734,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   const packageDetails = quotation.packageDetails || { hotels: [], roomInfo: '', inclusions: [] };
   const pricing = quotation.pricing || {};
   const flightDetails = quotation.flightDetails || [];
+  const flightImages = quotation.flightImages || [];
   const exclusions = quotation.exclusions || [];
   const paymentPolicy = quotation.paymentPolicy || [];
   const cancellationPolicy = quotation.cancellationPolicy || [];
@@ -819,25 +820,23 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
         </div>
       </div>
 
-      {/* Tagline — "YOUR JOURNEY BEGINS HERE" on confirmation only; nothing on quotations */}
-      {isConfirmation && (
-        <div
-          style={{
-            marginTop: '10px',
-            textAlign: 'center',
-            fontSize: '11px',
-            fontWeight: 800,
-            color: '#b91c1c',
-            letterSpacing: '0.04em',
-            padding: '4px 8px',
-            background: '#fff1f2',
-            borderRadius: '4px',
-            border: '1px solid #ffe4e6'
-          }}
-        >
-          ★ YOUR JOURNEY BEGINS HERE ★
-        </div>
-      )}
+      {/* Tagline: the products and services on a quotation, "Your journey begins here" on a booking confirmation */}
+      <div
+        style={{
+          marginTop: '10px',
+          textAlign: 'center',
+          fontSize: '11px',
+          fontWeight: 800,
+          color: '#b91c1c',
+          letterSpacing: '0.04em',
+          padding: '4px 8px',
+          background: '#fff1f2',
+          borderRadius: '4px',
+          border: '1px solid #ffe4e6'
+        }}
+      >
+        ★ {headerTagline(company.description, isConfirmation)} ★
+      </div>
     </div>
   );
 
@@ -932,7 +931,7 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
   // something entered, and only those laid out for this kind of quotation) instead of the price list.
   const priceTables = hidePrices ? [] : tablesOf(quotation).filter(tableHasData);
   const hasPriceTables = priceTables.length > 0;
-  const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0));
+  const hasFlightSection = !isVisaQuotation && (quotation.asPerFlightTicket || (flightDetails && flightDetails.length > 0) || flightImages.length > 0);
   const hasExclusions = exclusions && exclusions.length > 0;
   const hasPaymentPolicy = paymentPolicy && paymentPolicy.length > 0;
   const hasCancellationPolicy = cancellationPolicy && cancellationPolicy.length > 0;
@@ -1508,6 +1507,21 @@ export const QuotationDocumentView = ({ quotation, pageNumber = null, id = 'quot
                 >
                   Flight Details: -
                 </h3>
+
+                {/* Screenshots of the flight (the ticket or the airline's page): each one whole, as large as the page allows, one under the other */}
+                {flightImages.map((photo) => (
+                  <figure key={photo.token} className="quotation-keep" style={{ margin: '0 0 10px', textAlign: 'center' }}>
+                    <img
+                      src={mediaUrl(photo.token)}
+                      alt={photo.caption || 'Flight details'}
+                      width={photo.width}
+                      height={photo.height}
+                      crossOrigin={photoCrossOrigin}
+                      style={{ display: 'block', width: '100%', height: 'auto', maxHeight: '620px', objectFit: 'contain', border: '1px solid #e2e8f0', borderRadius: '4px', backgroundColor: '#ffffff' }}
+                    />
+                    {photo.caption && <figcaption style={{ marginTop: '3px', fontSize: '9px', color: '#000000', fontStyle: 'italic' }}>{photo.caption}</figcaption>}
+                  </figure>
+                ))}
 
                 {quotation.asPerFlightTicket ? (
                   <div

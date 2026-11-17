@@ -4,7 +4,7 @@ import ConfirmationModel from '../models/Confirmation.js';
 import { findGuestDocument } from './guestController.js';
 import { containsRegex, omit, queryString } from '../utils/security.js';
 import { friendlyMessage } from '../utils/errors.js';
-import { itineraryPhotoTokens, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
+import { itineraryPhotoTokens, normalizeQuotationFlightImages, normalizeQuotationItinerary } from '../utils/quotationItinerary.js';
 import { normalizeQuotationHotels, stayPhotoTokens } from '../utils/quotationHotels.js';
 import { normalizeQuotationLists } from '../utils/quotationLists.js';
 import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotationOptions.js';
@@ -45,6 +45,9 @@ const prepareExtras = async (body) => {
   const stays = hasStays ? normalizeQuotationHotels(body.packageDetails.hotels) : null;
   if (stays && !stays.ok) return stays;
 
+  const flightImages = body.flightImages === undefined ? null : normalizeQuotationFlightImages(body.flightImages);
+  if (flightImages && !flightImages.ok) return flightImages;
+
   const lists = normalizeQuotationLists(body);
   if (!lists.ok) return lists;
   const options = body.options === undefined ? null : normalizeQuotationOptions(body.options);
@@ -58,12 +61,13 @@ const prepareExtras = async (body) => {
   const priceTables = body.priceTables === undefined ? null : normalizeQuotationPriceTables(body.priceTables);
   if (priceTables && !priceTables.ok) return priceTables;
 
-  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : [])];
+  const tokens = [...(days ? itineraryPhotoTokens(days.value) : []), ...(stays ? stayPhotoTokens(stays.value) : []), ...(options ? optionPhotoTokens(options.value) : []), ...(flightImages ? flightImages.value.map((p) => p.token) : [])];
   const loaded = await loadPhotoSizes(tokens);
   if (!loaded.ok) return loaded;
   const sized = (photos) => photos.map((p) => ({ ...p, ...loaded.sizeOf(p.token) }));
   if (days) overrides.itinerary = days.value.map((d) => ({ ...d, photos: sized(d.photos) }));
   if (stays) overrides.packageDetails = { ...body.packageDetails, hotels: stays.value.map((s) => ({ ...s, photos: sized(s.photos) })) };
+  if (flightImages) overrides.flightImages = sized(flightImages.value);
   if (vehicles.vehicles) overrides.vehicles = vehicles.vehicles;
   if (vehicles.landService) overrides.landService = vehicles.landService;
   // The price of a land service quotation IS its vehicles: keep the amount the lists and statistics read (pricing.grandTotal)

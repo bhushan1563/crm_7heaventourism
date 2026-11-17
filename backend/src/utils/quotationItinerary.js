@@ -58,5 +58,10 @@ export const normalizeQuotationItinerary = (value) => {
   return { ok: true, value: days };
 };
 
+export const QUOTATION_FLIGHT_IMAGE_LIMIT = 6;
+
+/** The screenshots of a flight ticket: [{ token, caption }] like the photos of a day (the size is taken from the stored photo by the controller). */
+export const normalizeQuotationFlightImages = (value) => normalizePhotos(value, 'The flight screenshots', QUOTATION_FLIGHT_IMAGE_LIMIT);
+
 /** Every photo token the days mention (to confirm they exist). */
 export const itineraryPhotoTokens = (days) => days.flatMap((d) => d.photos.map((p) => p.token));

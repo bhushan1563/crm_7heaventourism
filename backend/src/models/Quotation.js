@@ -269,6 +269,8 @@ const quotationSchema = new mongoose.Schema({
     default: ''
   },
   flightDetails: [flightSegmentSchema],
+  // Screenshots of the flight (the ticket, or the airline's page), pasted or chosen on the flight tab; the flights page shows them as pictures.
+  flightImages: { type: [dayPhotoSchema], default: [] },
   exclusions: [{ type: String }],
   paymentPolicy: [{ type: String }],
   cancellationPolicy: [{ type: String }],

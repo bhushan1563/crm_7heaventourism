@@ -193,3 +193,57 @@ test('photos used only on a hotel stay of a quotation are never treated as unuse
   assert.ok(!orphans.includes(used.token), 'a photo on a hotel stay is in use');
   assert.ok(orphans.includes(unused.token));
 });
+
+test('flight screenshots are saved with the quotation, sized from the stored photo, come back when it is opened, and are replaced or kept like the days', async () => {
+  const made = await create({ flightImages: [{ token: photoA.token, caption: 'Onward', width: 1, height: 1 }, { token: photoB.token }] });
+  assert.equal(made.success, true, made.message);
+  assert.deepEqual(made.data.flightImages.map((p) => [p.token, p.width, p.height, p.caption]), [[photoA.token, photoA.width, photoA.height, 'Onward'], [photoB.token, photoB.width, photoB.height, '']]);
+  const id = made.data._id;
+  assert.equal((await api(`/${id}`, { token: admin.token })).body.data.flightImages.length, 2);
+
+  const statusOnly = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { status: 'Sent' } });
+  assert.equal(statusOnly.body.data.flightImages.length, 2, 'an update that does not mention them leaves them alone');
+  const one = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { flightImages: [{ token: photoB.token }] } });
+  assert.deepEqual(one.body.data.flightImages.map((p) => p.token), [photoB.token], 'sending the list replaces it');
+  const none = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { flightImages: [] } });
+  assert.deepEqual(none.body.data.flightImages, [], 'and an empty list removes them');
+
+  const older = await create({});
+  assert.deepEqual(older.data.flightImages, [], 'a quotation made before this has none');
+});
+
+test('flight screenshots that are not stored photos, or too many, are refused in plain words and change nothing', async () => {
+  const missing = await create({ flightImages: [{ token: 'Q'.repeat(24) }] });
+  assert.equal(missing.success, false);
+  assert.match(missing.message, /no longer available/);
+  const bad = await create({ flightImages: [{ token: '../x' }] });
+  assert.match(bad.message, /not valid/);
+  const notList = await create({ flightImages: 'oops' });
+  assert.match(notList.message, /must be a list/);
+  const many = await create({ flightImages: Array.from({ length: 7 }, (_, i) => ({ token: String.fromCharCode(97 + i).repeat(24) })) });
+  assert.match(many.message, /at most 6 photos/);
+
+  const made = await create({ flightImages: [{ token: photoA.token }] });
+  const refused = await api(`/${made.data._id}`, { method: 'PUT', token: admin.token, json: { flightImages: [{ token: 'Q'.repeat(24) }] } });
+  assert.equal(refused.body.success, false);
+  assert.equal((await api(`/${made.data._id}`, { token: admin.token })).body.data.flightImages.length, 1, 'a refused update leaves the saved screenshots');
+});
+
+test('screenshots used only on the flight tab are never treated as unused by the storage clean-up, and a booking keeps them', async () => {
+  const { findOrphans } = await import('../../src/services/mediaCleanup.js');
+  const { getMediaSources } = await import('../../src/services/mediaSources.js');
+  const { default: Media } = await import('../../src/models/Media.js');
+  const used = await upload(1211);
+  const unused = await upload(1212);
+  const made = await create({ flightImages: [{ token: used.token }] });
+  assert.equal(made.success, true, made.message);
+  const longAgo = new Date(Date.now() - 3 * 86400000);
+  await Media.collection.updateMany({ token: { $in: [used.token, unused.token] } }, { $set: { createdAt: longAgo, lastUsedAt: longAgo } });
+  const orphans = (await findOrphans(await getMediaSources())).map((m) => m.token);
+  assert.ok(!orphans.includes(used.token), 'a screenshot of a flight is in use');
+  assert.ok(orphans.includes(unused.token));
+
+  const confirmed = await app.call('/api/confirmations', { method: 'POST', token: admin.token, json: { quotationId: made.data._id } });
+  assert.equal(confirmed.body.success, true, confirmed.body.message);
+  assert.deepEqual(confirmed.body.data.quote.flightImages.map((p) => p.token), [used.token], 'the booking keeps the screenshots of the quotation it was made from');
+});

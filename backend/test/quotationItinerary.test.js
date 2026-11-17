@@ -2,7 +2,7 @@ import './helpers.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fc from 'fast-check';
-import { QUOTATION_DAY_LIMITS as L, itineraryPhotoTokens, normalizeQuotationItinerary } from '../src/utils/quotationItinerary.js';
+import { QUOTATION_DAY_LIMITS as L, QUOTATION_FLIGHT_IMAGE_LIMIT, itineraryPhotoTokens, normalizeQuotationFlightImages, normalizeQuotationItinerary } from '../src/utils/quotationItinerary.js';
 
 const TOKEN_A = 'AAAAAAAAAAAAAAAAAAAAAAAA';
 const ok = (value) => {
@@ -91,4 +91,25 @@ test('property: whatever arrives, the answer is either a clear message or days t
     }),
     { numRuns: 400 }
   );
+});
+
+test('flight screenshots: a list of photo references with an optional caption, in the order given, each photo once', () => {
+  const r = normalizeQuotationFlightImages([{ token: TOKEN_A, caption: '  Onward flight ' }, { token: 'B'.repeat(24) }, { token: TOKEN_A }]);
+  assert.equal(r.ok, true, r.message);
+  assert.deepEqual(r.value, [{ token: TOKEN_A, caption: 'Onward flight' }, { token: 'B'.repeat(24), caption: '' }]);
+  assert.deepEqual(normalizeQuotationFlightImages([]).value, []);
+  assert.deepEqual(normalizeQuotationFlightImages(undefined).value, [], 'nothing sent is no screenshots');
+});
+
+test('flight screenshots: at most six, only real photo references, nothing smuggled in', () => {
+  const tooMany = normalizeQuotationFlightImages(Array.from({ length: QUOTATION_FLIGHT_IMAGE_LIMIT + 1 }, (_, i) => ({ token: String.fromCharCode(65 + i).repeat(24) })));
+  assert.equal(tooMany.ok, false);
+  assert.match(tooMany.message, /flight screenshots can have at most 6 photos/);
+  for (const value of ['oops', 5, {}, [null], [{ token: '../../etc/passwd' }], [{ token: 5 }], [{}], [{ token: TOKEN_A, caption: 'x'.repeat(500) }]]) {
+    const r = normalizeQuotationFlightImages(value);
+    assert.equal(r.ok, false, JSON.stringify(value));
+    assert.ok(r.message.length > 8);
+  }
+  const clean = normalizeQuotationFlightImages([{ token: TOKEN_A, caption: 'x', width: 1, height: 1, url: 'http://evil', __proto__: { a: 1 } }]);
+  assert.deepEqual(Object.keys(clean.value[0]).sort(), ['caption', 'token'], 'only the token and the caption are kept; the size comes from the stored photo');
 });
