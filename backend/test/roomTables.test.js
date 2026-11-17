@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { readFileSync } from 'node:fs';
 import { ROOM_ROW_LABELS, ROOM_TABLE_LIMITS, numberIn, roomDefaults, roomRowNights, roomRowRooms, roomRowTotal, roomTableHasData, roomTableTotal } from '../src/utils/roomTables.js';
-import { LAYOUT_OF_TYPE, TABLE_LAYOUTS, normalizeQuotationPriceTables, tableHasData, tableTotal } from '../src/utils/quotationPriceTables.js';
+import { LAYOUT_OF_TYPE, layoutFor, TABLE_LAYOUTS, normalizeQuotationPriceTables, tableHasData, tableTotal } from '../src/utils/quotationPriceTables.js';
 import { confirmationFromQuotation } from '../src/utils/confirmationSnapshot.js';
 import * as browserSide from '../../frontend/src/utils/roomTables.js';
 
@@ -44,8 +44,15 @@ test('amounts are rounded to paise', () => {
   assert.equal(roomRowTotal(row('x', 1999.99, { nights: 3, rooms: 1 })), 5999.97);
 });
 
-test('the layout of a kind of quotation: hotels use the sheet, packages use the rooms; the others have their own pricing', () => {
-  assert.deepEqual(LAYOUT_OF_TYPE, { 'Only Hotel': 'sheet', Package: 'rooms' });
+test('the layout of a kind of quotation: hotels and packages use the sheet (an older package with only rooms tables keeps them); the others have their own pricing', () => {
+  assert.deepEqual(LAYOUT_OF_TYPE, { 'Only Hotel': 'sheet', Package: 'sheet' });
+  assert.equal(layoutFor('Package', []), 'sheet');
+  assert.equal(layoutFor('Package', undefined), 'sheet');
+  assert.equal(layoutFor('Package', [{ layout: 'rooms' }]), 'rooms');
+  assert.equal(layoutFor('Package', [{ layout: 'rooms' }, { layout: 'sheet' }]), 'sheet');
+  assert.equal(layoutFor('Package', [{ rows: [] }]), 'sheet'); // a table made before there were two layouts is a sheet
+  assert.equal(layoutFor('Only Hotel', [{ layout: 'rooms' }]), 'sheet');
+  assert.equal(layoutFor('Visa', [{ layout: 'sheet' }]), null);
   assert.deepEqual(TABLE_LAYOUTS, ['sheet', 'rooms']);
   assert.deepEqual(ROOM_ROW_LABELS, ['For 2 Adults', 'Extra bed', 'Child With bed', 'Child No Bed']);
 });

@@ -16,7 +16,17 @@ export const PRICE_TABLE_LIMITS = { tables: 6, rows: 10, name: 60, label: 40, ma
 export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS']];
 export const TABLE_LAYOUTS = ['sheet', 'rooms'];
 /** Which layout a kind of quotation is priced with (nothing for the others: they have their own pricing). */
-export const LAYOUT_OF_TYPE = { 'Only Hotel': 'sheet', Package: 'rooms' };
+export const LAYOUT_OF_TYPE = { 'Only Hotel': 'sheet', Package: 'sheet' };
+/**
+ * The layout a quotation is priced with: the kind's own, except a package that was made with the per-room-per-night tables and has no
+ * sheet, which keeps them (the room rates are now typed under each hotel, so a new package is priced with the sheet like a hotel).
+ */
+export const layoutFor = (quotationType, tables) => {
+  const layout = LAYOUT_OF_TYPE[quotationType] || null;
+  if (quotationType !== 'Package' || !Array.isArray(tables)) return layout;
+  const of = (table) => table?.layout || 'sheet';
+  return tables.some((t) => of(t) === 'rooms') && !tables.some((t) => of(t) === 'sheet') ? 'rooms' : layout;
+};
 
 const fail = (message) => ({ ok: false, message });
 const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);

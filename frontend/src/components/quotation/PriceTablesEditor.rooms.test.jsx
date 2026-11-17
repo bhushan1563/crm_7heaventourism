@@ -3,11 +3,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PriceTablesEditor from './PriceTablesEditor';
-import { startPriceTables } from '../../utils/priceTables';
+import { blankTable, startPriceTables as startSheets } from '../../utils/priceTables';
+
+const startPriceTables = (q) => (q?.quotationType === 'Only Hotel' ? startSheets(q) : [blankTable('Option 1', 'rooms'), blankTable('Option 2', 'rooms')]); // a package made with the per-room-per-night tables
 
 afterEach(cleanup);
 
-// The rooms layout (a package): Per room per night, No of nights, No of rooms, Total, and a Grand Total, in the same cards as the sheet.
+// The rooms layout (a package made with the per-room-per-night tables, which keeps them): Per room per night, No of nights, No of rooms, Total, and a Grand Total, in the same cards as the sheet.
 
 const Harness = ({ quotation = { quotationType: 'Package', duration: '4 Nights / 5 Days' }, onState }) => {
   const [tables, setTables] = useState(() => startPriceTables(quotation));

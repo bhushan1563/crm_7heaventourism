@@ -120,8 +120,8 @@ describe('ConfirmBookingDialog with pricing options', () => {
     expect(onConfirm).toHaveBeenCalledWith(1, 0);
   });
 
-  it('ignores pricing options laid out for another kind of quotation: a package with only a sheet is confirmed the usual way', () => {
-    render(<ConfirmBookingDialog quotation={hotel(two(), { quotationType: 'Package' })} isOpen onClose={() => {}} onConfirm={() => {}} />);
+  it('ignores pricing options laid out for another kind of quotation: a visa with only a sheet is confirmed the usual way', () => {
+    render(<ConfirmBookingDialog quotation={hotel(two(), { quotationType: 'Visa' })} isOpen onClose={() => {}} onConfirm={() => {}} />);
     expect(screen.queryByText('Which pricing option did the client accept?')).toBeNull();
   });
 

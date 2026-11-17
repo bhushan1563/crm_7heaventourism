@@ -101,7 +101,7 @@ test('a single filled-in option is confirmed without a choice; an option left em
 });
 
 test('the pricing options of another kind of quotation are ignored when confirming', async () => {
-  const q = (await create({ quotationType: 'Package', pricing: { grandTotal: 55555 } })).data;
+  const q = (await create({ quotationType: 'Events / Corporate', pricing: { grandTotal: 55555 } })).data;
   const ok = await confirm(q);
   assert.equal(ok.success, true, ok.message);
   assert.equal(ok.data.payment.totalAmount, 55555);
@@ -175,10 +175,10 @@ test('confirming a package asks which option, and the booking is for that option
   assert.match(ok.data.optionName, /3 Star/);
 });
 
-test('a package with sheet tables (not from the app) is priced the usual way, not by those tables', async () => {
-  const q = (await createPackage({ priceTables: sheet(), pricing: { grandTotal: 55555 } })).data;
-  assert.equal(q.pricing.grandTotal, 55555);
+test('a package is priced with the sheet like a hotel: its Grand Total is the option, and that is what is confirmed', async () => {
+  const q = (await createPackage({ priceTables: [sheet()[0]], pricing: { grandTotal: 55555 } })).data;
+  assert.equal(q.pricing.grandTotal, 99000 + 49500 + 48000);
   const ok = await confirm(q);
   assert.equal(ok.success, true, ok.message);
-  assert.equal(ok.data.payment.totalAmount, 55555);
+  assert.equal(ok.data.payment.totalAmount, 99000 + 49500 + 48000);
 });

@@ -17,13 +17,30 @@ import { typedCount } from './rateTable';
 export const PRICE_TABLE_LIMITS = { tables: 6, rows: 10, name: 60, label: 40, maxAmount: 1_000_000_000, maxPax: 999 };
 export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS']];
 export const DEFAULT_ROW_LABELS = ['Adult', 'Extra bed', 'CWB', 'CNB'];
+/** The amount columns the sheet of a kind of quotation shows: a package has Package and Airfare, a hotel the Package amount and what else is typed. */
+export const sheetColumns = (quotationType, tables = []) => {
+  if (quotationType === 'Package') return AMOUNT_COLUMNS.filter(([key]) => key === 'package' || key === 'airfare');
+  if (quotationType !== HOTEL) return AMOUNT_COLUMNS;
+  return AMOUNT_COLUMNS.filter(([key]) => key === 'package' || (tables || []).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0)));
+};
 export { ROOM_ROW_LABELS };
 
 export const HOTEL = 'Only Hotel';
 /** Which layout a kind of quotation is priced with (nothing for the others: a land service, a visa ... have their own pricing). */
-export const LAYOUT_OF_TYPE = { [HOTEL]: 'sheet', Package: 'rooms' };
-export const layoutOf = (quotation) => LAYOUT_OF_TYPE[quotation?.quotationType || 'Package'] || null;
+export const LAYOUT_OF_TYPE = { [HOTEL]: 'sheet', Package: 'sheet' };
 export const tableLayout = (table) => table?.layout || 'sheet'; // a table made before there were two layouts is a sheet
+/**
+ * A package is priced with the same sheet as a hotel quotation (Option 1, Option 2: Package and Airfare for each kind of traveller, PAX
+ * and the Final Price). A package that was made with the per-room-per-night tables, and has no sheet, keeps them (the room rates are
+ * now typed under each hotel, so a new package does not start with them).
+ */
+export const layoutOf = (quotation) => {
+  const type = quotation?.quotationType || 'Package';
+  const layout = LAYOUT_OF_TYPE[type] || null;
+  if (type !== 'Package') return layout;
+  const tables = quotation?.priceTables || [];
+  return tables.some((t) => tableLayout(t) === 'rooms') && !tables.some((t) => tableLayout(t) === 'sheet') ? 'rooms' : layout;
+};
 
 /** The tables of a quotation that are laid out the way its kind of quotation is priced (the others are never used). */
 export const tablesOf = (quotation) => {
@@ -62,6 +79,17 @@ export const startPricingFor = (quotation, type) => {
   const q = { ...quotation, quotationType: type };
   if (!layoutOf(q) || tablesOf(q).length) return {};
   return { priceTables: [...startPriceTables(q), ...(quotation?.priceTables || [])] };
+};
+
+/**
+ * The tables of a quotation as it is opened for editing. A package made while it still started with per-room-per-night tables, and
+ * never filled them in, has only blank ones: they are dropped, so it is priced with Package Price and Airfare like a new package.
+ * A package with some figures in its tables keeps all of them, and so does every other kind of quotation.
+ */
+export const tablesWhenOpened = (quotation) => {
+  const tables = quotation?.priceTables || [];
+  if ((quotation?.quotationType || 'Package') !== 'Package' || tablesOf(quotation).some(tableHasData)) return tables;
+  return tables.filter((table) => tableLayout(table) !== 'rooms');
 };
 
 /** The whole list of tables once the ones the quotation uses (shown in the editor) have been changed; the others stay at the end. */

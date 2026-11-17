@@ -272,7 +272,7 @@ export default generateVisaQuotationDocx;
  */
 export const generateConfirmationDocx = async (quotation, view, confirmation, { company = quotation?.companyDetails?.name ? quotation.companyDetails : COMPANY } = {}) => {
   const d = await import('docx');
-  const { AMOUNT_COLUMNS, LAYOUT_OF_TYPE, tableLayout, tableTotal, tablesOf, tableHasData, rowTotal, rowFinal } = await import('./priceTables');
+  const { sheetColumns, LAYOUT_OF_TYPE, tableLayout, tableTotal, tablesOf, tableHasData, rowTotal, rowFinal } = await import('./priceTables');
   const { roomTableTotal, roomDefaults } = await import('./roomTables');
 
   const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
@@ -540,8 +540,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
         const grandCols = [cols[0] + cols[1] + cols[2] + cols[3], cols[4]];
         children.push(tbl([headerRow, ...bodyRows, trow([cell([run('Grand Total', { bold: true })], { width: grandCols[0], fill: 'FEF9C3' }), rcell(rs(grandTotal), grandCols[1], { bold: true, size: 24 })])], cols));
       } else {
-        const hasColumnData = (key) => (quotation?.priceTables || [pt]).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
-        const sheetCols2 = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
+        const sheetCols2 = sheetColumns(quotationType, quotation?.priceTables || [pt]);
         const colCount = 2 + sheetCols2.length + 2;
         const baseW = Math.round(CONTENT / colCount);
         const cols = Array(colCount - 1).fill(baseW);
@@ -732,8 +731,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       });
       return [table([tableRow(['Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total'].map((t, i) => hcell(t, w[i])), { header: true }), ...body, totalRow('Grand Total', rs(P.tableTotal(pt, quotation)), w)], w), new d.Paragraph({ spacing: { after: 60 } })];
     }
-    const hasColumnData = (key) => (quotation?.priceTables || [pt]).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
-    const amounts = isHotelOnly ? P.AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : P.AMOUNT_COLUMNS;
+    const amounts = P.sheetColumns(quotationType, quotation?.priceTables || [pt]);
     const labelShare = 0.2;
     const share = (1 - labelShare) / (amounts.length + 3);
     const w = widthsOf([labelShare, ...Array(amounts.length + 3).fill(share)]);

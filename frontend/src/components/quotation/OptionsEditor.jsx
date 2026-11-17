@@ -44,7 +44,7 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, pr
           ) : fromListOnly ? (
             <div className="options-hint">Offer the guest a choice, for example 3 star and 4 star hotels. Each option can have several hotels; under each hotel enter its rates, and the Grand Total of the option is counted from them.</div>
           ) : (
-            <div className="options-hint">Offer the guest a choice. Each option has its own hotels and its own price, and they are shown side by side. Prices are per person for {guests} {guests === 1 ? 'guest' : 'guests'}.</div>
+            <div className="options-hint">Offer the guest a choice. Each option has its own hotels and its own price, and they are shown side by side. Type the price per person for {guests} {guests === 1 ? 'guest' : 'guests'}, or enter the room rates under each hotel and the Grand Total of the option is counted from them.</div>
           )}
         </div>
         <div className="options-tools">
@@ -162,7 +162,7 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, pr
                       </div>
                       <input type="text" className="form-input option-address" value={h.address || ''} maxLength={300} placeholder="Hotel address" aria-label={`Hotel ${k + 1} address, option ${i + 1}`} onChange={(e) => patchHotel(i, k, { address: e.target.value })} />
                     </div>
-                    {fromListOnly && !pricedByTables && <RateTable stay={h} where={`hotel ${k + 1}, option ${i + 1}`} onChange={(rates) => patchHotel(i, k, { rates })} />}
+                    {!pricedByTables && <RateTable stay={h} where={`hotel ${k + 1}, option ${i + 1}`} onChange={(rates) => patchHotel(i, k, { rates })} />}
                   </div>
                 );
               })}
@@ -184,7 +184,7 @@ export const OptionsEditor = ({ options, onChange, paxDetails, quotationType, pr
                 price until a hotel of it gets a rate table. Any other quotation is priced per person. */}
             {pricedByTables ? (
               <p className="options-hint option-in-tables">The price of this option is in the pricing table (Pricing tab).</p>
-            ) : fromListOnly && (optionUsesRates(option) || !(option.pricePerPerson > 0)) ? (
+            ) : optionUsesRates(option) || (fromListOnly && !(option.pricePerPerson > 0)) ? (
               <div className="option-price option-price-tables">
                 <div>
                   <span className="form-label">Grand Total of option {i + 1}</span>

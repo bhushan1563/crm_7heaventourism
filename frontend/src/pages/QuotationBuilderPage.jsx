@@ -63,6 +63,7 @@ import HotelPicker from '../components/hotel/HotelPicker';
 import TagInput from '../components/itinerary/TagInput';
 import FormattedLine from '../components/quotation/FormattedLine';
 import OptionsEditor from '../components/quotation/OptionsEditor';
+import RateTable from '../components/quotation/RateTable';
 import { hotelsOfFirstOption, optionsProblem, repriceOptions, startHotelOptions, startOptions } from '../utils/quotationOptions';
 import { startRates } from '../utils/rateTable';
 import { DEFAULT_CANCELLATION_POLICY, DEFAULT_EXCLUSIONS, DEFAULT_IMPORTANT_NOTES, DEFAULT_PAYMENT_POLICY, DEFAULT_VEHICLE_NOTES } from '../utils/standardText';
@@ -77,7 +78,7 @@ import SaveVisaToList from '../components/visa/SaveVisaToList';
 import ConfirmDialog from '../components/ConfirmDialog';
 import visaService from '../services/visaService';
 import { applyVisaItem, hasVisaContent, visaTitle } from '../utils/visaList';
-import { layoutOf, priceTablesPayload, priceTablesProblem, startPricingFor, startPriceTables, tablesOf, usesPriceTables, withTables } from '../utils/priceTables';
+import { layoutOf, priceTablesPayload, priceTablesProblem, startPricingFor, startPriceTables, tablesOf, tablesWhenOpened, usesPriceTables, withTables } from '../utils/priceTables';
 import { nextPriceNote } from '../utils/pricingNote';
 import { richToPlainText } from '../utils/richText';
 import { feesPayload, followGuests, isVisa, startVisa, visaIssue, visaPayload } from '../utils/visa';
@@ -183,7 +184,7 @@ export const QuotationBuilderPage = () => {
   const [formData, setFormData] = useState({
     quotationNo: '',
     quotationType: 'Package', // 'Only Hotel' | 'Package' | 'Events / Corporate'
-    priceTables: startPriceTables({ quotationType: 'Package' }), // a new package (and hotel) quotation is priced with the pricing tables
+    priceTables: startPriceTables({ quotationType: 'Package' }), // a new package (and hotel) quotation is priced with the pricing sheet
     guestId: '',
     clientName: '',
     clientEmail: '',
@@ -286,6 +287,7 @@ export const QuotationBuilderPage = () => {
             setFormData({
               ...data,
               quotationType: data.quotationType || 'Package',
+              priceTables: tablesWhenOpened(data),
               companyDetails,
               paymentPolicy: (data.paymentPolicy && data.paymentPolicy.length > 0) ? data.paymentPolicy : [...DEFAULT_PAYMENT_POLICY],
               cancellationPolicy: (data.cancellationPolicy && data.cancellationPolicy.length > 0) ? data.cancellationPolicy : [...DEFAULT_CANCELLATION_POLICY],
@@ -926,7 +928,11 @@ export const QuotationBuilderPage = () => {
     showToast(`The ${visa.country} visa was added to this quotation. Check the fees and the number of applicants.`, 'success');
   };
 
-  const currentPricingItems = formData.pricing?.items || DEFAULT_PRICING_ITEMS;
+  // A package is priced with Package Price and Airfare (the room rates are typed under each hotel). "Other" and the add-ons stay out
+  // of sight unless the quotation already uses them, so nothing typed earlier is hidden.
+  const allPricingItems = formData.pricing?.items || DEFAULT_PRICING_ITEMS;
+  const isPlainPackage = formData.quotationType === 'Package' && allPricingItems.every((item) => ['pkg', 'air', 'oth'].includes(item.id) && (item.id !== 'oth' || !(Number(item.costPerPerson) > 0)));
+  const currentPricingItems = isPlainPackage ? allPricingItems.filter((item) => item.id !== 'oth') : allPricingItems;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -1772,6 +1778,11 @@ export const QuotationBuilderPage = () => {
                           />
                         </div>
 
+                        {/* The room rates of this stay: per room per night, the nights, the rooms and the total of each row. */}
+                        {formData.quotationType !== 'Only Hotel' && (
+                          <RateTable stay={h} where={`hotel stay ${idx + 1}`} onChange={(rates) => handleUpdateHotel(idx, 'rates', rates)} />
+                        )}
+
                         {/* What the hotel quotation shows besides the basics: photos, amenities, check-in / check-out times */}
                         <details className="stay-more" open={Boolean(h.photos?.length || h.amenities?.length)}>
                           <summary>
@@ -2161,7 +2172,9 @@ export const QuotationBuilderPage = () => {
                     ? 'Remove the pricing table and the amounts typed in it, and use the usual price list instead?'
                     : formData.quotationType === 'Only Hotel'
                       ? 'This hotel quotation is priced with the pricing sheet: one table for each option (for example the 3 star and the 4 star hotels you chose on the Hotel Details tab), with Package, Airfare, Visa and TCS for each kind of traveller. The totals are counted for you.'
-                      : 'This package is priced per room per night: one table for each option (for example a 3 star and a 4 star package), with the nights, the rooms and the total counted for you. Your trip\'s nights are used unless you type them.'}
+                      : layoutOf(formData) === 'sheet'
+                        ? 'This package is priced with the pricing sheet: one table for each option (for example a 3 star and a 4 star package), with the Package price and the Airfare for each kind of traveller and how many of them (PAX). The totals are counted for you. The room rates per night are typed under each hotel (Hotel Details tab).'
+                        : 'This package is priced per room per night: one table for each option (for example a 3 star and a 4 star package), with the nights, the rooms and the total counted for you. Your trip\'s nights are used unless you type them.'}
                 </span>
                 {askUsualList ? (
                   <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2194,14 +2207,14 @@ export const QuotationBuilderPage = () => {
             <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
 
               {/* A hotel or package quotation made before the pricing tables came back keeps its per-person price list, with a way to the tables. */}
-              {layoutOf(formData) && (
+              {layoutOf(formData) === 'sheet' && (
                 <div className="cf-banner" role="note">
                   <span>
                     {askTables
                       ? 'Use the pricing table instead? The per-person prices typed here, and the prices typed under the hotel options, are removed.'
                       : formData.quotationType === 'Only Hotel'
                         ? 'This hotel quotation uses the per-person price list. The pricing sheet (Option 1 and Option 2, with Package, Airfare, Visa and TCS for each kind of traveller) is the usual way to price a hotel quotation.'
-                        : 'This package uses the per-person price list. The pricing table (per room per night, with the nights, the rooms and the total counted for you) is the usual way to price a package.'}
+                        : 'This package uses the per-person price list. The pricing sheet (Option 1 and Option 2, with the Package price and the Airfare for each kind of traveller and how many of them) is the usual way to price a package.'}
                   </span>
                   {askTables ? (
                     <span style={{ display: 'inline-flex', gap: 8, flexWrap: 'wrap' }}>
@@ -2239,20 +2252,22 @@ export const QuotationBuilderPage = () => {
                     <span>Pricing Management & Cost Breakdown</span>
                   </div>
                   <div style={{ fontSize: '0.78rem', color: 'var(--fg-64748B)' }}>
-                    Configure Package Price, Airfare, Other, dynamic Add-ons and view live Grand Totals.
+                    {isPlainPackage ? 'Configure the Package Price and the Airfare, and view live Grand Totals. The room rates are typed under each hotel (Hotel Details tab).' : 'Configure Package Price, Airfare, Other, dynamic Add-ons and view live Grand Totals.'}
                   </div>
                 </div>
 
-                {/* + Add On Button */}
-                <button
-                  type="button"
-                  onClick={handleAddPricingItem}
-                  className="btn btn-primary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <PlusCircle size={15} />
-                  <span>+ Add On</span>
-                </button>
+                {/* + Add On Button (not for a package: it is priced with Package Price and Airfare) */}
+                {!isPlainPackage && (
+                  <button
+                    type="button"
+                    onClick={handleAddPricingItem}
+                    className="btn btn-primary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <PlusCircle size={15} />
+                    <span>+ Add On</span>
+                  </button>
+                )}
               </div>
 
               {/* Buttons / Tabs Under Pricing */}
@@ -2483,14 +2498,16 @@ export const QuotationBuilderPage = () => {
                       <CheckCircle2 size={18} />
                       <span>Consolidated Total & Pricing Summary</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleAddPricingItem}
-                      className="btn btn-outline-azure btn-xs"
-                    >
-                      <Plus size={12} />
-                      <span>+ Add More Component</span>
-                    </button>
+                    {!isPlainPackage && (
+                      <button
+                        type="button"
+                        onClick={handleAddPricingItem}
+                        className="btn btn-outline-azure btn-xs"
+                      >
+                        <Plus size={12} />
+                        <span>+ Add More Component</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Pricing Items Summary Table */}

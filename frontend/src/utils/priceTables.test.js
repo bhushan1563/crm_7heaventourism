@@ -32,10 +32,11 @@ describe('starting', () => {
     expect(blankTable('Option 1').rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
     expect(blankTable('Mine').name).toBe('Mine');
   });
-  it('only a hotel quotation with tables uses them', () => {
+  it('only a hotel or a package quotation with tables uses them', () => {
     expect(usesPriceTables(hotel([blankTable('Option 1')]))).toBe(true);
     expect(usesPriceTables(hotel([]))).toBe(false);
-    expect(usesPriceTables({ quotationType: 'Package', priceTables: [blankTable('Option 1')] })).toBe(false);
+    expect(usesPriceTables({ quotationType: 'Package', priceTables: [blankTable('Option 1')] })).toBe(true); // a package is priced with the sheet too
+    expect(usesPriceTables({ quotationType: 'Visa', priceTables: [blankTable('Option 1')] })).toBe(false);
     expect(usesPriceTables(undefined)).toBe(false);
   });
   it('an empty cell shows nothing, like the sheet', () => {
@@ -50,7 +51,7 @@ describe('priceTablesProblem', () => {
   it('has nothing to say about a good quotation, or about one that does not use the tables', () => {
     expect(priceTablesProblem(hotel([{ name: 'Option 1', rows: [row('Adult')] }]))).toBeNull();
     expect(priceTablesProblem(hotel([blankTable('Option 1'), blankTable('Option 2')]))).toBeNull();
-    expect(priceTablesProblem({ quotationType: 'Package', priceTables: [{ name: 'x', rows: [row('')] }] })).toBeNull();
+    expect(priceTablesProblem({ quotationType: 'Visa', priceTables: [{ name: 'x', rows: [row('')] }] })).toBeNull();
   });
   it('names the option, the row and the column in plain words', () => {
     expect(priceTablesProblem(hotel([{ name: 'Taj', rows: [row('Adult', { package: -1 })] }]))).toMatch(/^The Package of "Adult" in Taj must be an amount from 0 to Rs 1,00,00,00,000\./);

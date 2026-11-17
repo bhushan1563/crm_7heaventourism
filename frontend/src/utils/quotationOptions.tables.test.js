@@ -30,9 +30,10 @@ describe('options on a quotation priced with the pricing tables', () => {
     expect(optionsProblem(withTables([{ ...blankOption(1), hotels: [stay()] }]))).toMatch(/at least two/);
   });
 
-  it('tables laid out for the other kind of quotation do not count: a package with only a sheet is still priced per person', () => {
+  it('a package with no tables is priced per person, and one with the sheet has the prices in it', () => {
     const q = { quotationType: 'Package', options: two() };
-    expect(optionsProblem({ ...q, priceTables: startPriceTables({ quotationType: 'Only Hotel' }) })).toMatch(/price per person of Option 1/);
+    expect(optionsProblem({ ...q, priceTables: [] })).toMatch(/price per person of Option 1/);
+    expect(optionsProblem({ ...q, priceTables: startPriceTables({ quotationType: 'Only Hotel' }) })).toBeNull(); // the sheet carries the prices
   });
 
   it('a land service or a visa never uses the tables, so their options are checked as before', () => {

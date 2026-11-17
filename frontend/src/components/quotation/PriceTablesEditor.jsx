@@ -1,6 +1,6 @@
 import React from 'react';
 import { Copy, Plus, Trash2 } from 'lucide-react';
-import { AMOUNT_COLUMNS, PRICE_TABLE_LIMITS as L, ROOM_ROW_LABELS, blankRoomRow, blankRow, blankTable, rowFinal, rowTotal, tableLayout, tableTotal } from '../../utils/priceTables';
+import { AMOUNT_COLUMNS as ALL_COLUMNS, PRICE_TABLE_LIMITS as L, ROOM_ROW_LABELS, blankRoomRow, blankRow, blankTable, rowFinal, rowTotal, sheetColumns, tableLayout, tableTotal } from '../../utils/priceTables';
 import { ROOM_TABLE_LIMITS as R, roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../../utils/roomTables';
 import './priceTables.css';
 
@@ -12,7 +12,8 @@ const cell = (n) => (Number(n) > 0 ? Number(n).toLocaleString('en-IN') : '');
  * 3 star choice, Option 2 = the 4 star ...). Every Total, Final Price and Grand Total is worked out as you type and is never typed.
  *
  * A hotel quotation uses the SHEET: a row per kind of traveller with Package, Airfare, Visa and TCS per person, the Total of one person,
- * PAX (how many) and the Final Price (Total x PAX). A package quotation uses ROOMS: a row per kind of guest (For 2 Adults, Extra bed,
+ * PAX (how many) and the Final Price (Total x PAX); a package uses the same sheet with Package and Airfare only. A package made with the
+ * per-room-per-night tables keeps ROOMS: a row per kind of guest (For 2 Adults, Extra bed,
  * Child With bed, Child No Bed) with the rate per room per night, the nights, the rooms and the Total. The card, the names, the copy and
  * remove buttons and the Grand Total are the same in both. `onChange(tables)` receives the new list; `quotation` gives the rooms layout
  * the length of the trip (the nights a row follows while its nights are left empty).
@@ -23,6 +24,8 @@ export const PriceTablesEditor = ({ tables, onChange, quotation }) => {
   const nameOf = (table, i) => String(table.name || '').trim() || `Option ${i + 1}`;
   const layout = tableLayout(tables[0]);
   const defaults = roomDefaults(quotation);
+  const type = quotation?.quotationType || 'Package';
+  const AMOUNT_COLUMNS = type === 'Package' ? sheetColumns(type) : ALL_COLUMNS; // a package: Package and Airfare; a hotel: all four
 
   // A new row of a rooms table is the next of the client's rows that the table does not have yet (Extra bed, Child With bed ...).
   const nextRoomLabel = (table) => ROOM_ROW_LABELS.find((label) => !table.rows.some((r) => String(r.label || '').trim().toLowerCase() === label.toLowerCase())) || '';
@@ -41,7 +44,7 @@ export const PriceTablesEditor = ({ tables, onChange, quotation }) => {
         </p>
       ) : (
         <p className="pt-hint">
-          One table for each option you offer. Fill in the amounts for one person, and PAX for how many of each kind. <strong>Total</strong> is Package + Airfare + Visa + TCS, <strong>Final Price</strong> is Total × PAX, and the Grand Total adds them up. All of it is worked out for you as you type. An option with nothing entered is not printed.
+          One table for each option you offer. Fill in the amounts for one person, and PAX for how many of each kind. <strong>Total</strong> is {AMOUNT_COLUMNS.map(([, title]) => title).join(' + ')}, <strong>Final Price</strong> is Total × PAX, and the Grand Total adds them up. All of it is worked out for you as you type. An option with nothing entered is not printed.
         </p>
       )}
 
@@ -168,7 +171,7 @@ export const PriceTablesEditor = ({ tables, onChange, quotation }) => {
                 </tbody>
                 <tfoot>
                   <tr>
-                    <th scope="row" colSpan={7} className="pt-grand-label">Grand Total</th>
+                    <th scope="row" colSpan={AMOUNT_COLUMNS.length + 3} className="pt-grand-label">Grand Total</th>
                     <td className="pt-grand" aria-live="polite">{money(tableTotal(table, quotation))}</td>
                     <td />
                   </tr>

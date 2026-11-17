@@ -1,4 +1,4 @@
-import { LAYOUT_OF_TYPE, tableHasData, tableTotal } from './quotationPriceTables.js';
+import { layoutFor, tableHasData, tableTotal } from './quotationPriceTables.js';
 import { roomDefaults } from './roomTables.js';
 import { optionTotal, optionUsesRates } from './hotelRates.js';
 
@@ -65,8 +65,8 @@ export const confirmationFromQuotation = (quotation, optionIndex, priceTableInde
   }
 
   // A hotel or package quotation priced with the pricing tables: the option the client accepted is the one kept, and its Grand Total is the amount.
-  // Only a table laid out the way this kind of quotation is priced counts (a hotel: the sheet; a package: the rooms).
-  const layout = LAYOUT_OF_TYPE[quotation.quotationType];
+  // Only a table laid out the way this kind of quotation is priced counts (a hotel and a package: the sheet; an older package keeps its rooms tables).
+  const layout = layoutFor(quotation.quotationType, quotation.priceTables);
   const tables = layout && Array.isArray(quotation.priceTables) ? quotation.priceTables : [];
   const filledIn = tables.map((table, i) => i).filter((i) => (tables[i].layout || 'sheet') === layout && tableHasData(tables[i]));
   if (filledIn.length > 0) {

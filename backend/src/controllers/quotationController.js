@@ -11,7 +11,7 @@ import { normalizeQuotationOptions, optionPhotoTokens } from '../utils/quotation
 import { normalizeQuotationVehicles } from '../utils/quotationVehicles.js';
 import { normalizeQuotationVisa } from '../utils/quotationVisa.js';
 import { normalizeQuotationText } from '../utils/quotationText.js';
-import { LAYOUT_OF_TYPE, normalizeQuotationPriceTables, tableHasData, tableTotal } from '../utils/quotationPriceTables.js';
+import { layoutFor, normalizeQuotationPriceTables, tableHasData, tableTotal } from '../utils/quotationPriceTables.js';
 import { roomDefaults } from '../utils/roomTables.js';
 import { loadPhotoSizes } from '../services/photoRefs.js';
 import { isStaleClaim, releaseStaleClaim } from '../services/confirmationClaims.js';
@@ -78,9 +78,10 @@ const prepareExtras = async (body) => {
   if (priceTables) overrides.priceTables = priceTables.value;
   // A hotel or package quotation priced with the pricing tables is "from" its lowest Grand Total: keep the amount that lists and
   // statistics read (pricing.grandTotal) equal to it. A "rooms" row that follows the trip needs the duration; without it nothing is changed.
-  if (priceTables && LAYOUT_OF_TYPE[body.quotationType]) {
+  const tableLayout = priceTables ? layoutFor(body.quotationType, priceTables.value) : null;
+  if (priceTables && tableLayout) {
     const defaults = roomDefaults(body);
-    const counted = priceTables.value.filter((table) => table.layout === LAYOUT_OF_TYPE[body.quotationType]); // only tables laid out the way this kind is priced
+    const counted = priceTables.value.filter((table) => table.layout === tableLayout); // only tables laid out the way this kind is priced
     const totals = counted.filter(tableHasData).map((table) => tableTotal(table, defaults)).filter((total) => total > 0);
     const followsTrip = counted.some((table) => table.layout === 'rooms' && table.rows.some((row) => row.nights === null));
     if (totals.length && !(followsTrip && !defaults.nights)) {

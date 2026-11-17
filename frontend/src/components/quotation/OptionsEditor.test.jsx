@@ -164,11 +164,31 @@ describe('a hotel quotation: every hotel has its rate table and the option has a
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.getAllByLabelText('Price per person (Rs)')).toHaveLength(2); // every option has its own price box
     expect(screen.getAllByLabelText('Price per person (Rs)')[0]).toHaveValue(25000);
-    expect(screen.getByText(/Prices are per person for 2 guests/)).toBeInTheDocument();
+    expect(screen.getByText(/price per person for 2 guests/)).toBeInTheDocument();
   });
 
   it('adds a hotel by hand to a hotel quotation with its room rate row ready, and says what the total is counted from', () => {
     show(priced());
     expect(screen.getByText(/the Grand Total of the option is counted from them/)).toBeInTheDocument();
+  });
+});
+
+describe('a package with hotel options: the room rates can go under each hotel too', () => {
+  const rate = (where, value) => fireEvent.change(screen.getByLabelText(`Rate per room per night, room, ${where}`), { target: { value } });
+
+  it('offers "Add the room rate" under a hotel, and keeps the price per person box until a rate is added', async () => {
+    const spy = show(start(), { type: 'Package' });
+    expect(screen.getAllByLabelText('Price per person (Rs)')).toHaveLength(2);
+    await userEvent.click(screen.getByLabelText('Add the room rate of hotel 1, option 1'));
+    expect(spy.current[0].hotels[0].rates.length).toBeGreaterThan(0);
+  });
+
+  it('counts the Grand Total of the option from the rates, as a hotel quotation does', () => {
+    const spy = show([{ ...blankOption(1), hotels: [hotel({ nights: '3 Nights', noOfRooms: '2 Rooms', rates: startRates() })] }, blankOption(2)], { type: 'Package' });
+    rate('hotel 1, option 1', '5000');
+    expect(screen.getByLabelText('Grand Total of option 1')).toHaveTextContent('Rs 30,000');
+    expect(spy.current[0].totalPrice).toBe(30000);
+    expect(spy.current[0].pricePerPerson).toBe(15000);
+    expect(screen.getAllByLabelText('Price per person (Rs)')).toHaveLength(1); // option 2 is still priced per person
   });
 });

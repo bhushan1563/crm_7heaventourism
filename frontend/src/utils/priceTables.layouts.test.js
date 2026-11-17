@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { LAYOUT_OF_TYPE, ROOM_ROW_LABELS, blankRoomRow, blankTable, filledTables, layoutOf, listPrice, lowestTotal, needsPriceTableChoice, priceTablesPayload, priceTablesProblem, startPriceTables, tableHasData, tableLayout, tableTotal, tablesOf, usesPriceTables } from './priceTables';
+import { LAYOUT_OF_TYPE, ROOM_ROW_LABELS, blankRoomRow, blankTable, filledTables, layoutOf, listPrice, lowestTotal, needsPriceTableChoice, priceTablesPayload, priceTablesProblem, startPriceTables, startPricingFor, tableHasData, tablesWhenOpened, tableLayout, tableTotal, tablesOf, usesPriceTables } from './priceTables';
 
-// The two layouts of the pricing tables: the sheet for a hotel quotation, the rooms for a package quotation.
+// The two layouts of the pricing tables: the sheet (a hotel quotation, and a package), and the rooms (a package made with them earlier).
 
 const sheetTable = (name = 'Option 1') => ({ name, layout: 'sheet', rows: [{ label: 'Adult', package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2 }] });
 const roomRow = (label, rate, over = {}) => ({ label, rate, nights: '', rooms: '', ...over });
@@ -11,19 +11,24 @@ const pkg = (over = {}) => ({ quotationType: 'Package', duration: '4 Nights / 5 
 const hotel = (over = {}) => ({ quotationType: 'Only Hotel', priceTables: [sheetTable('3 Star'), sheetTable('4 Star')], ...over });
 
 describe('which layout a kind of quotation uses', () => {
-  it('is the sheet for a hotel and the rooms for a package; the other kinds have their own pricing', () => {
-    expect(LAYOUT_OF_TYPE).toEqual({ 'Only Hotel': 'sheet', Package: 'rooms' });
+  it('is the sheet for a hotel and for a package (one made with the rooms tables keeps them); the other kinds have their own pricing', () => {
+    expect(LAYOUT_OF_TYPE).toEqual({ 'Only Hotel': 'sheet', Package: 'sheet' });
     expect(layoutOf({ quotationType: 'Only Hotel' })).toBe('sheet');
-    expect(layoutOf({ quotationType: 'Package' })).toBe('rooms');
-    expect(layoutOf({})).toBe('rooms'); // a quotation with no kind is a package, as everywhere else
+    expect(layoutOf({ quotationType: 'Package' })).toBe('sheet');
+    expect(layoutOf({})).toBe('sheet'); // a quotation with no kind is a package, as everywhere else
+    expect(layoutOf(pkg())).toBe('rooms'); // made with the per-room-per-night tables, and no sheet
+    expect(layoutOf(pkg({ priceTables: [...pkg().priceTables, sheetTable()] }))).toBe('sheet');
+    expect(layoutOf({ quotationType: 'Only Hotel', priceTables: pkg().priceTables })).toBe('sheet');
     for (const type of ['Land Service', 'Visa', 'Events / Corporate']) expect(layoutOf({ quotationType: type })).toBeNull();
   });
 
   it('only counts the tables laid out that way (a table made before there were two layouts is a sheet)', () => {
     expect(tableLayout({ rows: [] })).toBe('sheet');
     expect(tablesOf(hotel({ priceTables: [{ name: 'Old', rows: [] }, roomsTable('R', [])] }))).toHaveLength(1);
-    expect(tablesOf(pkg({ priceTables: [sheetTable()] }))).toEqual([]);
-    expect(usesPriceTables(pkg({ priceTables: [sheetTable()] }))).toBe(false);
+    expect(tablesOf(pkg({ priceTables: [sheetTable()] }))).toHaveLength(1);
+    expect(tablesOf(pkg({ priceTables: [sheetTable(), roomsTable('R', [])] }))).toHaveLength(1); // the sheet wins; the rooms table is kept aside
+    expect(usesPriceTables(pkg({ priceTables: [sheetTable()] }))).toBe(true);
+    expect(usesPriceTables(pkg({ priceTables: [] }))).toBe(false);
     expect(usesPriceTables(pkg())).toBe(true);
     expect(usesPriceTables({ quotationType: 'Visa', priceTables: [sheetTable()] })).toBe(false);
     expect(usesPriceTables(hotel({ priceTables: [] }))).toBe(false);
@@ -31,14 +36,15 @@ describe('which layout a kind of quotation uses', () => {
 });
 
 describe('starting a quotation with its tables', () => {
-  it('gives a hotel two sheet options and a package two rooms options, with the rows of the client\'s sheets', () => {
-    const h = startPriceTables({ quotationType: 'Only Hotel' });
-    expect(h.map((t) => [t.name, t.layout])).toEqual([['Option 1', 'sheet'], ['Option 2', 'sheet']]);
-    expect(h[0].rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
-    const p = startPriceTables({ quotationType: 'Package' });
-    expect(p.map((t) => [t.name, t.layout])).toEqual([['Option 1', 'rooms'], ['Option 2', 'rooms']]);
-    expect(p[0].rows.map((r) => r.label)).toEqual(ROOM_ROW_LABELS);
-    expect(p[0].rows[0]).toEqual(blankRoomRow('For 2 Adults'));
+  it('gives a hotel and a package two sheet options, with the rows of the client\'s sheet; the rooms layout is still there to make', () => {
+    for (const type of ['Only Hotel', 'Package']) {
+      const h = startPriceTables({ quotationType: type });
+      expect(h.map((t) => [t.name, t.layout])).toEqual([['Option 1', 'sheet'], ['Option 2', 'sheet']]);
+      expect(h[0].rows.map((r) => r.label)).toEqual(['Adult', 'Extra bed', 'CWB', 'CNB']);
+    }
+    const p = blankTable('Option 1', 'rooms');
+    expect(p.rows.map((r) => r.label)).toEqual(ROOM_ROW_LABELS);
+    expect(p.rows[0]).toEqual(blankRoomRow('For 2 Adults'));
   });
 
   it('is named after the hotel options when the quotation already has them (3 Star, 4 Star ...), and nothing for other kinds', () => {
@@ -137,5 +143,44 @@ describe('property', () => {
       }),
       { numRuns: 300 }
     );
+  });
+});
+
+describe('what a quotation starts pricing with when its kind is chosen', () => {
+  it('gives a hotel and a package the pricing sheet (a package: Package and Airfare), and the other kinds nothing', () => {
+    expect(startPricingFor({}, 'Only Hotel').priceTables.map((t) => t.layout)).toEqual(['sheet', 'sheet']);
+    expect(startPricingFor({}, 'Package').priceTables.map((t) => t.layout)).toEqual(['sheet', 'sheet']);
+    expect(startPricingFor({}, 'Visa')).toEqual({});
+  });
+
+  it('leaves a package that already has per-room-per-night tables as it is, and keeps them when it is switched to a hotel and back', () => {
+    const rooms = [blankTable('Option 1', 'rooms'), blankTable('Option 2', 'rooms')];
+    const asPackage = { quotationType: 'Package', priceTables: rooms };
+    expect(usesPriceTables(asPackage)).toBe(true);
+    expect(startPricingFor(asPackage, 'Package')).toEqual({});
+    const toHotel = startPricingFor(asPackage, 'Only Hotel').priceTables;
+    expect(toHotel.map((t) => t.layout)).toEqual(['sheet', 'sheet', 'rooms', 'rooms']);
+    expect(startPricingFor(asPackage, 'Visa')).toEqual({});
+  });
+});
+
+describe('opening a package that was made with the per-room-per-night tables', () => {
+  const filled = () => [blankTable('Option 1', 'rooms'), blankTable('Option 2', 'rooms')].map((t, i) => (i ? t : { ...t, rows: [{ label: 'For 2 Adults', rate: 5000, nights: 3, rooms: 1 }] }));
+
+  it('drops tables nobody filled in, so the package is priced with Package Price and Airfare', () => {
+    const q = { quotationType: 'Package', priceTables: [blankTable('Option 1', 'rooms'), blankTable('Option 2', 'rooms')] };
+    expect(tablesWhenOpened(q)).toEqual([]);
+    expect(usesPriceTables({ ...q, priceTables: tablesWhenOpened(q) })).toBe(false);
+  });
+
+  it('keeps every table of a package that has figures in one of them, and leaves hotels and other kinds alone', () => {
+    const q = { quotationType: 'Package', priceTables: filled() };
+    expect(tablesWhenOpened(q)).toHaveLength(2);
+    const hotel = { quotationType: 'Only Hotel', priceTables: startPriceTables({ quotationType: 'Only Hotel' }) };
+    expect(tablesWhenOpened(hotel)).toHaveLength(2);
+    expect(tablesWhenOpened({ quotationType: 'Package' })).toEqual([]);
+    expect(tablesWhenOpened({ quotationType: 'Package', priceTables: [...startPriceTables({ quotationType: 'Only Hotel' }), blankTable('R', 'rooms')] }).map((t) => t.layout)).toEqual(['sheet', 'sheet']);
+    const sheetPackage = { quotationType: 'Package', priceTables: startPriceTables({ quotationType: 'Package' }) };
+    expect(tablesWhenOpened(sheetPackage)).toHaveLength(2); // a package with the sheet is not touched
   });
 });

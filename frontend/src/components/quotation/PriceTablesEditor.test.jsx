@@ -15,6 +15,7 @@ const Harness = ({ initial, onState }) => {
   return (
     <PriceTablesEditor
       tables={tables}
+      quotation={{ quotationType: 'Only Hotel', priceTables: tables }}
       onChange={(next) => {
         setTables(next);
         onState?.(next);

@@ -64,14 +64,18 @@ describe('the PRICING of a package, per room per night', () => {
     expect(container).not.toHaveTextContent('Empty');
   });
 
-  it('a package without tables, or with only a hotel sheet, prints its old price list as before', () => {
-    const sheetOnly = [{ name: 'Option 1', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }];
-    for (const priceTables of [[], sheetOnly]) {
-      const { container } = show(packageQuotation({ priceTables }));
-      expect(screen.queryByText('PRICING')).toBeNull();
-      expect(container).toHaveTextContent('OLD PRICE LINE');
-      cleanup();
-    }
+  it('a package without tables prints its old price list as before', () => {
+    const { container } = show(packageQuotation({ priceTables: [] }));
+    expect(screen.queryByText('PRICING')).toBeNull();
+    expect(container).toHaveTextContent('OLD PRICE LINE');
+  });
+
+  it('a package priced with the sheet prints Package and Airfare only, like a hotel quotation prints its sheet', () => {
+    const sheet = [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 500, visa: 0, tcs: 0, pax: 2 }] }];
+    show(packageQuotation({ priceTables: sheet }));
+    expect(screen.getByText('PRICING')).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'Total', 'PAX', 'Final Price']);
+    expect(within(screen.getByText('Adult').closest('tr')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '500', '1,500', '2', '3,000']);
   });
 
   it('a hotel quotation does not print the per room layout (the sheet it is priced with is the other one)', () => {

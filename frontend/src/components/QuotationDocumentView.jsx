@@ -11,7 +11,7 @@ import { isDefaultOptionName } from '../utils/quotationOptions';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../utils/hotelRates';
 import { vehicleTotal } from '../utils/landService';
 import { feeAmount, visaFeeTotal } from '../utils/visa';
-import { AMOUNT_COLUMNS, cellText, rowFinal, rowTotal, tableHasData, tableLayout, tableTotal, tablesOf } from '../utils/priceTables';
+import { cellText, rowFinal, rowTotal, sheetColumns, tableHasData, tableLayout, tableTotal, tablesOf } from '../utils/priceTables';
 import { roomDefaults, roomRowNights, roomRowRooms, roomRowTotal } from '../utils/roomTables';
 import { mediaUrl } from '../services/mediaService';
 import { API_ORIGIN } from '../services/api';
@@ -170,8 +170,8 @@ const rs =(n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 /**
  * The PRICING of a hotel or package quotation, laid out like the company's sheets: a box titled PRICING, then for each option its name,
  * a table and the Grand Total.
- * - Only Hotel: Sr No, Package, Total, PAX, Final Price (Airfare / Visa / TCS are not part of a hotel-only quotation).
- * - Package: Room, Per room per night, No of nights, No of rooms, Total (the client's "rooms" sheet).
+ * - The sheet (a hotel, and a package): Sr No, Package, Airfare (and Visa / TCS of a hotel when entered), Total, PAX, Final Price.
+ * - Rooms (a package made with the per-room-per-night tables): Room, Per room per night, No of nights, No of rooms, Total.
  * Empty cells stay empty, as on the sheets. Every total is worked out from the figures so they always agree.
  */
 const PriceTablesSection = ({ tables, quotation }) => {
@@ -179,11 +179,8 @@ const PriceTablesSection = ({ tables, quotation }) => {
   const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
-  // Only Hotel shows the Package amount, plus Airfare, Visa, and TCS whenever entered.
-  const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
-  const allTables = quotation?.priceTables || tables || [];
-  const hasColumnData = (key) => allTables.some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
-  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
+  // A hotel shows the Package amount, plus Airfare, Visa and TCS whenever entered; a package shows Package and Airfare.
+  const sheetCols = sheetColumns(quotation?.quotationType || 'Package', quotation?.priceTables || tables || []);
   const sheetColSpan = 2 + sheetCols.length + 1; // Sr No + amounts + PAX + Final Price → colSpan for Grand Total
   return (
     <div style={{ marginBottom: '14px' }}>
@@ -275,10 +272,7 @@ const OptionPriceTable = ({ table, quotation }) => {
   const head = { border, padding: '3px 6px', fontSize: '9.5px', fontWeight: 800, color: '#0f172a', textAlign: 'left', backgroundColor: '#ffffff' };
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
-  const isHotelOnly = (quotation?.quotationType || '') === 'Only Hotel';
-  const allTables = quotation?.priceTables || [table];
-  const hasColumnData = (key) => allTables.some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0));
-  const sheetCols = isHotelOnly ? AMOUNT_COLUMNS.filter(([key]) => key === 'package' || hasColumnData(key)) : AMOUNT_COLUMNS;
+  const sheetCols = sheetColumns(quotation?.quotationType || 'Package', quotation?.priceTables || [table]);
   const sheetColSpan = 2 + sheetCols.length + 1;
 
   if (tableLayout(table) === 'rooms') {

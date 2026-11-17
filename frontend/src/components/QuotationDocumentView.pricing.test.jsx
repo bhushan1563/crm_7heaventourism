@@ -65,7 +65,7 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
   });
 
   it('other kinds of quotation never print pricing tables', () => {
-    show(hotelQuotation({ quotationType: 'Package' }));
+    show(hotelQuotation({ quotationType: 'Visa' }));
     expect(screen.queryByText('PRICING')).toBeNull();
   });
 
