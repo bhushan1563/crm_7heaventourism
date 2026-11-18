@@ -78,6 +78,19 @@ describe('the PRICING of a package, per room per night', () => {
     expect(within(screen.getByText('Adult').closest('tr')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '500', '1,500', '2', '3,000']);
   });
 
+  it('every row of the sheet spans the same columns: the option name and the Grand Total reach the last column (a package and a hotel)', () => {
+    const sheet = [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 451364, airfare: 4564, visa: 7, tcs: 9, pax: 4 }] }];
+    for (const type of ['Package', 'Only Hotel']) {
+      const { container } = show(packageQuotation({ quotationType: type, priceTables: sheet }));
+      const table = container.querySelector('table');
+      const width = (tr) => [...tr.children].reduce((sum, c) => sum + (c.colSpan || 1), 0);
+      const widths = [...table.querySelectorAll('tr')].map(width);
+      expect(new Set(widths).size).toBe(1);
+      expect(table.querySelector('tfoot, tbody tr:last-child td:last-child').style.whiteSpace).toBe('nowrap');
+      cleanup();
+    }
+  });
+
   it('a hotel quotation does not print the per room layout (the sheet it is priced with is the other one)', () => {
     show(packageQuotation({ quotationType: 'Only Hotel' }));
     expect(screen.queryByText('PRICING')).toBeNull();

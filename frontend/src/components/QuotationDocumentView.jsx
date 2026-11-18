@@ -181,7 +181,7 @@ const PriceTablesSection = ({ tables, quotation }) => {
   const defaults = roomDefaults(quotation);
   // A hotel shows the Package amount, plus Airfare, Visa and TCS whenever entered; a package shows Package and Airfare.
   const sheetCols = sheetColumns(quotation?.quotationType || 'Package', quotation?.priceTables || tables || []);
-  const sheetColSpan = 2 + sheetCols.length + 1; // Sr No + amounts + PAX + Final Price → colSpan for Grand Total
+  const sheetColSpan = sheetCols.length + 4; // Sr No + the amounts + Total + PAX + Final Price (every column of the table)
   return (
     <div style={{ marginBottom: '14px' }}>
       <div className="quotation-keep" style={{ border: '1.5px solid #0f172a', textAlign: 'center', fontSize: '12px', fontWeight: 800, letterSpacing: '0.06em', padding: '4px 0', color: '#0f172a' }}>PRICING</div>
@@ -213,7 +213,7 @@ const PriceTablesSection = ({ tables, quotation }) => {
               })}
               <tr>
                 <td colSpan={4} style={{ ...cell, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3', whiteSpace: 'nowrap' }}>{rs(tableTotal(table, quotation))}</td>
               </tr>
             </tbody>
           </table>
@@ -251,7 +251,7 @@ const PriceTablesSection = ({ tables, quotation }) => {
               ))}
               <tr>
                 <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
+                <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3', whiteSpace: 'nowrap' }}>
                   {rs(tableTotal(table, quotation))}
                 </td>
               </tr>
@@ -273,7 +273,7 @@ const OptionPriceTable = ({ table, quotation }) => {
   const cell = { border, padding: '3px 6px', fontSize: '9.5px', color: '#0f172a', textAlign: 'right', height: '15px' };
   const defaults = roomDefaults(quotation);
   const sheetCols = sheetColumns(quotation?.quotationType || 'Package', quotation?.priceTables || [table]);
-  const sheetColSpan = 2 + sheetCols.length + 1;
+  const sheetColSpan = sheetCols.length + 4;
 
   if (tableLayout(table) === 'rooms') {
     return (
@@ -301,7 +301,7 @@ const OptionPriceTable = ({ table, quotation }) => {
             })}
             <tr>
               <td colSpan={4} style={{ ...cell, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-              <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>{rs(tableTotal(table, quotation))}</td>
+              <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3', whiteSpace: 'nowrap' }}>{rs(tableTotal(table, quotation))}</td>
             </tr>
           </tbody>
         </table>
@@ -340,7 +340,7 @@ const OptionPriceTable = ({ table, quotation }) => {
           ))}
           <tr>
             <td colSpan={sheetColSpan - 1} style={{ ...cell, borderRight: border, fontWeight: 700, padding: '4px 8px' }}>Grand Total</td>
-            <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3' }}>
+            <td style={{ ...cell, fontWeight: 800, fontSize: '10.5px', backgroundColor: '#fef9c3', whiteSpace: 'nowrap' }}>
               {rs(tableTotal(table, quotation))}
             </td>
           </tr>
