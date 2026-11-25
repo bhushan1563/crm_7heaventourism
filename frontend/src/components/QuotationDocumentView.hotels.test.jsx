@@ -26,8 +26,8 @@ const inOrder = (indexes) => indexes.every((n, i) => n >= 0 && (i === 0 || n > i
 
 describe('a hotel quotation with one list of hotels', () => {
   it('puts the DESTINATION on top, then the hotel, its room category and its address, then the dates', () => {
-    show(hotelQuotation());
-    expect(screen.getByText(/UDAIPUR/, { selector: 'div' })).toBeInTheDocument();
+    const { container } = show(hotelQuotation());
+    expect(within(container.querySelector('[id$="-cover"]')).getByText('UDAIPUR')).toBeInTheDocument(); // the cover opens with the destination
     const card = screen.getByText('Taj Lake Palace').closest('.quotation-keep');
     const text = card.textContent;
     expect(inOrder(order(text, 'Taj Lake Palace', 'Luxury Lake View Room', 'Pichola, Udaipur 313001', 'Check In', 'Check Out'))).toBe(true);
@@ -63,9 +63,26 @@ describe('a hotel quotation with one list of hotels', () => {
   });
 
   it('still prints a quotation made earlier with the hotel as its title', () => {
-    show(hotelQuotation({ destination: 'TAJ LAKE PALACE, UDAIPUR' }));
-    expect(screen.getAllByText(/TAJ LAKE PALACE, UDAIPUR/).length).toBeGreaterThan(0);
+    const { container } = show(hotelQuotation({ destination: 'TAJ LAKE PALACE, UDAIPUR' }));
+    const cover = within(container.querySelector('[id$="-cover"]')); // the cover sets the name large and what follows the comma beneath it
+    expect(cover.getByText('TAJ LAKE PALACE')).toBeInTheDocument();
+    expect(cover.getByText('UDAIPUR')).toBeInTheDocument();
     expect(screen.getByText('Luxury Lake View Room')).toBeInTheDocument();
+  });
+});
+
+describe('the overview of a hotel quotation', () => {
+  it('has a row for each hotel stay: when, where, which hotel (with its stars) and the meals, on the journey page', () => {
+    const { container } = show(hotelQuotation({ packageDetails: { hotels: [stay(), stay({ hotelName: 'Hotel Sunrise', city: 'Jaipur', starRating: '3 star', mealPlan: 'MAP', checkInDate: '2026-03-10', checkOutDate: '2026-03-12' })], inclusions: [] } }));
+    const rows = [...container.querySelectorAll('[id$="-journey"] table.qd-table tbody tr')].map((tr) => [...tr.children].map((td) => td.textContent));
+    expect(rows).toEqual([['7 – 10 March', 'Udaipur', 'Taj Lake Palace (5★)', 'CP (Breakfast Only)'], ['10 – 12 March', 'Jaipur', 'Hotel Sunrise (3★)', 'MAP']]);
+    expect(container.querySelector('.qd-toc')).toHaveTextContent('The Journey');
+    expect(container.querySelector('.qd-toc')).toHaveTextContent('Hotel & Accommodation');
+  });
+
+  it('is left out when the quotation has hotel options (each option carries its own hotels)', () => {
+    const { container } = show(withOptions([option('3 Star', [stay({ hotelName: 'Hotel Sunrise' })])]));
+    expect(container.querySelector('[id$="-journey"] table')).toBeNull();
   });
 });
 
@@ -77,20 +94,36 @@ describe('hotel options', () => {
 
   it('shows every hotel of every option with its room, its address and its two dates', () => {
     show(withOptions(options()));
-    const first = screen.getByText('Hotel Sunrise').parentElement.parentElement;
+    const first = screen.getByText('Hotel Sunrise').closest('.qd-hotel');
     const text = first.textContent;
     expect(inOrder(order(text, 'Hotel Sunrise', 'Deluxe Room', '12 Lake Road', 'Check In: 07 Mar 2026', 'Check Out: 10 Mar 2026'))).toBe(true);
-    const second = screen.getByText('Hotel Moonlight').parentElement.parentElement;
+    const second = screen.getByText('Hotel Moonlight').closest('.qd-hotel');
     expect(second.textContent).toContain('Check In: 10 Mar 2026');
     expect(second.textContent).toContain('Check Out: 12 Mar 2026');
-    expect(screen.getByText('Hotel Orchid').parentElement.parentElement.textContent).toContain('5 Palace Marg');
+    expect(screen.getByText('Hotel Orchid').closest('.qd-hotel').textContent).toContain('5 Palace Marg');
   });
 
   it('keeps the address and the room out of the one-line summary, so nothing is printed twice', () => {
     show(withOptions(options()));
-    const card = screen.getByText('Hotel Sunrise').parentElement.parentElement;
+    const card = screen.getByText('Hotel Sunrise').closest('.qd-hotel');
     expect((card.textContent.match(/Deluxe Room/g) || []).length).toBe(1);
     expect((card.textContent.match(/12 Lake Road/g) || []).length).toBe(1);
+  });
+});
+
+describe('the options as the document prints them', () => {
+  it('give each option a header with its name (a ribbon on the recommended one) and a price at the end of its hotels', () => {
+    const { container } = show(withOptions([option('3 Star', [stay({ hotelName: 'Hotel Sunrise' })], { recommended: true }), option('4 Star', [stay({ hotelName: 'Hotel Orchid' })], { pricePerPerson: 0, totalPrice: 0 })]));
+    const heads = [...container.querySelectorAll('.qd-opt-head')];
+    expect(heads).toHaveLength(2);
+    expect(heads[0]).toHaveTextContent('OPTION 1');
+    expect(heads[0]).toHaveTextContent('3 Star');
+    expect(heads[0]).toHaveTextContent('RECOMMENDED');
+    expect(heads[1]).not.toHaveTextContent('RECOMMENDED');
+    const totals = [...container.querySelectorAll('.qd-opt-total')].map((t) => t.textContent);
+    expect(totals[0]).toContain('Price per person');
+    expect(totals[0]).toContain('Rs 20,000');
+    expect(totals[1]).toContain('On request'); // no price typed yet
   });
 });
 
@@ -101,7 +134,8 @@ describe('property', () => {
       fc.property(word, word, word, fc.constantFrom('', '2026-03-07', '2026-12-31T00:00:00.000Z'), fc.constantFrom('', '2026-03-10', '2027-01-02'), (name, room, address, inDate, outDate) => {
         fc.pre(new Set([name, room, address]).size === 3 && !'Check In Out Stay Hotel Rooms Nights'.split(' ').some((w) => [name, room, address].includes(w)));
         const { container, unmount } = render(<MemoryRouter><QuotationDocumentView quotation={hotelQuotation({ packageDetails: { hotels: [stay({ hotelName: `${name}X`, roomCategory: `${room}Y`, address: `${address}Z`, city: '', checkInDate: inDate, checkOutDate: outDate })], inclusions: [] } })} /></MemoryRouter>);
-        const card = within(container).getByText(`${name}X`).closest('.quotation-keep');
+        const card = container.querySelector('.qd-hotel');
+        expect(within(card).getByText(`${name}X`)).toBeInTheDocument();
         const text = card.textContent;
         expect(inOrder(order(text, `${name}X`, `${room}Y`, `${address}Z`))).toBe(true);
         if (inDate) expect(text.indexOf('Check In')).toBeGreaterThan(text.indexOf(`${address}Z`));

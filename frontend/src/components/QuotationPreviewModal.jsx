@@ -46,7 +46,7 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
       const cleanDest = (quotation.destination || '7Heaven').replace(/[^a-zA-Z0-9]/g, '_');
       const filename = `7Heaven_${documentLabel}_${cleanDest}_${quotation.quotationNo || 'Doc'}.pdf`;
 
-      // Use hidden full render container ID to render all 3 pages
+      // Use the hidden full render container to draw every page
       await generateQuotationPDF('quotation-modal-full-render', filename, (pct, msg) => {
         setProgressMsg(msg);
       });

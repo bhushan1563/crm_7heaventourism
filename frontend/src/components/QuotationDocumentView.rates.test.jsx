@@ -119,12 +119,14 @@ describe('an option that has no name of its own', () => {
 });
 
 describe('a packages quotation with options is not changed', () => {
-  it('still prints the side-by-side cards with the price per person, and no rate table', () => {
-    show(quotation([option('Option A', [stay('Hotel A', [])], { pricePerPerson: 25000, totalPrice: 50000 }), option('Option B', [stay('Hotel B', [])], { pricePerPerson: 40000, totalPrice: 80000 })], { quotationType: 'Package' }));
+  it('still prints the price per person and the total of each option, and no rate table', () => {
+    const { container } = show(quotation([option('Option A', [stay('Hotel A', [])], { pricePerPerson: 25000, totalPrice: 50000 }), option('Option B', [stay('Hotel B', [])], { pricePerPerson: 40000, totalPrice: 80000 })], { quotationType: 'Package' }));
     expect(screen.getByText('Rs 25,000')).toBeInTheDocument();
     expect(screen.getByText('Total: Rs 50,000')).toBeInTheDocument();
-    expect(screen.queryByText('OPTION 1')).toBeNull();
-    expect(screen.queryByRole('table')).toBeNull();
+    expect(screen.getByText('Rs 40,000')).toBeInTheDocument();
+    expect(screen.getAllByText('Price per person')).toHaveLength(2);
+    expect(container.querySelectorAll('table.qd-rates')).toHaveLength(0);
+    expect(container.querySelectorAll('table.qd-ptable')).toHaveLength(0);
   });
 });
 
@@ -134,8 +136,9 @@ describe('a confirmed hotel booking (one hotel list, no options)', () => {
       packageDetails: { hotels: [stay('Hotel Sunrise', [room(5000), bed(1500)])], inclusions: [] },
       pricing: { grandTotal: 34500, totalCostPerPerson: 0, totalCostNote: 'Grand Total as per the rates of the hotels above', items: [] }
     });
-    show(booking);
-    const table = screen.getByRole('table');
+    const { container } = show(booking);
+    const table = container.querySelector('table.qd-rates');
+    expect(container.querySelectorAll('table.qd-rates')).toHaveLength(1);
     expect(cells(within(table).getAllByRole('row')[1])).toEqual(['2 Adults', '5,000', '3', '2', '30,000']);
     expect(screen.getByText(/Grand Total: Rs 34,500/)).toBeInTheDocument();
     expect(screen.getByText('Grand Total as per the rates of the hotels above')).toBeInTheDocument();

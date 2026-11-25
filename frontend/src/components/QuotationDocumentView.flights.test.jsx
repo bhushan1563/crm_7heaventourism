@@ -1,11 +1,12 @@
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import QuotationDocumentView from './QuotationDocumentView';
 import BookingPage from './confirmation/BookingPage';
 import { bookingView, quotationOf } from '../utils/confirmation';
 import { mediaUrl } from '../services/mediaService';
+import { DOC_CSS } from './quotationDoc/docCss';
 
 afterEach(cleanup);
 
@@ -21,7 +22,7 @@ const base = (over = {}) => ({
   ...over
 });
 const show = (quotation, before) => render(<MemoryRouter><QuotationDocumentView quotation={quotation} before={before} /></MemoryRouter>);
-const flightsPage = (container) => container.querySelector('[id$="-page-flights"]');
+const flightsPage = (container) => container.querySelector('[id$="-flights"]');
 
 describe('the flight screenshots on the flights page', () => {
   it('make the flights page: the heading, then each screenshot whole, in order, with its caption', () => {
@@ -33,9 +34,19 @@ describe('the flight screenshots on the flights page', () => {
     expect(images.map((img) => img.getAttribute('src'))).toEqual([mediaUrl(SHOT_A.token), mediaUrl(SHOT_B.token)]);
     expect(images[0]).toHaveAttribute('alt', 'Onward flight');
     expect(images[1]).toHaveAttribute('alt', 'Flight details');
-    expect(images[0]).toHaveStyle({ width: '100%', objectFit: 'contain' }); // never cropped, never stretched
+    expect(images[0].closest('figure')).toHaveClass('qd-shot');
+    expect(DOC_CSS).toMatch(/\.qd-shot img \{[^}]*width: 100%[^}]*object-fit: contain/); // never cropped, never stretched
     expect(page).toHaveTextContent('Onward flight');
     expect(images[0].closest('.quotation-keep')).not.toBeNull(); // each one moves to the next sheet whole when the page is full
+  });
+
+  it('are a numbered section of the document: in the contents, after the days, with its heading', () => {
+    const { container } = show(base({ flightImages: [SHOT_A] }));
+    const toc = container.querySelector('.qd-toc');
+    const rows = [...toc.querySelectorAll('.qd-toc-row:not(.sub)')].map((row) => [row.querySelector('.rn').textContent, row.querySelector('.tt').textContent]);
+    expect(rows).toEqual([['I', 'Day by Day'], ['II', 'Flight Details'], ['III', 'Pricing']]);
+    expect(within(flightsPage(container)).getByRole('heading', { name: 'Flight Details' }).closest('.qd-band')).toHaveTextContent('II');
+    expect(container.querySelector('[id$="-days"]').compareDocumentPosition(flightsPage(container)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('need no typed segment and no "as per ticket" mode: the screenshots alone are the flight section', () => {

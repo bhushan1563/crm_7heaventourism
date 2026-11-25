@@ -24,43 +24,45 @@ const view = (c, form) => render(
 );
 
 describe('the booking confirmation document', () => {
-  it('opens with the booking details at the top of the first page, the quotation as it was sold right under them, all numbered with the confirmation number', () => {
+  it('opens with the cover, then the booking details on a framed page of their own, then the quotation as it was sold, all numbered with the confirmation number', () => {
     const { container } = view(confirmation({ showPricing: true }));
     const pages = [...container.querySelectorAll('.quotation-page')];
-    expect(pages[0].id).toMatch(/-page-1$/); // no page of its own for the booking: it would stay half empty
-    expect(container.querySelectorAll('.quotation-page[id$="-booking"]')).toHaveLength(0);
-    expect(pages.length).toBeGreaterThanOrEqual(2); // itinerary with the booking on top, package/price
-    expect(pages[0]).toHaveTextContent('Booking Confirmation');
-    expect(pages[0]).toHaveTextContent('Arrival in Jaipur'); // the itinerary starts on the same page
+    expect(pages[0]).toHaveAttribute('data-qd-cover');
+    expect(pages[1].id).toMatch(/-booking$/); // the booking details come right after the cover, on a page of their own
+    expect(pages[1]).toHaveTextContent('Booking Confirmation');
+    expect(pages[1]).not.toHaveTextContent('Arrival in Jaipur');
+    expect(container.querySelector('[id$="-welcome"]')).toBeNull(); // no welcome letter on a confirmation
+    expect(pages.length).toBeGreaterThanOrEqual(4); // cover, booking, itinerary, package/price, ...
+    expect(container.querySelector('[id$="-days"]')).toHaveTextContent('Arrival in Jaipur');
     expect(container).toHaveTextContent('Rs 60,000 Per person');
     expect(container.querySelector('.quotation-doc-container > .quotation-page:first-child')).toBe(pages[0]);
-    for (const p of pages) expect(p).toHaveTextContent('Ref: 7H-CF-2026-001');
+    // the number of a confirmation is its confirmation number: the cover and the closing page carry it
+    expect(pages[0]).toHaveTextContent('Booking No 7H-CF-2026-001');
+    expect(pages[pages.length - 1]).toHaveTextContent('7H-CF-2026-001');
   });
 
-  it('lays the booking details, then the ITINERARY bar, then the days one under the other on the first page, without saying the destination twice', () => {
+  it('lays the booking details out as one framed page (a title, the trip, the travellers, the notes), without saying the destination twice', () => {
     const { container } = view(confirmation({ travellers: [{ name: 'Aarav Mehta', age: 41, passportNo: 'Z1', notes: '' }], notes: '<p>Airport pick-up at 10:30</p>' }));
-    const first = container.querySelector('[id$="-page-1"]');
-    const text = first.textContent;
-    const order = ['Booking Confirmation', 'Trip Details', 'Travellers', 'Notes', 'ITINERARY', 'Day 01: Arrival in Jaipur'].map((t) => text.indexOf(t));
+    const booking = container.querySelector('[id$="-booking"]');
+    expect(booking).toHaveClass('quotation-page');
+    const order = ['Booking Confirmation', 'Trip Details', 'Travellers', 'Notes'].map((t) => booking.textContent.indexOf(t));
     expect(order.every((n) => n >= 0)).toBe(true);
     expect([...order].sort((a, b) => a - b)).toEqual(order);
-    expect(first.querySelectorAll('h2')).toHaveLength(1); // one title: Booking Confirmation (the destination banner of a quotation is left out)
-    expect(first.textContent.match(/Trip Details/g)).toHaveLength(1);
+    expect(booking.querySelectorAll('h2')).toHaveLength(1); // one title: Booking Confirmation
+    expect(booking.textContent.match(/Trip Details/g)).toHaveLength(1);
     // every block is a direct part of the page's flow, so the PDF can carry it over to the next sheet when the page is full
-    const flow = first.querySelector('.quotation-flow');
-    const booking = first.querySelector('[id$="-booking"]');
-    expect(flow).toContainElement(booking);
-    expect(booking).toHaveStyle({ display: 'contents' });
-    expect(booking.querySelectorAll('.quotation-keep').length).toBeGreaterThan(3);
-    expect(first).toHaveTextContent('Mob:'); // the footer of the page is still there, once
-    expect(first.textContent.match(/Mob:/g)).toHaveLength(1);
+    const flow = booking.querySelector('.quotation-flow');
+    expect(flow.querySelectorAll(':scope > .quotation-keep').length).toBeGreaterThan(3);
+    expect(booking.querySelectorAll('.quotation-keep .quotation-keep')).toHaveLength(0);
+    expect(booking.querySelectorAll('.qd-foot')).toHaveLength(1); // the footer of the page is still there, once
+    expect(booking.querySelectorAll('.qd-head')).toHaveLength(1);
   });
 
   it('shows the trip as a Trip Details table, larger than before: the name of each fact on the left, the fact on the right, one line each', () => {
     const { container } = view(confirmation({ duration: '7 Nights / 8 Days', travelDate: '2026-12-01T00:00:00.000Z', optionName: '' }));
     const first = container.querySelector('[id$="-booking"]');
     const heading = [...first.querySelectorAll('h3')].find((h) => h.textContent === 'Trip Details');
-    expect(heading).toHaveStyle({ fontSize: '14px', textTransform: 'uppercase' });
+    expect(heading).toHaveStyle({ fontSize: '12px', textTransform: 'uppercase' });
     const rows = [...first.querySelectorAll('.quotation-keep')].filter((el) => el.children.length === 2 && el.children[0].tagName === 'STRONG');
     expect(rows.map((r) => [r.children[0].textContent, r.children[1].textContent])).toEqual([
       ['Guest', 'Aarav Mehta'],
@@ -88,28 +90,19 @@ describe('the booking confirmation document', () => {
     expect(labels(confirmation({ travelDate: '2026-12-01T00:00:00.000Z', duration: '7 Nights / 8 Days' }))).toContain('Return Date');
   });
 
-  it('keeps the ITINERARY bar with the first day, so the PDF never leaves the bar alone at the bottom of a sheet', () => {
-    const { container } = view(confirmation());
-    const first = container.querySelector('[id$="-page-1"]');
-    const piece = [...first.querySelectorAll('.quotation-flow .quotation-keep')].find((el) => el.textContent.includes('Day 01'));
-    expect(piece).toHaveTextContent('ITINERARY');
-    expect(first.textContent.match(/ITINERARY/g)).toHaveLength(1);
-  });
-
-  it('starts on the package details page when the quotation has no itinerary page, and gives the booking a page of its own only when it has neither', () => {
+  it('gives the booking a page of its own after the cover whatever else the quotation has (itinerary, hotels, or nothing)', () => {
     const only = (quote) => view(confirmation({ quote: { quotationNo: '7H-QT-2026-004', quotationType: 'Only Hotel', clientName: 'Aarav Mehta', destination: 'UDAIPUR', paxDetails: '2 Adults', ...quote } }));
     const stay = only({ packageDetails: { hotels: [{ hotelName: 'Hotel Sunrise', city: 'Udaipur', address: 'Lake Road', checkInDate: '2027-04-10', checkOutDate: '2027-04-12', nights: '2 Nights' }], inclusions: [] } });
     const pages = [...stay.container.querySelectorAll('.quotation-page')];
-    expect(pages[0].id).toMatch(/-page-2$/);
-    expect(pages[0]).toHaveTextContent('Booking Confirmation');
-    expect(pages[0]).toHaveTextContent('Hotel Sunrise');
-    expect(stay.container.querySelectorAll('.quotation-page[id$="-booking"]')).toHaveLength(0);
+    expect(pages[0]).toHaveAttribute('data-qd-cover');
+    expect(pages[1].id).toMatch(/-booking$/);
+    expect(pages[1]).toHaveTextContent('Booking Confirmation');
+    expect(stay.container.querySelector('[id$="-stay"]')).toHaveTextContent('Hotel Sunrise');
     cleanup();
     const bare = only({ packageDetails: { hotels: [], inclusions: [] } });
     const own = bare.container.querySelector('.quotation-page[id$="-booking"]');
-    expect(own).not.toBeNull(); // nothing to put it on: the old page of its own
     expect(own).toHaveTextContent('Booking Confirmation');
-    expect(bare.container.querySelector('.quotation-doc-container > .quotation-page:first-child')).toBe(own);
+    expect(bare.container.querySelectorAll('.quotation-page')[1]).toBe(own);
   });
 
   it('leaves out the payment and every price unless the booking says the voucher shows them', () => {
@@ -174,67 +167,62 @@ describe('the booking confirmation document', () => {
     const base = confirmation().quote;
     const lists = { importantNotes: ['Carry your ID.'], paymentPolicy: ['25% Token advance.'], cancellationPolicy: ['10% if 30 days before.'], exclusions: ['Airfare unless specified'] };
     const { container } = view(confirmation({ quote: { ...base, ...lists } }));
-    const terms = container.querySelector('[id$="-page-terms"]');
+    const terms = container.querySelector('[id$="-terms"]');
     expect(terms).not.toBeNull();
-    for (const text of ['GENERAL POLICY', 'Carry your ID.', '25% Token advance.', '10% if 30 days before.', 'Airfare unless specified']) expect(terms).toHaveTextContent(text);
-    expect(terms).not.toHaveTextContent('TERMS, POLICIES, EXCLUSIONS & GUIDELINES'); // a confirmation calls it "General Policy"
+    for (const text of ['General Policy', 'Carry your ID.', '25% Token advance.', '10% if 30 days before.', 'Airfare unless specified']) expect(terms).toHaveTextContent(text);
+    expect(terms).not.toHaveTextContent('Inclusions & Conditions'); // a confirmation calls it "General Policy"
+    expect(terms).not.toHaveTextContent('Acceptance'); // and has nothing to sign
     cleanup();
-    const bare = view(confirmation());
-    expect(bare.container.querySelector('[id$="-page-terms"]')).toBeNull();
+    const bare = view(confirmation({ quote: { ...base, packageDetails: { hotels: [], inclusions: [] } } }));
+    expect(bare.container.querySelector('[id$="-terms"]')).toBeNull();
   });
 
-  it('puts the additional services straight under the inclusions, and the important notes on the last page under "General Policy", above the standard terms', () => {
+  it('puts the additional services straight under the inclusions, and the important notes under "General Policy", above the standard terms', () => {
     const base = confirmation().quote;
     const lists = { importantNotes: ['Standard term one.'], paymentPolicy: ['25% advance.'], exclusions: ['Airfare unless specified'] };
     const { container } = view(confirmation({ quote: { ...base, ...lists }, additionalServices: '<p>Airport <strong>transfer</strong></p><p>Candle-light dinner</p>', importantNotes: '<ul><li>Carry a passport</li><li>Be early</li></ul>' }));
     const pages = [...container.querySelectorAll('.quotation-page')];
-    const last = pages[pages.length - 1];
-    expect(last.id).toMatch(/-page-terms$/); // the last page
-    expect(last).toHaveTextContent('GENERAL POLICY');
-    const text = last.textContent;
-    const order = ['IMPORTANT NOTES', 'Carry a passport', 'Be early', 'TERMS', 'Standard term one.', 'POLICIES', '25% advance.', 'EXCLUSIONS'].map((t) => text.indexOf(t));
-    expect(order.every((n) => n >= 0)).toBe(true);
-    expect([...order].sort((a, b) => a - b)).toEqual(order); // in this order
-    expect(last).not.toHaveTextContent('Additional Services'); // no longer on the last page
-    expect(pages[0]).not.toHaveTextContent('Additional Services'); // nor on the booking page
-
-    const details = container.querySelector('[id$="-page-2"]');
-    const at = ['Inclusions', 'Breakfast', 'Additional Services', 'Airport transfer', 'Candle-light dinner'].map((t) => details.textContent.indexOf(t));
+    const terms = container.querySelector('[id$="-terms"]');
+    expect(pages[pages.length - 2]).toBe(terms); // the page before the closing page
+    expect(terms).toHaveTextContent('General Policy');
+    expect(pages[1]).not.toHaveTextContent('Additional Services'); // not on the booking page
+    const text = terms.textContent;
+    const at = ['Package Inclusions', 'Breakfast', 'Additional Services', 'Airport transfer', 'Candle-light dinner'].map((t) => text.indexOf(t));
     expect(at.every((n) => n >= 0)).toBe(true);
     expect([...at].sort((a, b) => a - b)).toEqual(at); // straight under the inclusions list
-    expect([...details.querySelectorAll('strong')].some((el) => el.textContent === 'transfer')).toBe(true); // the formatting is kept
+    expect([...terms.querySelectorAll('strong')].some((el) => el.textContent === 'transfer')).toBe(true); // the formatting is kept
+    const order = ['Additional Services', 'Important Notes', 'Carry a passport', 'Be early', 'General Conditions', 'Standard term one.', 'Payment Policy', '25% advance.'].map((t) => text.indexOf(t));
+    expect(order.every((n) => n >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order); // the booking's own notes above the standard terms and policies
   });
 
-  it('prints the additional services larger than the standard text and each line close under the one before', () => {
+  it('prints each line of the additional services as a piece of its own, so a long text can run over the page', () => {
     const { container } = view(confirmation({ additionalServices: '<p>Booking is confirmed for 12 pax</p><p>Safari pickup at 6 AM</p>' }));
-    const lines = ['Booking is confirmed for 12 pax', 'Safari pickup at 6 AM'].map((t) => screen.getByText(t).closest('.qd-booking'));
-    for (const line of lines) {
-      expect(line).not.toBeNull();
-      expect(line).toHaveStyle({ fontSize: '12px', color: '#000000' });
-    }
-    expect(lines[0]).not.toBe(lines[1]); // one piece per line, so a long text can run over the page
-    expect(container.querySelector('[id$="-page-2"]')).toContainElement(lines[0]);
-    expect(container.innerHTML).toMatch(/\.qd-booking\.qd-part > :last-child \{ margin-bottom: 1px; \}/); // the gap under a line is one pixel
+    const lines = ['Booking is confirmed for 12 pax', 'Safari pickup at 6 AM'].map((t) => screen.getByText(t).closest('.qd-booktext'));
+    for (const line of lines) expect(line).not.toBeNull();
+    expect(lines[0]).not.toBe(lines[1]); // one piece per line
+    expect(container.querySelector('[id$="-terms"]')).toContainElement(lines[0]);
+    expect(container.innerHTML).toMatch(/\.qd-booktext \{ font-size: 12px;/); // set in the page size, like the rest of the text
   });
 
   it('shows the additional services even when the quotation has no inclusions, hotels or terms', () => {
     const { container } = view(confirmation({ quote: { ...confirmation().quote, packageDetails: { hotels: [], inclusions: [] } }, additionalServices: '<p>Private airport transfer</p>' }));
-    const details = container.querySelector('[id$="-page-2"]');
+    const details = container.querySelector('[id$="-terms"]');
     expect(details).toHaveTextContent('Additional Services');
     expect(details).toHaveTextContent('Private airport transfer');
-    expect(container.querySelector('[id$="-page-terms"]')).toBeNull(); // nothing for the last page
+    expect(details).not.toHaveTextContent('General Conditions'); // the quotation has no terms of its own
   });
 
   it('prints the booking\'s own texts even when the quotation has no policies at all, and leaves them out when empty', () => {
-    const { container } = view(confirmation({ importantNotes: '<p>Only this note</p>' }));
-    const terms = container.querySelector('[id$="-page-terms"]');
-    expect(terms).toHaveTextContent('GENERAL POLICY');
-    expect(terms).toHaveTextContent('IMPORTANT NOTES');
+    const { container } = view(confirmation({ quote: { ...confirmation().quote, packageDetails: { hotels: [], inclusions: [] } }, importantNotes: '<p>Only this note</p>' }));
+    const terms = container.querySelector('[id$="-terms"]');
+    expect(terms).toHaveTextContent('General Policy');
+    expect(terms).toHaveTextContent('Important Notes');
     expect(terms).toHaveTextContent('Only this note');
-    expect(terms).not.toHaveTextContent('ADDITIONAL SERVICES');
+    expect(terms).not.toHaveTextContent('Additional Services');
     cleanup();
-    const none = view(confirmation({ additionalServices: '<p><br></p>', importantNotes: '' }));
-    expect(none.container.querySelector('[id$="-page-terms"]')).toBeNull();
+    const none = view(confirmation({ quote: { ...confirmation().quote, packageDetails: { hotels: [], inclusions: [] } }, additionalServices: '<p><br></p>', importantNotes: '' }));
+    expect(none.container.querySelector('[id$="-terms"]')).toBeNull();
   });
 
   it('says "Fully paid" once everything is received, and leaves out empty sections', () => {
@@ -267,7 +255,7 @@ describe('the booking confirmation document', () => {
     expect(page).toHaveTextContent('<img src=x onerror=alert(1)>');
     expect(page).toHaveTextContent('<b>Name</b>');
     expect(page.querySelector('script')).toBeNull();
-    expect(page.querySelector('img[onerror], img[src="x"]')).toBeNull(); // (the logo in the header is the only image)
+    expect(page.querySelector('img[onerror], img[src="x"]')).toBeNull(); // (the pages carry no other image)
   });
 
   it('a quotation document without the extra pages is unchanged', () => {

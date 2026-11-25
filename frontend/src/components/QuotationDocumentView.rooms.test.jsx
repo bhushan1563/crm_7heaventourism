@@ -21,12 +21,15 @@ const packageQuotation = (over = {}) => ({
   priceTables: rooms(), ...over
 });
 const show = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} /></MemoryRouter>);
+// The price tables of the document (the overview of the hotel stays is a table too, and is not one of them).
+const priceTables = (container) => [...container.querySelectorAll('table.qd-ptable')];
+const pricingHeading = () => screen.queryByRole('heading', { name: 'Pricing' });
 
 describe('the PRICING of a package, per room per night', () => {
-  it('prints a PRICING box, then each option with the sheet\'s columns, its rows and its Grand Total', () => {
+  it('prints a Pricing section, then each option with the sheet\'s columns, its rows and its Grand Total', () => {
     const { container } = show(packageQuotation());
-    expect(screen.getByText('PRICING')).toBeInTheDocument();
-    const tables = screen.getAllByRole('table');
+    expect(pricingHeading()).toBeInTheDocument();
+    const tables = priceTables(container);
     expect(tables).toHaveLength(2);
     const first = tables[0];
     expect(within(first).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['3 Star', 'Room', 'Per room per night', 'No of nights', 'No of rooms', 'Total']);
@@ -60,21 +63,22 @@ describe('the PRICING of a package, per room per night', () => {
 
   it('does not print an option with nothing entered', () => {
     const { container } = show(packageQuotation({ priceTables: [rooms()[0], { name: 'Empty', layout: 'rooms', rows: [room('For 2 Adults')] }] }));
-    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(priceTables(container)).toHaveLength(1);
     expect(container).not.toHaveTextContent('Empty');
   });
 
   it('a package without tables prints its old price list as before', () => {
     const { container } = show(packageQuotation({ priceTables: [] }));
-    expect(screen.queryByText('PRICING')).toBeNull();
+    expect(pricingHeading()).toBeInTheDocument(); // the price list is on the Pricing page too
+    expect(priceTables(container)).toHaveLength(0);
     expect(container).toHaveTextContent('OLD PRICE LINE');
   });
 
   it('a package priced with the sheet prints Package and Airfare only, like a hotel quotation prints its sheet', () => {
     const sheet = [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 500, visa: 0, tcs: 0, pax: 2 }] }];
-    show(packageQuotation({ priceTables: sheet }));
-    expect(screen.getByText('PRICING')).toBeInTheDocument();
-    expect(screen.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'Total', 'PAX', 'Final Price']);
+    const { container } = show(packageQuotation({ priceTables: sheet }));
+    expect(pricingHeading()).toBeInTheDocument();
+    expect(within(priceTables(container)[0]).getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'Total', 'PAX', 'Final Price']);
     expect(within(screen.getByText('Adult').closest('tr')).getAllByRole('cell').map((c) => c.textContent)).toEqual(['Adult', '1,000', '500', '1,500', '2', '3,000']);
   });
 
@@ -82,24 +86,26 @@ describe('the PRICING of a package, per room per night', () => {
     const sheet = [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 451364, airfare: 4564, visa: 7, tcs: 9, pax: 4 }] }];
     for (const type of ['Package', 'Only Hotel']) {
       const { container } = show(packageQuotation({ quotationType: type, priceTables: sheet }));
-      const table = container.querySelector('table');
+      const table = priceTables(container)[0];
       const width = (tr) => [...tr.children].reduce((sum, c) => sum + (c.colSpan || 1), 0);
       const widths = [...table.querySelectorAll('tr')].map(width);
       expect(new Set(widths).size).toBe(1);
-      expect(table.querySelector('tfoot, tbody tr:last-child td:last-child').style.whiteSpace).toBe('nowrap');
+      expect(table.querySelector('tr.grand').lastElementChild).toHaveClass('gv'); // the amount sits in the last column, under Final Price, and never wraps
       cleanup();
     }
   });
 
   it('a hotel quotation does not print the per room layout (the sheet it is priced with is the other one)', () => {
-    show(packageQuotation({ quotationType: 'Only Hotel' }));
-    expect(screen.queryByText('PRICING')).toBeNull();
+    const { container } = show(packageQuotation({ quotationType: 'Only Hotel' }));
+    expect(priceTables(container)).toHaveLength(0);
+    expect(container).not.toHaveTextContent('Per room per night');
   });
 
   it('shows hostile text in a name as plain text', () => {
     const { container } = show(packageQuotation({ priceTables: [{ name: '<img src=x onerror=alert(1)>', layout: 'rooms', rows: [room('<b>Room</b>', { rate: 100 })] }] }));
     expect(container).toHaveTextContent('<img src=x onerror=alert(1)>');
-    expect(container.querySelector('img[onerror], b')).toBeNull();
+    expect(container.querySelector('img[onerror]')).toBeNull();
+    expect(container.querySelector('table.qd-ptable b')).toBeNull();
   });
 });
 
@@ -115,7 +121,7 @@ describe('hotel options when the pricing tables carry the prices', () => {
     for (const name of ['Hotel One', 'Hotel Two', 'Hotel Three']) expect(container).toHaveTextContent(name);
     expect(container).not.toHaveTextContent('On request');
     expect(container).not.toHaveTextContent('Price per person');
-    expect(screen.queryByText('PRICING')).toBeNull(); // price tables are now inline below each option
+    expect(pricingHeading()).toBeNull(); // price tables are now inline below each option
     expect(container).toHaveTextContent('Rs 2,000');
   });
 
@@ -123,7 +129,8 @@ describe('hotel options when the pricing tables carry the prices', () => {
     const { container } = show(packageQuotation({ options: options() }));
     for (const name of ['Hotel One', 'Hotel Two', 'Hotel Three']) expect(container).toHaveTextContent(name);
     expect(container).not.toHaveTextContent('On request');
-    expect(screen.getAllByRole('table')).toHaveLength(2); // two inline price tables, one per option
+    expect(priceTables(container)).toHaveLength(2); // two inline price tables, one per option
+    expect(pricingHeading()).toBeNull();
   });
 
   it('options without tables are priced as before', () => {

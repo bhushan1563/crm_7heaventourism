@@ -18,7 +18,24 @@ const quotation = (items, over = {}) => ({
 const show = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} /></MemoryRouter>).container;
 const OPTION = { name: 'Option 1', hotels: [{ hotelName: 'Hotel Sunrise', city: 'Udaipur' }], pricePerPerson: 30000, totalPrice: 180000 };
 
+const pricingPage = (container) => container.querySelector('[id$="-pricing"]');
+
 describe('the price list of a quotation', () => {
+  it('has a page of its own, a numbered section "Pricing" in the contents, after the days', () => {
+    const page = show(quotation([item()]));
+    expect(pricingPage(page)).not.toBeNull();
+    expect(pricingPage(page)).toHaveTextContent('Pricing Breakdown');
+    const rows = [...page.querySelectorAll('.qd-toc-row:not(.sub)')].map((row) => [row.querySelector('.rn').textContent, row.querySelector('.tt').textContent]);
+    expect(rows).toContainEqual(['II', 'Pricing']);
+    expect(page.querySelector('[id$="-days"]').compareDocumentPosition(pricingPage(page)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('has no pricing page when no price was typed', () => {
+    const page = show(quotation([], { pricing: { items: [], totalCostPerPerson: 0, grandTotal: 0, totalCostNote: '' } }));
+    expect(pricingPage(page)).toBeNull();
+    expect(page.querySelector('.qd-toc')).not.toHaveTextContent('Pricing');
+  });
+
   it('prints an included Airfare with its price and note', () => {
     const page = show(quotation([item()]));
     expect(page).toHaveTextContent('Pricing Breakdown');
@@ -48,11 +65,13 @@ describe('the price list of a quotation', () => {
     expect(page).toHaveTextContent(/Gala dinner:\s*Rs 1,200 Per person \(optional, not in the total\)/);
     expect(page).not.toHaveTextContent('Package Price');
     expect(page).not.toHaveTextContent('Pricing Breakdown'); // each option carries its own price
+    expect(pricingPage(page)).toHaveTextContent('Additional Components'); // what is typed on top of the options still has its page
   });
 
   it('prints nothing extra under the options when only the package price is typed', () => {
     const page = show(quotation([item({ id: 'pkg', name: 'Package Price', costPerPerson: 25000 }), item({ costPerPerson: 0 })], { options: [OPTION] }));
     expect(page).not.toHaveTextContent('Additional Components');
+    expect(pricingPage(page)).toBeNull(); // and no empty pricing page
   });
 
   it('prints none of it on a booking confirmation, which hides the prices unless the booking says to show them', () => {
@@ -60,6 +79,7 @@ describe('the price list of a quotation', () => {
     const page = show(confirmed);
     expect(page).not.toHaveTextContent('Airfare');
     expect(page).not.toHaveTextContent('Pricing Breakdown');
+    expect(pricingPage(page)).toBeNull();
     cleanup();
     expect(show({ ...confirmed, options: [OPTION] })).not.toHaveTextContent('Additional Components');
   });

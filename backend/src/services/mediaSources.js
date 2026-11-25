@@ -8,8 +8,8 @@ export const getMediaSources = async () => {
   return [
     // The itinerary's own gallery and the photos of each day.
     { model: Itinerary, select: 'photos days.photos' },
-    // The photos on the days of a quotation and on its hotel stays (copied in from the libraries or added there), and the screenshots of its flights.
-    { model: Quotation, select: 'itinerary.photos packageDetails.hotels.photos options.hotels.photos flightImages' },
+    // The photos on the days of a quotation and on its hotel stays (copied in from the libraries or added there), its flight screenshots and its cover photo.
+    { model: Quotation, select: 'itinerary.photos packageDetails.hotels.photos options.hotels.photos flightImages coverPhoto' },
     // The photo gallery of each hotel in the hotel list.
     { model: Hotel, select: 'photos' },
     // Hotels found with the hotel finder and saved, before (or instead of) being added to the hotel list.

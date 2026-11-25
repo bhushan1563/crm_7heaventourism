@@ -1,19 +1,16 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import QuotationDocumentView from './QuotationDocumentView';
-import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useFitScale } from '../hooks/useFitScale';
 
-// On the builder routes QuotationDocumentView lays each page out 120mm wide (210mm elsewhere); 120mm = ~454px at 96dpi.
-const BUILDER_PAGE_WIDTH_PX = 454;
+// The document is laid out at A4 width (210mm = 794px at 96dpi) everywhere and scaled down to the pane.
+const BUILDER_PAGE_WIDTH_PX = 794;
 
 /**
  * The builder's live document preview.
- * Wide screens: a sticky side pane (scaled 0.85, as before). Below 1280px the pane sits under the form
- * and the page is scaled to fit its width, so it is fully readable on a tablet or phone.
+ * A sticky side pane on wide screens; below 1280px the pane sits under the form. The page is always scaled to fit the width of the pane.
  */
 export const QuotationLivePreview = ({ quotation }) => {
-  const isStacked = useMediaQuery('(max-width: 1279.98px)');
   const [fitRef, fitScale] = useFitScale(BUILDER_PAGE_WIDTH_PX, { min: 0.3, max: 1 });
 
   return (
@@ -47,16 +44,10 @@ export const QuotationLivePreview = ({ quotation }) => {
         </div>
       </div>
 
-      {/* Measured wrapper (never scaled itself) */}
-      <div ref={fitRef} style={{ width: '100%', overflow: isStacked ? 'hidden' : 'visible' }}>
-        <div
-          style={
-            isStacked
-              ? { zoom: fitScale }
-              : { transform: 'scale(0.85)', transformOrigin: 'top center', borderRadius: '8px', padding: '12px' }
-          }
-        >
-          <QuotationDocumentView quotation={quotation} pageNumber={null} id="quotation-live-render-view" />
+            {/* Measured wrapper (never scaled itself); `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom scroll. */}
+      <div ref={fitRef} style={{ width: '100%', overflow: 'hidden' }}>
+        <div style={{ zoom: fitScale }}>
+          <QuotationDocumentView quotation={quotation} id="quotation-live-render-view" />
         </div>
       </div>
     </div>

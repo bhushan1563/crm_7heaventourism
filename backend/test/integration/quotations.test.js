@@ -212,6 +212,44 @@ test('flight screenshots are saved with the quotation, sized from the stored pho
   assert.deepEqual(older.data.flightImages, [], 'a quotation made before this has none');
 });
 
+test('the cover photo is saved with the quotation, sized from the stored photo, kept by an update that does not mention it, replaced, and cleared by sending nothing', async () => {
+  const none = await create({});
+  assert.equal(none.data.coverPhoto ?? null, null, 'a quotation made without one has none (its cover then takes the first photo of the trip)');
+
+  const made = await create({ coverPhoto: { token: photoA.token, width: 1, height: 1 } });
+  assert.equal(made.success, true, made.message);
+  assert.deepEqual([made.data.coverPhoto.token, made.data.coverPhoto.width, made.data.coverPhoto.height], [photoA.token, photoA.width, photoA.height]);
+  const id = made.data._id;
+  assert.equal((await api(`/${id}`, { token: admin.token })).body.data.coverPhoto.token, photoA.token);
+
+  const statusOnly = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { status: 'Sent' } });
+  assert.equal(statusOnly.body.data.coverPhoto.token, photoA.token, 'an update that does not mention it leaves it alone');
+  const other = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { coverPhoto: { token: photoB.token } } });
+  assert.equal(other.body.data.coverPhoto.token, photoB.token, 'sending another replaces it');
+  const cleared = await api(`/${id}`, { method: 'PUT', token: admin.token, json: { coverPhoto: null } });
+  assert.equal(cleared.body.data.coverPhoto ?? null, null, 'and sending nothing takes it away');
+});
+
+test('a cover photo that is not a stored photo is refused in plain words, and the photo is counted as in use', async () => {
+  const missing = await create({ coverPhoto: { token: 'Q'.repeat(24) } });
+  assert.equal(missing.success, false);
+  assert.match(missing.message, /no longer available/);
+  const bad = await create({ coverPhoto: { token: '../x' } });
+  assert.match(bad.message, /not valid/);
+
+  const { findOrphans } = await import('../../src/services/mediaCleanup.js');
+  const { getMediaSources } = await import('../../src/services/mediaSources.js');
+  const { default: Media } = await import('../../src/models/Media.js');
+  const used = await upload(941);
+  const unused = await upload(942);
+  await create({ coverPhoto: { token: used.token } });
+  const longAgo = new Date(Date.now() - 3 * 86400000);
+  await Media.collection.updateMany({ token: { $in: [used.token, unused.token] } }, { $set: { createdAt: longAgo, lastUsedAt: longAgo } });
+  const orphans = (await findOrphans(await getMediaSources())).map((m) => m.token);
+  assert.ok(!orphans.includes(used.token), 'a cover photo is in use, so the clean-up keeps it');
+  assert.ok(orphans.includes(unused.token));
+});
+
 test('flight screenshots that are not stored photos, or too many, are refused in plain words and change nothing', async () => {
   const missing = await create({ flightImages: [{ token: 'Q'.repeat(24) }] });
   assert.equal(missing.success, false);

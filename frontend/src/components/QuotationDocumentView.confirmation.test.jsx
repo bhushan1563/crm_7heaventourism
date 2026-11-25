@@ -6,8 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 import QuotationDocumentView from './QuotationDocumentView';
 import { formFromConfirmation, quotationOf } from '../utils/confirmation';
 
-// What a quotation prints once it has become a booking confirmation (hotel and package): the confirmation details under the
-// destination, the hotel's own confirmation number under its name, its contact number after the address, the times after the dates,
+// What a quotation prints once it has become a booking confirmation (hotel and package): the confirmation details on the cover, under
+// the trip, the hotel's own confirmation number under its name, its contact number after the address, the times after the dates,
 // and no vehicle notes.
 
 afterEach(cleanup);
@@ -22,16 +22,20 @@ const quote = (type, over = {}) => ({
 });
 const confirmation = (type, over = {}) => ({ confirmationNo: '7H-CF-2026-001', confirmedAt: '2026-11-04T10:00:00.000Z', status: 'Confirmed', quote: quote(type), hotelBookings: [{ confirmationNo: 'HB-2291', contactNumber: '+91 294 999 0000', checkInTime: '15:30', checkOutTime: '10:00' }], ...over });
 const show = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} /></MemoryRouter>);
+// The first hotel card of the document (the overview of the stays, and the list of days, name the hotel too).
+const hotelCard = () => document.querySelector('.qd-hotel');
 const inOrder = (text, ...parts) => parts.map((p) => text.indexOf(p)).every((n, i, a) => n >= 0 && (i === 0 || n > a[i - 1]));
 
 describe.each([['Only Hotel'], ['Package']])('a %s confirmation', (type) => {
-  const card = () => screen.getByText(/Hotel Sunrise/).closest('.quotation-keep');
+  const card = hotelCard;
 
-  it('says "Confirmation Details" under the destination, with the confirmation number and the day it was confirmed', () => {
+  it('says "Confirmation Details" on the cover, under the trip, with the confirmation number and the day it was confirmed', () => {
     show(quotationOf(confirmation(type)));
     const lines = screen.getAllByText(/Confirmation Details: 7H-CF-2026-001 • Confirmed on 04 Nov 2026/);
-    expect(lines.length).toBeGreaterThan(0);
-    expect(lines[0].parentElement.textContent).toMatch(/UDAIPUR/);
+    expect(lines).toHaveLength(1);
+    const cover = lines[0].closest('.quotation-page');
+    expect(cover).toHaveAttribute('data-qd-cover');
+    expect(cover.textContent).toMatch(/Udaipur/i);
   });
 
   it('prints the hotel\'s confirmation number under its name, and nothing for a hotel that has none yet', () => {
@@ -80,7 +84,7 @@ describe.each([['Only Hotel'], ['Package']])('a %s confirmation', (type) => {
 
   it('says CANCELLED in the confirmation line of a cancelled booking', () => {
     show(quotationOf(confirmation(type, { status: 'Cancelled' })));
-    expect(screen.getAllByText(/Confirmation Details: 7H-CF-2026-001 .* CANCELLED/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Confirmation Details: 7H-CF-2026-001 .* CANCELLED/)).toHaveLength(1);
   });
 });
 
@@ -90,7 +94,7 @@ describe('the prices on a confirmation', () => {
 
   it.each([['Only Hotel'], ['Package']])('a %s voucher has no price box, no rate table and no total unless the booking shows prices', (type) => {
     show(quotationOf(withPrices(type)));
-    expect(screen.getByText(/Hotel Sunrise/)).toBeInTheDocument();
+    expect(hotelCard()).toHaveTextContent('Hotel Sunrise');
     for (const text of ['Per room per night', 'Rs 20,000 Per person', 'Rs 40,000', 'Pricing Breakdown']) expect(document.body.textContent).not.toContain(text);
     cleanup();
     show(quotationOf(withPrices(type, {}, { showPricing: true })));
@@ -133,7 +137,7 @@ describe('the same quotation before it is confirmed is exactly as it was', () =>
     expect(document.body.textContent).not.toContain('Confirmation Details');
     expect(document.body.textContent).not.toContain('Hotel Confirmation No');
     expect(document.body.textContent).not.toContain('Time: ____');
-    const card = screen.getByText(/Hotel Sunrise/).closest('.quotation-keep').textContent;
+    const card = hotelCard().textContent;
     expect(card).toMatch(/Check-in from 14:00/);
     expect(card).toContain('+91 294 111 2222');
   });
@@ -166,7 +170,7 @@ describe('property', () => {
         fc.pre(no !== name);
         const c = confirmation(type, { quote: quote(type, { packageDetails: { hotels: [stay(`${name}H`, { address: 'Marg Road' })], inclusions: [] } }), hotelBookings: [{ confirmationNo: `${no}N`, contactNumber: '+91 1234 5678', checkInTime: time, checkOutTime: '' }] });
         const { container, unmount } = render(<MemoryRouter><QuotationDocumentView quotation={quotationOf(c)} /></MemoryRouter>);
-        const text = [...container.querySelectorAll('.quotation-keep')].find((k) => k.textContent.includes(`${name}H`)).textContent;
+        const text = [...container.querySelectorAll('.qd-hotel')].find((k) => k.textContent.includes(`${name}H`)).textContent;
         expect(inOrder(text, `${name}H`, `Hotel Confirmation No: ${no}N`)).toBe(true);
         expect(inOrder(text, 'Marg Road', 'Hotel Contact No: +91 1234 5678')).toBe(true);
         expect(text).toContain(`Check In: 07 Mar 2026, Time: ${time || '____'}`);

@@ -618,7 +618,7 @@ export const QuotationListPage = () => {
                             setIsPreviewOpen(true);
                           }}
                           className="btn btn-outline-azure btn-sm btn-icon"
-                          title="Interactive PDF Preview (3 Pages)"
+                          title="Interactive PDF Preview"
                           style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
                         >
                           <Eye size={13} />

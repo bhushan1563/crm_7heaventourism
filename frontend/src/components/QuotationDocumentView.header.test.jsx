@@ -12,7 +12,7 @@ const quotation = (companyDetails) => ({ quotationNo: '7H-QT-2026-001', quotatio
 const confirmation = (companyDetails) => ({ ...quotation(companyDetails), confirmationInfo: { showPricing: false } });
 const renderDoc = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} /></MemoryRouter>).container;
 
-describe('the tagline banner in the document header', () => {
+describe('the tagline in the document (the closing page: thank-you, company and what it offers)', () => {
   it('shows the products and services on a quotation, whichever standard line is stored on it', () => {
     for (const stored of [PRODUCTS_TAGLINE, CONFIRMATION_TAGLINE, '', '  ', undefined, `  ${PRODUCTS_TAGLINE.toUpperCase()} `]) {
       const text = renderDoc(quotation(company(stored))).textContent;
@@ -44,10 +44,34 @@ describe('the tagline banner in the document header', () => {
     expect(renderDoc(confirmation(company('Luxury holidays since 2010'))).textContent).toContain('★ Luxury holidays since 2010 ★');
   });
 
-  it('shows the company name and tagline on quotations regardless', () => {
-    const text = renderDoc(quotation(company('Luxury holidays since 2010'))).textContent;
+  it('puts the tagline on the closing page, under the company name', () => {
+    const closing = renderDoc(quotation(company('Luxury holidays since 2010'))).querySelector('[id$="-back"]');
+    expect(closing).toHaveTextContent('Thank you for choosing');
+    expect(closing.querySelector('.pt')).toHaveTextContent('★ Luxury holidays since 2010 ★');
+    expect(closing.querySelector('.nm').compareDocumentPosition(closing.querySelector('.pt')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows the company name and tagline on quotations regardless: on the cover, in every running header and footer, and on the closing page', () => {
+    const container = renderDoc(quotation(company('Luxury holidays since 2010')));
+    const text = container.textContent;
     expect(text).toContain('7HEAVEN TOURISM');
     expect(text).toContain('Travel with Trust');
+    const cover = container.querySelector('[id$="-cover"]');
+    expect(cover.querySelector('.brand')).toHaveTextContent('7HEAVEN TOURISM');
+    expect(cover.querySelector('.sub')).toHaveTextContent('Travel with Trust');
+    const inner = [...container.querySelectorAll('.qd-page:not(.qd-cover)')];
+    expect(inner.length).toBeGreaterThan(2);
+    for (const page of inner) {
+      expect(page.querySelector('.qd-head-brand')).toHaveTextContent('7HEAVEN TOURISM');
+      expect(page.querySelector('.qd-foot-row')).toHaveTextContent('7HEAVEN TOURISM');
+    }
+    expect(inner.some((page) => page.querySelector('.qd-head-label'))).toBe(true);
+  });
+
+  it('prints the company name as typed, in capitals, whatever case it was saved in', () => {
+    const container = renderDoc(quotation({ ...company(''), name: 'Sky Route Holidays' }));
+    expect(container.querySelector('.qd-cover .brand')).toHaveTextContent('SKY ROUTE HOLIDAYS');
+    expect(container.querySelector('.qd-head-brand')).toHaveTextContent('SKY ROUTE HOLIDAYS');
   });
 });
 

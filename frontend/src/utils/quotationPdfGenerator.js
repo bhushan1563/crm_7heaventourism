@@ -1,6 +1,8 @@
 import { formatDate } from './dateHelper';
 import { toDisplayHtml } from './richText'; // the flight note can be formatted: this escapes plain text and cleans formatted text
 import { mediaUrl } from '../services/mediaService';
+import { finalizeDocument } from '../components/quotationDoc/finalize';
+import { DOC_FONTS_HREF } from '../components/quotationDoc/tokens';
 
 // html2canvas and jspdf are large, so they are loaded only when a PDF is generated.
 
@@ -61,6 +63,12 @@ const splitTallPages = (root) => {
         overflow.unshift(last);
         last.remove();
       }
+      // A heading (a banner, the band that opens a section) is never left alone at the foot of a sheet: it goes over with what it introduces.
+      while (keeps().length > 1 && keeps()[keeps().length - 1].classList.contains('qd-keepnext')) {
+        const heading = keeps()[keeps().length - 1];
+        overflow.unshift(heading);
+        heading.remove();
+      }
 
       if (overflow.length === 0) break;
 
@@ -86,7 +94,7 @@ const PRINT_PAGE_CSS = `
     width: 210mm;
   }
   body {
-    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    font-family: 'Montserrat', 'Plus Jakarta Sans', -apple-system, sans-serif;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
@@ -100,10 +108,7 @@ const PRINT_PAGE_CSS = `
     width: 210mm !important;
     max-width: 210mm !important;
     min-height: 297mm !important;
-    height: auto !important;
     max-height: none !important;
-    overflow: visible !important;
-    padding: 14mm 16mm !important;
     page-break-before: always !important;
     break-before: page !important;
     page-break-after: auto !important;
@@ -113,10 +118,6 @@ const PRINT_PAGE_CSS = `
     box-shadow: none !important;
     margin: 0 !important;
     border-radius: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: flex-start !important;
-    background: #ffffff !important;
   }
   .quotation-page:first-child {
     page-break-before: auto !important;
@@ -132,8 +133,8 @@ const buildQuotationPrintHtml = (bodyHtml) => `
   <!DOCTYPE html>
   <html>
     <head>
-      <title>7Heaven Tourism Quotation</title>
-      <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@700;800;900&display=swap" rel="stylesheet">
+      <title>Quotation</title>
+      <link href="${DOC_FONTS_HREF}" rel="stylesheet">
       <style>${PRINT_PAGE_CSS}</style>
     </head>
     <body>
@@ -178,6 +179,7 @@ const openPrintFrame = async (container) => {
   await waitForPrintFrame(iframe);
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   splitTallPages(doc);
+  finalizeDocument(doc.body, { perSheet: false }); // the sheets are now exact: number them and fill the contents
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   return iframe;
 };
@@ -233,6 +235,13 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
       onProgress(pct, `Rendering page ${i + 1} of ${totalPages}...`);
     }
 
+    // The web links on the page (the MAP buttons), measured now so they can be laid over the picture of the page as real links.
+    const pageRect = pageEl.getBoundingClientRect();
+    const links = Array.from(pageEl.querySelectorAll('a[href^="http"]')).map((a) => {
+      const r = a.getBoundingClientRect();
+      return { x: r.left - pageRect.left, y: r.top - pageRect.top, w: r.width, h: r.height, url: a.href };
+    });
+
     // High fidelity canvas render at 2x scale for crisp print quality
     const canvas = await html2canvas(pageEl, {
       scale: 2,
@@ -261,6 +270,11 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
       }
       const drawHeight = imgHeight >= a4PageHeight - 8 ? a4PageHeight : Math.min(imgHeight, a4PageHeight);
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, drawHeight, undefined, 'FAST');
+      if (pageRect.width && pageRect.height) {
+        const sx = imgWidth / pageRect.width;
+        const sy = drawHeight / pageRect.height;
+        links.forEach((l) => pdf.link(l.x * sx, l.y * sy, l.w * sx, l.h * sy, { url: l.url }));
+      }
       isFirstPdfPage = false;
     } else {
       // In case an individual section is unusually long, slice it across sub-pages

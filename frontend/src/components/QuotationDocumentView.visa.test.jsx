@@ -29,7 +29,7 @@ const view = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} />
 describe('the visa quotation document', () => {
   it('shows the visa, the documents checklist, the fee table with its total, the note and the inclusions', () => {
     const { container } = view(visaQuotation());
-    expect(screen.getByText('Visa Details, Documents & Fees: -')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Visa Details' })).toBeInTheDocument();
     for (const text of ['United Arab Emirates', 'Tourist', 'Single entry', 'e-Visa', '3 to 5 working days', '60 days', '30 days']) expect(container).toHaveTextContent(text);
     expect(screen.getByText('Documents Required')).toBeInTheDocument();
     expect(screen.getByText('Passport valid for 6 months')).toBeInTheDocument();
@@ -49,16 +49,35 @@ describe('the visa quotation document', () => {
     expect(container).not.toHaveTextContent('SHOULD NOT SHOW');
     expect(container).not.toHaveTextContent('LEFTOVER AIR');
     expect(container).not.toHaveTextContent('VEHICLE RULE');
-    expect(screen.queryByText('ITINERARY')).toBeNull();
+    expect(screen.queryByText(/Day-by-Day/i)).toBeNull();
     expect(screen.queryByText(/Pricing Breakdown/)).toBeNull();
-    expect(container.querySelector('[id$="-page-1"]')).toBeNull();
-    expect(container.querySelector('[id$="-page-2"]')).not.toBeNull();
+    for (const gone of ['journey', 'shape', 'days', 'stay', 'flights', 'pricing']) expect(container.querySelector(`[id$="-${gone}"]`), gone).toBeNull();
+    for (const page of ['cover', 'welcome', 'visa', 'back']) expect(container.querySelector(`[id$="-${page}"]`), page).not.toBeNull();
+  });
+
+  it('opens with a cover that says what it is for: the country, the applicants and the trip number', () => {
+    const { container } = view(visaQuotation());
+    const cover = container.querySelector('[id$="-cover"]');
+    expect(container.querySelector('.quotation-page')).toBe(cover); // the cover is the first page
+    for (const text of ['United Arab Emirates', 'Visa services for', 'Aarav Mehta', '7H-QT-0042']) expect(cover).toHaveTextContent(text);
+    expect(within(cover).getByText('Applicants').parentElement).toHaveTextContent('3');
+  });
+
+  it('lists its one section in the contents, numbered I, on the page where it is', () => {
+    const { container } = view(visaQuotation());
+    const toc = container.querySelector('.qd-toc');
+    expect(toc).toHaveTextContent('Visa Details');
+    expect(toc).not.toHaveTextContent('Day by Day');
+    expect(toc).not.toHaveTextContent('Inclusions & Conditions');
+    expect(toc.querySelector('.rn')).toHaveTextContent('I');
+    expect(toc.querySelector('[data-toc="visa"]')).toHaveTextContent('03'); // cover, welcome, then the visa
   });
 
   it('prints no terms, policies or exclusions page: the client does not want them on a visa quotation', () => {
     const { container } = view(visaQuotation({ importantNotes: ['Fees are not refundable'], paymentPolicy: ['100% advance'], cancellationPolicy: ['No refund after submission'] }));
     for (const gone of ['TERMS, POLICIES, EXCLUSIONS', 'Payment Policy', 'Cancellation Policy', 'Fees are not refundable', '100% advance', 'No refund after submission', 'Travel insurance', 'Exclusions']) expect(container, gone).not.toHaveTextContent(gone);
-    expect(container.querySelector('[id$="-page-terms"]')).toBeNull();
+    expect(container.querySelector('[id$="-terms"]')).toBeNull();
+    expect(container.querySelector('.qd-toc')).not.toHaveTextContent('Acceptance');
     expect(container).toHaveTextContent('Documents'); // the visa's own pages are still there
   });
 
@@ -120,6 +139,7 @@ describe('the visa quotation document', () => {
     const { container } = view(visaQuotation({ quotationType: 'Package', packageDetails: { inclusions: ['Daily breakfast'] } }));
     expect(container).toHaveTextContent('SHOULD NOT SHOW');
     expect(screen.queryByText('Documents Required')).toBeNull();
-    expect(container.querySelector('[id$="-page-1"]')).not.toBeNull();
+    expect(container.querySelector('[id$="-days"]')).not.toBeNull();
+    expect(container.querySelector('[id$="-visa"]')).toBeNull();
   });
 });

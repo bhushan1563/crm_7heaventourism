@@ -226,6 +226,7 @@ export const QuotationBuilderPage = () => {
     flightTicketUrl: '',
     flightDetails: [],
     flightImages: [],
+    coverPhoto: null,
     exclusions: [...DEFAULT_EXCLUSIONS],
     paymentPolicy: [...DEFAULT_PAYMENT_POLICY],
     cancellationPolicy: [...DEFAULT_CANCELLATION_POLICY],
@@ -1271,6 +1272,19 @@ export const QuotationBuilderPage = () => {
                     onChange={(e) => setFormData({ ...formData, ops: e.target.value })}
                   />
                 </div>
+              </div>
+
+              {/* The picture on the cover of the quotation document */}
+              <div style={{ padding: '14px 16px', borderRadius: '10px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-subtle)' }}>
+                <PhotoGallery
+                  photos={formData.coverPhoto ? [formData.coverPhoto] : []}
+                  onChange={(list) => setFormData((prev) => ({ ...prev, coverPhoto: list[list.length - 1] || null }))}
+                  purpose="quotation"
+                  max={1}
+                  captions={false}
+                  label="Cover photo"
+                  help="The picture behind the destination on the first page of the quotation. Paste it (Ctrl+V), choose it or drop it here. A wide, landscape photo works best. Without one, the cover uses the first photo of the trip."
+                />
               </div>
             </div>
           )}

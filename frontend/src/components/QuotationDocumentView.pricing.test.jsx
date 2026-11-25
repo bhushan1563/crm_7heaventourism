@@ -18,12 +18,15 @@ const hotelQuotation = (over = {}) => ({
   priceTables: sheet(), ...over
 });
 const show = (q) => render(<MemoryRouter><QuotationDocumentView quotation={q} /></MemoryRouter>);
+// The price tables of the document (the overview of the hotel stays is a table too, and is not one of them).
+const priceTables = (container) => [...container.querySelectorAll('table.qd-ptable')];
+const pricingHeading = () => screen.queryByRole('heading', { name: 'Pricing' });
 
 describe('the PRICING of a hotel quotation, as on the company sheet', () => {
-  it('prints a PRICING box, then each option with the sheet\'s columns, its rows and its Grand Total', () => {
-    show(hotelQuotation());
-    expect(screen.getByText('PRICING')).toBeInTheDocument();
-    const tables = screen.getAllByRole('table');
+  it('prints a Pricing section, then each option with the sheet\'s columns, its rows and its Grand Total', () => {
+    const { container } = show(hotelQuotation());
+    expect(pricingHeading()).toBeInTheDocument();
+    const tables = priceTables(container);
     expect(tables).toHaveLength(2);
     const first = tables[0];
     expect(within(first).getByText('Option 1')).toBeInTheDocument();
@@ -52,7 +55,7 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
 
   it('does not print an option that has nothing entered, and replaces the old price list', () => {
     const { container } = show(hotelQuotation({ priceTables: [sheet()[0], { name: 'Option 2', rows: [row('Adult', { package: 0, airfare: 0, visa: 0, tcs: 0, pax: 0 })] }] }));
-    expect(screen.getAllByRole('table')).toHaveLength(1);
+    expect(priceTables(container)).toHaveLength(1);
     expect(container).not.toHaveTextContent('Option 2');
     expect(container).not.toHaveTextContent('OLD PRICE LINE');
     expect(container).not.toHaveTextContent('Pricing Breakdown');
@@ -60,13 +63,14 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
 
   it('a hotel quotation without tables prints its old price list as before', () => {
     const { container } = show(hotelQuotation({ priceTables: [] }));
-    expect(screen.queryByText('PRICING')).toBeNull();
+    expect(priceTables(container)).toHaveLength(0);
     expect(container).toHaveTextContent('OLD PRICE LINE');
   });
 
   it('other kinds of quotation never print pricing tables', () => {
-    show(hotelQuotation({ quotationType: 'Visa' }));
-    expect(screen.queryByText('PRICING')).toBeNull();
+    const { container } = show(hotelQuotation({ quotationType: 'Visa' }));
+    expect(pricingHeading()).toBeNull();
+    expect(priceTables(container)).toHaveLength(0);
   });
 
   it('works from what was typed in the form (text), so the preview matches the screen', () => {
@@ -79,7 +83,8 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
   it('shows hostile text in a name as plain text', () => {
     const { container } = show(hotelQuotation({ priceTables: [{ name: '<img src=x onerror=alert(1)>', rows: [row('<b>Adult</b>')] }] }));
     expect(container).toHaveTextContent('<img src=x onerror=alert(1)>');
-    expect(container.querySelector('img[onerror], b')).toBeNull();
+    expect(container.querySelector('img[onerror]')).toBeNull();
+    expect(container.querySelector('table.qd-ptable b')).toBeNull();
   });
 
   it('shows Airfare column and adds it to Total when airfare is entered on a hotel quotation', () => {
@@ -87,8 +92,8 @@ describe('the PRICING of a hotel quotation, as on the company sheet', () => {
       { name: 'Option 1', rows: [{ label: 'Adult', package: 160000, airfare: 37500, visa: 0, tcs: 3200, pax: 2 }] },
       { name: 'Option 2', rows: [{ label: 'Adult', package: 150000, airfare: 37500, visa: 0, tcs: 3000, pax: 2 }] }
     ];
-    show(hotelQuotation({ priceTables: airfareSheet }));
-    const tables = screen.getAllByRole('table');
+    const { container } = show(hotelQuotation({ priceTables: airfareSheet }));
+    const tables = priceTables(container);
     expect(tables).toHaveLength(2);
     // Table headers should include Airfare and TCS, but not Visa (0)
     expect(within(tables[0]).getAllByRole('columnheader').map((h) => h.textContent)).toEqual(['Option 1', 'Sr No', 'Package', 'Airfare', 'TCS', 'Total', 'PAX', 'Final Price']);

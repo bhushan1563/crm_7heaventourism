@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import QuotationDocumentView from './QuotationDocumentView';
 
@@ -22,59 +22,73 @@ const base = (over = {}) => ({
 describe('a long itinerary day can run on over the page', () => {
   const lines = ['6:30AM Pick up at the hotel', '7:15AM ETA in Pier 1', '8:00AM Take the ferry', '10:00AM ETA in Tagbilaran'];
   const day = (description, over = {}) => ({ dayNumber: 'Day 04', title: 'CEBU - BOHOL - CEBU', description, ...over });
+  const cards = (container) => [...container.querySelectorAll('.quotation-flow > .quotation-keep.qd-day')];
 
-  it('has its day heading in bold blue, with no yellow highlight', () => {
-    show(base({ itinerary: [day('Meet'), day('Free', { dayNumber: 'Day 05', title: 'FREE TIME' })] }));
-    for (const text of [/Day 04: CEBU - BOHOL - CEBU/, /Day 05: FREE TIME/]) {
-      const heading = screen.getByText(text);
-      expect(heading).toHaveStyle({ color: '#1d4ed8', fontWeight: '800' });
-      expect(heading.getAttribute('style')).not.toMatch(/background/i);
-    }
+  it('has its day heading and its title in the navy band of the day, with no yellow highlight', () => {
+    const { container } = show(base({ itinerary: [day('Meet'), day('Free', { dayNumber: 'Day 05', title: 'FREE TIME' })] }));
+    const [first, second] = cards(container);
+    expect(first.querySelector('.qd-day-band .dt')).toHaveTextContent('Day 1');
+    expect(first.querySelector('.qd-day-band .ti')).toHaveTextContent('CEBU - BOHOL - CEBU');
+    expect(second.querySelector('.qd-day-band .dt')).toHaveTextContent('Day 2');
+    expect(second.querySelector('.qd-day-band .ti')).toHaveTextContent('FREE TIME');
+    for (const heading of container.querySelectorAll('.qd-day-band .dt, .qd-day-band .ti')) expect(heading.getAttribute('style') || '').not.toMatch(/background/i);
   });
 
-  it('is laid out in pieces: the heading with the first line, then one piece for each following line, in order', () => {
+  it('is laid out as one block for each day, with every line of the day as its own bullet, in order', () => {
     const { container } = show(base({ itinerary: [day(`<p>${lines.join('<br>')}</p>`), { dayNumber: 'Day 05', title: 'Free time', description: 'The day is free.' }] }));
-    const pieces = [...container.querySelectorAll('.quotation-flow > .quotation-keep')].map((el) => el.textContent);
-    const first = pieces.findIndex((t) => t.includes('Day 04'));
-    expect(pieces[first]).toContain('6:30AM Pick up at the hotel');
-    expect(pieces[first]).not.toContain('7:15AM');
-    expect(pieces.slice(first + 1, first + 4)).toEqual([lines[1], lines[2], lines[3]]);
-    expect(pieces[first + 4]).toContain('Day 05');
+    const [first, second] = cards(container);
+    expect(first).toHaveTextContent('CEBU - BOHOL - CEBU');
+    expect([...first.querySelectorAll('li')].map((li) => li.textContent)).toEqual(lines);
+    expect(second).toHaveTextContent('Free time');
+    expect(second).toHaveTextContent('The day is free.');
     expect(container.querySelectorAll('.quotation-keep .quotation-keep')).toHaveLength(0);
   });
 
-  it('keeps a short day, and a day without text, as one piece, and a day\'s photos with it', () => {
+  it('keeps a short day, and a day without text, as one block, and a day\'s photos with it', () => {
     const { container } = show(base({ itinerary: [day('One line only'), day('', { dayNumber: 'Day 05' })] }));
-    const pieces = [...container.querySelectorAll('.quotation-flow > .quotation-keep')].map((el) => el.textContent);
-    expect(pieces.filter((t) => t.includes('Day 04'))).toHaveLength(1);
-    expect(pieces.find((t) => t.includes('Day 04'))).toContain('One line only');
-    expect(pieces.filter((t) => t.includes('Day 05'))).toHaveLength(1);
+    const [first, second] = cards(container);
+    expect(cards(container)).toHaveLength(2);
+    expect(first).toHaveTextContent('One line only');
+    expect(second).toHaveTextContent('Day 2');
+    expect(second.querySelectorAll('li')).toHaveLength(1); // a day without text says its details follow
   });
 
-  it('keeps list items and paragraphs, with their formatting, each in its own piece', () => {
+  it('keeps list items and paragraphs, with their formatting, each as its own bullet', () => {
     const { container } = show(base({ itinerary: [day('<p><strong>Highlights</strong></p><ul><li>Trekking</li><li><span style="color:#dc2626">Cliff jumps</span></li></ul>')] }));
-    expect(container.querySelector('.quotation-flow strong')).toHaveTextContent('Highlights');
+    expect(container.querySelector('.qd-day strong')).toHaveTextContent('Highlights');
     expect(screen.getByText('Trekking').closest('li')).not.toBeNull();
     expect(screen.getByText('Cliff jumps').closest('span[style]')).toHaveStyle({ color: '#dc2626' });
-    expect(screen.getByText('Cliff jumps').closest('.quotation-keep')).not.toBe(screen.getByText('Trekking').closest('.quotation-keep'));
+    expect(screen.getByText('Cliff jumps').closest('li')).not.toBe(screen.getByText('Trekking').closest('li'));
   });
 
-  it('prints the day text in the size of the page, whatever size it was typed in, and in black', () => {
+  it('prints the day text in the size of the page, whatever size it was typed in', () => {
     const { container } = show(base({
       itinerary: [day('<p><span style="font-size:14px">Normal text</span></p><p><span style="font-size:18px">Larger text</span></p>')],
       packageDetails: { hotels: [], roomInfo: '', inclusions: ['<p><span style="font-size:14px">Five nights stay</span></p>'] }
     }));
-    expect(screen.getByText('Normal text').closest('span[style]').getAttribute('style')).toContain('font-size:1em');
-    expect(screen.getByText('Larger text').closest('span[style]').getAttribute('style')).toContain('font-size:1.286em');
+    const card = within(container.querySelector('.qd-day')); // the list of days repeats a few words of each day, as plain text
+    expect(card.getByText('Normal text').closest('span[style]').getAttribute('style')).toContain('font-size:1em');
+    expect(card.getByText('Larger text').closest('span[style]').getAttribute('style')).toContain('font-size:1.286em');
     expect(screen.getByText('Five nights stay').closest('span[style]').getAttribute('style')).toContain('font-size:1em');
-    expect(container.innerHTML).not.toMatch(/font-size:\s*1[48]px/);
-    expect(screen.getByText('Normal text').closest('.qd-rich')).toHaveStyle({ color: '#000000', fontSize: '10.5px' });
+    const inlineStyles = [...container.querySelectorAll('[style]')].map((el) => el.getAttribute('style')).join(' ');
+    expect(inlineStyles).not.toMatch(/font-size:\s*1[48]px/); // the sizes typed in the editor are made relative to the page
+    expect(card.getByText('Normal text').closest('.qd-rich')).not.toBeNull();
   });
 
-  it('has no grey text left in the itinerary, the day details or the lists', () => {
+  it('has none of the old grey text left in the itinerary, the day details or the lists, and shows where the night is spent', () => {
     const { container } = show(base({ itinerary: [day('Meet', { stay: 'Cebu', meals: 'Breakfast' })], packageDetails: { hotels: [{ hotelName: 'Sea View', city: 'Cebu', address: 'Lake Road', amenities: ['Pool'] }], roomInfo: '', inclusions: ['Breakfast'] } }));
     expect(container.innerHTML).not.toMatch(/color:\s*(?:#64748b|#475569|#334155|#1f2937|#94a3b8|rgb\(100, 116, 139\)|rgb\(71, 85, 105\)|rgb\(51, 65, 85\)|rgb\(31, 41, 55\)|rgb\(148, 163, 184\))/i);
-    expect(screen.getByText(/Overnight: Cebu/)).toHaveStyle({ color: '#000000' });
+    const over = container.querySelector('.qd-day-over');
+    expect(over).toHaveTextContent('Overnight');
+    expect(over).toHaveTextContent('Cebu');
+  });
+
+  it('closes the itinerary with the end-of-tour note, formatted as typed', () => {
+    const { container } = show(base({ endOfTourNote: bold('The End') }));
+    expect(container.querySelector('.qd-end strong')).toHaveTextContent('The End');
+    cleanup();
+    const plain = show(base({ endOfTourNote: '' }));
+    expect(plain.container.querySelector('.qd-end')).toHaveTextContent('***End of the Tour***');
   });
 });
 
