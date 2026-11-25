@@ -125,10 +125,10 @@ const COVER = `
 .qd-cover .logo { left: 50%; top: 148px; width: 64px; height: 64px; margin-left: -32px; border-radius: 50%; background: rgba(10,39,66,0.55); border: 1px solid ${C.goldLight}; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .qd-cover .logo img { width: 54px; height: 54px; object-fit: contain; border-radius: 50%; display: block; }
 .qd-cover .titleblock { left: 68px; width: 658px; top: 376px; text-align: center; }
-.qd-cover .kicker { font-size: 10.5px; font-weight: 600; letter-spacing: 0.36em; color: ${C.goldLight}; text-transform: uppercase; padding-left: 0.36em; line-height: 14px; }
-.qd-cover .title { font-family: ${FONT_SERIF}; font-weight: 600; color: #fff; letter-spacing: 0.09em; text-transform: uppercase; line-height: 1.05; margin-top: 8px; padding-left: 0.09em; }
-.qd-cover .country { margin-top: 6px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.5em; color: ${C.goldLight}; text-transform: uppercase; padding-left: 0.5em; line-height: 16px; }
-.qd-cover .tagline { margin-top: 8px; font-family: ${FONT_SERIF}; font-style: italic; font-size: 16.5px; color: #fff; line-height: 22px; }
+.qd-cover .kicker { font-size: 11.5px; font-weight: 800; letter-spacing: 0.34em; color: #f8e08f; text-shadow: 0 2px 10px rgba(4,14,28,0.9), 0 0 3px rgba(4,14,28,0.85); text-transform: uppercase; padding-left: 0.36em; line-height: 14px; }
+.qd-cover .title { font-family: ${FONT_SERIF}; font-weight: 700; color: #fff; text-shadow: 0 3px 16px rgba(4,14,28,0.92), 0 0 4px rgba(4,14,28,0.8); letter-spacing: 0.09em; text-transform: uppercase; line-height: 1.05; margin-top: 8px; padding-left: 0.09em; }
+.qd-cover .country { margin-top: 6px; font-size: 12.5px; font-weight: 800; letter-spacing: 0.46em; color: #f8e08f; text-shadow: 0 2px 10px rgba(4,14,28,0.9), 0 0 3px rgba(4,14,28,0.85); text-transform: uppercase; padding-left: 0.5em; line-height: 16px; }
+.qd-cover .tagline { margin-top: 8px; font-family: ${FONT_SERIF}; font-style: italic; font-weight: 500; font-size: 17px; color: #fff; text-shadow: 0 2px 10px rgba(4,14,28,0.9), 0 0 3px rgba(4,14,28,0.85); line-height: 22px; }
 .qd-cover .card-wrap { left: 142px; top: 534px; width: 510px; height: 114px; border: 1px solid ${C.goldLight}; padding: 2px; background: ${C.navy}; }
 .qd-cover .card { position: relative; width: 100%; height: 100%; background: ${C.cream}; border-top: 3px solid ${C.gold}; display: flex; flex-direction: column; align-items: center; padding-top: 11px; }
 .qd-cover .card .len { font-weight: 800; font-size: 21px; letter-spacing: 0.07em; color: ${C.navy}; text-transform: uppercase; line-height: 28px; }

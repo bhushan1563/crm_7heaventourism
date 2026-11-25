@@ -96,7 +96,7 @@ export const Cover = ({ model, quotation, id }) => {
             <div style={{ position: 'absolute', left: 234, top: 62, width: 560 }}><SkylineGeneric variant="cover" width={560} height={130} style={{ opacity: 0.7 }} /></div>
           </div>
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,39,66,0.15) 0%, rgba(10,39,66,0) 30%, rgba(10,39,66,0.08) 60%, rgba(10,39,66,0.78) 92%, #0a2742 100%)' }} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(10,39,66,0.35) 0%, rgba(10,39,66,0.08) 22%, rgba(10,39,66,0.3) 38%, rgba(10,39,66,0.66) 55%, rgba(10,39,66,0.86) 75%, rgba(10,39,66,0.95) 90%, #0a2742 100%)' }} />
         <svg className="edge" width="658" height="454" viewBox="0 0 658 454" aria-hidden="true"><path d="M12 454V138A503 503 0 0 1 646 138V454" fill="none" stroke="#e6cb7e" strokeWidth="1.1" opacity="0.8" /></svg>
       </div>
       <div className="abs logo"><img src={company.logo || logoImg} alt="" crossOrigin={company.logo ? photoCrossOrigin : undefined} /></div>
