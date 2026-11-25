@@ -23,7 +23,7 @@ const Row = ({ row }) => {
 };
 
 /** A day of the itinerary: the band (ribbon, date, title, where the night is spent), then what happens, and the notes that belong to it. */
-export const DayCard = ({ day, index, total, model, quotation }) => {
+export const DayCard = ({ day, index, total, model, quotation, endNote = '' }) => {
   const parsed = parseDay(day.description);
   const Art = iconForDay(`${day.title} ${parsed.summary}`, index);
   const date = dayDate(model, index);
@@ -67,6 +67,7 @@ export const DayCard = ({ day, index, total, model, quotation }) => {
       {parsed.why && (
         <div className="qd-why"><span className="k">Why this day</span><span className="t"><RichLine html={parsed.why} /></span></div>
       )}
+      {endNote && <div className="qd-end"><RichLine html={endNote} /></div>}
     </div>
   );
 };
@@ -76,8 +77,8 @@ export const DaysPage = ({ model, quotation, id }) => {
   const days = quotation.itinerary || [];
   return (
     <Page id={id} model={model} header="Day-by-Day Itinerary" flowClass="qd-days-flow">
-      {days.map((day, i) => <DayCard key={i} day={day} index={i} total={days.length} model={model} quotation={quotation} />)}
-      <div className="quotation-keep qd-end"><RichLine html={quotation.endOfTourNote || '***End of the Tour***'} /></div>
+      {/* The end-of-tour line is part of the last day, so it can never be left alone on a page of its own. */}
+      {days.map((day, i) => <DayCard key={i} day={day} index={i} total={days.length} model={model} quotation={quotation} endNote={i === days.length - 1 ? quotation.endOfTourNote || '***End of the Tour***' : ''} />)}
     </Page>
   );
 };

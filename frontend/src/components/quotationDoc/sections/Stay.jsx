@@ -160,10 +160,10 @@ export const StayPage = ({ model, quotation, numeral, id, tables, priced, hidePr
   return (
     <Page id={id} model={model} header="Accommodation">
       <IntroBand numeral={numeral} title={TITLE[model.type] || 'Accommodation'} text={options.length ? 'Please choose the option that suits you best. All amounts are in Rs.' : 'Where you stay, and the arrangements for each stay.'} art={<BannerPagoda size={52} />} section="stay" />
+      {!options.length && roomInfo && <div className="quotation-keep qd-keepnext qd-note" style={{ marginTop: -6 }}><b style={{ color: '#0a2742' }}>Room Allocation:</b> <RichLine html={roomInfo} /></div>}
       {options.length > 0
         ? options.map((option, i) => <OptionBlock key={i} option={option} number={i + 1} priced={priced} table={priced ? tables[i] : null} quotation={quotation} />)
         : hotels.map((h, i) => <HotelCard key={i} h={h} confirmed={confirmed} hidePrices={hidePrices} />)}
-      {!options.length && roomInfo && <div className="quotation-keep qd-note"><b style={{ color: '#0a2742' }}>Room Allocation:</b> <RichLine html={roomInfo} /></div>}
     </Page>
   );
 };
