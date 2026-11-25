@@ -8,8 +8,16 @@ import { addressLine } from '../../../utils/hotelStay';
 import { isDefaultOptionName } from '../../../utils/quotationOptions';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../../../utils/hotelRates';
 import { OptionPriceTable } from './Pricing';
+import { DayPhotos } from '../DayPhotos';
 
 const crossOrigin = API_ORIGIN ? 'anonymous' : undefined;
+/** The size a photo is shown at inside a frame: as large as fits, in its own proportions (explicit sizes, because the PDF renderer stretches a photo that is only fitted with CSS). */
+const fitIn = (photo, maxW, maxH) => {
+  const ratio = (Number(photo?.width) || 4) / (Number(photo?.height) || 3);
+  const width = Math.min(maxW, maxH * ratio);
+  return { width: Math.round(width), height: Math.round(width / ratio) };
+};
+
 const inr = (n) => (Number(n) || 0).toLocaleString('en-IN');
 const amenityLine = (amenities) => (amenities || []).join('  •  ');
 const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean).join('  •  ');
@@ -76,14 +84,10 @@ export const HotelCard = ({ h, compact = false, confirmed = false, hidePrices = 
   );
   return (
     <div className={`${keep ? 'quotation-keep ' : ''}qd-hotel`}>
-      {!compact && cover && <img className="cover" src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} />}
-      {!compact && more.length > 0 && (
-        <div className="strip" style={{ display: 'flex', gap: 5 }}>
-          {more.slice(0, 3).map((p) => <img key={p.token} src={mediaUrl(p.token)} alt={p.caption || ''} crossOrigin={crossOrigin} style={{ flex: 1, minWidth: 0, height: 74, objectFit: 'cover', display: 'block' }} />)}
-        </div>
-      )}
+      {!compact && cover && <div className="cover-wrap"><img className="cover" src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 656, 440)} /></div>}
+      {!compact && more.length > 0 && <div className="strip"><DayPhotos photos={more.slice(0, 3)} maxRowHeight={120} /></div>}
       <div className="row">
-        {compact && cover && <div className="ph"><img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} /></div>}
+        {compact && cover && <div className="ph"><img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 132, 150)} /></div>}
         {body}
       </div>
     </div>

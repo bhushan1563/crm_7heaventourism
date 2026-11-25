@@ -5,11 +5,13 @@ import { COLORS as C, FONT_SERIF } from './tokens';
 export const OFFER_CSS = `
 /* ---- hotels ---- */
 .qd-hotel { border: 1px solid ${C.rule}; background: ${C.panel}; margin: 0 0 12px; overflow: hidden; }
-.qd-hotel .cover { display: block; width: 100%; height: 168px; object-fit: cover; }
-.qd-hotel .strip { padding: 5px 5px 0; }
+/* A photo is never cropped: it keeps its own shape (a very tall one is fitted whole inside the frame, on the band colour). */
+.qd-hotel .cover-wrap { background: ${C.band}; text-align: center; line-height: 0; }
+.qd-hotel .cover { display: inline-block; }
+.qd-hotel .strip { padding: 6px 12px 0; }
 .qd-hotel .row { display: flex; gap: 14px; padding: 12px 16px 14px; }
 .qd-hotel .ph { flex: none; width: 132px; }
-.qd-hotel .ph img { display: block; width: 132px; height: 90px; object-fit: cover; border-radius: 2px; }
+.qd-hotel .ph img { display: block; border-radius: 2px; }
 .qd-hotel .main { flex: 1; min-width: 0; }
 .qd-hotel .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .qd-hotel .nm { font-family: ${FONT_SERIF}; font-size: 16px; font-weight: 600; color: ${C.navy}; line-height: 1.25; }
@@ -42,7 +44,7 @@ table.qd-rates tfoot td { background: ${C.band}; font-weight: 700; }
 .qd-opt-total { display: flex; align-items: center; justify-content: space-between; background: ${C.band}; border-top: 1px solid ${C.rule}; padding: 10px 16px; }
 .qd-opt-total .k { font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; color: ${C.navy}; text-transform: uppercase; }
 .qd-opt-total .v { font-family: ${FONT_SERIF}; font-size: 18px; font-weight: 600; color: ${C.navy}; white-space: nowrap; }
-.qd-opt-total .sm { text-align: right; font-size: 10.5px; color: ${C.muted}; padding: 0 16px 8px; background: ${C.band}; }
+.qd-opt .sm { text-align: right; font-size: 10.5px; color: ${C.muted}; padding: 0 16px 8px; background: ${C.band}; }
 .qd-cmp { display: grid; gap: 10px; margin: 0 0 14px; }
 .qd-cmp .col { border: 1px solid ${C.rule}; background: ${C.panel}; }
 .qd-cmp .col.rec { border: 2px solid ${C.gold}; }
