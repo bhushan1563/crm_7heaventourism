@@ -6,6 +6,11 @@ export const OFFER_CSS = `
 /* ---- hotels ---- */
 .qd-hotel { border: 1px solid ${C.rule}; background: ${C.panel}; margin: 0 0 12px; overflow: hidden; }
 /* A photo is never cropped: it keeps its own shape (a very tall one is fitted whole inside the frame, on the band colour). */
+.qd-hsplit { margin: 0 0 12px; }
+/* each piece carries the card's own class (it may be moved to another page on its own) and shows only its share of the border */
+.qd-hotel.qd-hpart { border: 0; border-left: 1px solid ${C.rule}; border-right: 1px solid ${C.rule}; margin: 0; overflow: visible; }
+.qd-hotel.qd-hpart.is-first { border-top: 1px solid ${C.rule}; }
+.qd-hotel.qd-hpart.is-last { border-bottom: 1px solid ${C.rule}; }
 .qd-hotel .cover-wrap { background: ${C.band}; text-align: center; line-height: 0; }
 .qd-hotel .cover { display: inline-block; }
 .qd-hotel .strip { padding: 6px 12px 0; }

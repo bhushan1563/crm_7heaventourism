@@ -60,6 +60,9 @@ const splitTallPages = (root) => {
       while (current.scrollHeight > limit && keeps().length > 1) {
         const remaining = keeps();
         const last = remaining[remaining.length - 1];
+        // Never strip a page down to its headings alone (a banner or a section band): a page with only a heading is worse than a page that
+        // runs a little over, which the sheet then scales to fit.
+        if (!remaining.slice(0, -1).some((k) => !k.classList.contains('qd-keepnext'))) break;
         overflow.unshift(last);
         last.remove();
       }

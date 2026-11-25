@@ -55,7 +55,7 @@ export const DayCard = ({ day, index, total, model, quotation }) => {
         <div className="qd-day-art"><Art size={60} /></div>
         <div className="qd-day-rows">
           {rows.length ? rows.map((row, i) => <Row key={i} row={row} />) : <div className="qd-day-row nolabel"><div className="bl"><ul><li>Details of this day will be shared on confirmation.</li></ul></div></div>}
-          {day.photos?.length > 0 && <div className="qd-day-photos"><DayPhotos photos={day.photos} /></div>}
+          {day.photos?.length > 0 && <div className="qd-day-photos"><DayPhotos photos={day.photos} maxRowHeight={420} /></div>}
         </div>
       </div>
       {parsed.callouts.map((c, i) => (

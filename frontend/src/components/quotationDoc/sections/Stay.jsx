@@ -82,12 +82,21 @@ export const HotelCard = ({ h, compact = false, confirmed = false, hidePrices = 
       {!hidePrices && <RatesPrint stay={h} />}
     </div>
   );
+  const coverImg = cover && <div className="cover-wrap"><img className="cover" src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 656, 560)} /></div>;
+  if (!compact) {
+    // A large card is drawn in pieces (the photo, the other photos, the details), each a block of its own, so a card that is taller than the
+    // room left on a page continues on the next page instead of being squeezed or sliced. Side by side they read as one card.
+    const pieces = [coverImg, more.length > 0 && <div className="strip"><DayPhotos photos={more.slice(0, 3)} maxRowHeight={700} /></div>, <div className="row">{body}</div>].filter(Boolean);
+    return (
+      <div className="qd-hsplit">
+        {pieces.map((piece, i) => <div key={i} className={`quotation-keep qd-hotel qd-hpart${i === 0 ? ' is-first' : ''}${i === pieces.length - 1 ? ' is-last' : ''}`}>{piece}</div>)}
+      </div>
+    );
+  }
   return (
     <div className={`${keep ? 'quotation-keep ' : ''}qd-hotel`}>
-      {!compact && cover && <div className="cover-wrap"><img className="cover" src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 656, 440)} /></div>}
-      {!compact && more.length > 0 && <div className="strip"><DayPhotos photos={more.slice(0, 3)} maxRowHeight={120} /></div>}
       <div className="row">
-        {compact && cover && <div className="ph"><img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 132, 150)} /></div>}
+        {cover && <div className="ph"><img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 132, 190)} /></div>}
         {body}
       </div>
     </div>
