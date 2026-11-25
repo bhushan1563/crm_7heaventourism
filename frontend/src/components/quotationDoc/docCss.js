@@ -122,8 +122,8 @@ const COVER = `
 .qd-cover .photo { left: 68px; top: 125px; width: 658px; height: 454px; overflow: hidden; background: ${C.navy}; }
 .qd-cover .dome { overflow: hidden; position: absolute; left: -185px; top: 15px; width: 1028px; height: 1028px; border-radius: 50%; background-size: 658px 454px, 658px 454px; background-position: 185px -15px, 185px -15px; background-repeat: no-repeat; }
 .qd-cover .photo svg.edge { position: absolute; left: 0; top: 0; }
-.qd-cover .logo { left: 50%; top: 148px; width: 64px; height: 64px; margin-left: -32px; border-radius: 50%; background: rgba(10,39,66,0.55); border: 1px solid ${C.goldLight}; display: flex; align-items: center; justify-content: center; overflow: hidden; }
-.qd-cover .logo img { width: 54px; height: 54px; object-fit: contain; border-radius: 50%; display: block; }
+.qd-cover .logo { left: 50%; top: 146px; width: 68px; height: 68px; margin-left: -34px; border-radius: 50%; background: #ffffff; border: 2px solid ${C.goldLight}; box-shadow: 0 2px 12px rgba(4,14,28,0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; } /* solid white: the logo is a transparent badge made for a light background, so anything else tints its colours */
+.qd-cover .logo img { width: 58px; height: 58px; object-fit: contain; display: block; }
 .qd-cover .titleblock { left: 68px; width: 658px; top: 376px; text-align: center; }
 .qd-cover .kicker { font-size: 11.5px; font-weight: 800; letter-spacing: 0.34em; color: #f8e08f; text-shadow: 0 2px 10px rgba(4,14,28,0.9), 0 0 3px rgba(4,14,28,0.85); text-transform: uppercase; padding-left: 0.36em; line-height: 14px; }
 .qd-cover .title { font-family: ${FONT_SERIF}; font-weight: 700; color: #fff; text-shadow: 0 3px 16px rgba(4,14,28,0.92), 0 0 4px rgba(4,14,28,0.8); letter-spacing: 0.09em; text-transform: uppercase; line-height: 1.05; margin-top: 8px; padding-left: 0.09em; }

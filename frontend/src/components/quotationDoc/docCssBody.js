@@ -29,14 +29,14 @@ table.qd-table tr.total td { background: ${C.band}; font-weight: 700; }
 .qd-shape .circle { flex: none; width: 50px; height: 50px; border-radius: 50%; background: ${C.navy}; border: 2px solid ${C.cream}; box-shadow: 0 0 0 1.5px ${C.gold}; color: ${C.goldLight}; font-family: ${FONT_SERIF}; font-size: 17px; line-height: 46px; text-align: center; margin: 0; }
 .qd-shape .dash { flex: 1; width: 0; border-left: 2px dashed ${C.teal}; margin: 5px 0 5px 0; min-height: 14px; }
 .qd-shape.last .dash { visibility: hidden; }
-.qd-shape .card { flex: 1; margin: 0 0 14px 24px; display: flex; align-items: center; background: ${C.band}; border: 1px solid ${C.rule}; border-left: 3px solid ${C.teal}; padding: 10px 14px 10px 15px; min-height: 58px; }
+.qd-shape .card { flex: 1; margin: 0 0 12px 24px; display: flex; align-items: center; background: ${C.band}; border: 1px solid ${C.rule}; border-left: 3px solid ${C.teal}; padding: 9px 14px 9px 15px; min-height: 56px; }
 .qd-shape .main { flex: 1; min-width: 0; }
 .qd-shape .when { font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: ${C.muted}; text-transform: uppercase; margin-right: 8px; }
-.qd-shape .place { font-family: ${FONT_SERIF}; font-size: 16.5px; font-weight: 600; color: ${C.navy}; line-height: 1.25; }
-.qd-shape .blurb { margin-top: 4px; font-size: 12.3px; color: ${C.ink}; line-height: 1.4; }
-.qd-shape .night { flex: none; width: 110px; border-left: 1px solid ${C.rule}; margin: 0 16px; padding: 2px 0 2px 0; text-align: center; font-size: 8.5px; font-weight: 700; letter-spacing: 0.22em; color: ${C.muted}; text-transform: uppercase; }
+.qd-shape .place { font-family: ${FONT_SERIF}; font-size: 15.5px; font-weight: 600; color: ${C.navy}; line-height: 1.25; }
+.qd-shape .blurb { margin-top: 3px; font-size: 11.8px; color: ${C.ink}; line-height: 1.4; }
+.qd-shape .night { flex: none; width: 104px; border-left: 1px solid ${C.rule}; margin: 0 16px; padding: 2px 0 2px 0; text-align: center; font-size: 8.5px; font-weight: 700; letter-spacing: 0.22em; color: ${C.muted}; text-transform: uppercase; }
 .qd-shape .night b { display: block; margin-top: 3px; font-size: 11.5px; letter-spacing: 0.02em; color: ${C.teal}; text-transform: none; }
-.qd-shape .map { flex: none; border: 1px solid ${C.gold}; color: ${C.gold}; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; padding: 5px 10px; text-decoration: none; background: ${C.panel}; line-height: 14px; }
+.qd-shape .map { flex: none; border: 1px solid ${C.gold}; color: ${C.gold}; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; padding: 5px 9px; text-decoration: none; background: ${C.panel}; line-height: 14px; white-space: nowrap; }
 
 /* ---- a day: a navy band with a ribbon, a drawing, and rows of what happens ---- */
 .qd-day { position: relative; margin: 9px 0 0; }

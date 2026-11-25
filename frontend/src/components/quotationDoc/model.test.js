@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildModel, dayBlurb, journeyStops, nightsAndDays, numberWord, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate, welcomeParagraphs } from './model';
+import { buildModel, dayBlurb, overnightOf, journeyStops, nightsAndDays, numberWord, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate, welcomeParagraphs } from './model';
 
 describe('durations and dates', () => {
   it('reads nights and days from the usual ways of writing a duration', () => {
@@ -117,3 +117,41 @@ describe('the trip', () => {
     expect(welcomeParagraphs(buildModel(quotation))[0]).toContain('nine-day');
   });
 });
+
+describe('where each night is spent', () => {
+  const hotels = [
+    { city: 'Srinagar', nights: '2 Nights', checkInDate: '2026-02-01', checkOutDate: '2026-02-03' },
+    { city: 'Pahalgam', nights: '1 Night', checkInDate: '2026-02-03', checkOutDate: '2026-02-04' },
+    { hotelName: 'Gulmarg Resort', city: '', nights: '2 Nights', checkInDate: '2026-02-04', checkOutDate: '2026-02-06' }
+  ];
+  const q = (over = {}) => ({ itinerary: Array.from({ length: 6 }, () => ({})), packageDetails: { hotels }, ...over });
+  const start = toUtcDate('2026-02-01');
+
+  it('takes it from the hotel stays by their dates, and leaves the last day without a night', () => {
+    expect([0, 1, 2, 3, 4, 5].map((i) => overnightOf(q(), start, i))).toEqual(['Srinagar', 'Srinagar', 'Pahalgam', 'Gulmarg Resort', 'Gulmarg Resort', '']);
+  });
+
+  it('counts the nights of the stays in order when the trip has no start date', () => {
+    expect([0, 1, 2, 3, 4, 5].map((i) => overnightOf(q(), null, i))).toEqual(['Srinagar', 'Srinagar', 'Pahalgam', 'Gulmarg Resort', 'Gulmarg Resort', '']);
+  });
+
+  it('keeps what was typed for a day, and finds nothing without hotels', () => {
+    const typed = q({ itinerary: [{ stay: 'Houseboat' }, {}, {}, {}, {}, {}] });
+    expect(overnightOf(typed, start, 0)).toBe('Houseboat');
+    expect(overnightOf({ itinerary: [{}], packageDetails: { hotels: [] } }, start, 0)).toBe('');
+  });
+});
+
+describe('the few words of a day in the list', () => {
+  it('ends at a sentence instead of in the middle of one', () => {
+    const day = parseDay('<p>Meet our representative at Srinagar airport, transfer to hotel . In the evening enjoy a Shikara ride on Dal Lake and watch the sunset behind the mountains.</p>');
+    expect(dayBlurb(day)).toBe('Meet our representative at Srinagar airport, transfer to hotel.');
+  });
+
+  it('cuts a very long sentence at a word with an ellipsis', () => {
+    const blurb = dayBlurb(parseDay(`<p>${'After breakfast we drive slowly through the valley stopping at many places '.repeat(3)}</p>`));
+    expect(blurb.endsWith('…')).toBe(true);
+    expect(blurb.length).toBeLessThanOrEqual(112);
+  });
+});
+

@@ -108,13 +108,55 @@ export const parseDay = (description) => {
 
 const ROUTINE = /^(breakfast|overnight|return to|hotel check|check.?in|check.?out|welcome garland|drinking water|transfer arrangement|vehicle arrangement|full-day (private )?vehicle|meet )/i;
 
+/** Text cut at the end of a sentence that fits `max` characters (one or two sentences), else at a word, with an ellipsis. */
+const shorten = (text, max) => {
+  const clean1 = text.replace(/\s+([.,;:!?])/g, (_, mark) => mark).trim(); // "hotel ." -> "hotel."
+  if (clean1.length <= max) return clean1;
+  const sentences = clean1.match(/[^.!?]+[.!?]+(?=\s|$)/g) || [];
+  let out = '';
+  for (const s of sentences) {
+    if ((out + s).trim().length > max) break;
+    out = `${out}${s}`;
+  }
+  if (out.trim().length >= 24) return out.trim();
+  const cut = clean1.slice(0, max);
+  const at = Math.max(cut.lastIndexOf(', '), cut.lastIndexOf(' '));
+  return `${cut.slice(0, at > 30 ? at : max).replace(/[\s,;:]+$/, '')}…`;
+};
+
 /** The few words that stand for a day in the list of days: its summary, else the first line that says what happens (not the routine), shortened. */
-export const dayBlurb = (parsed, max = 70) => {
+export const dayBlurb = (parsed, max = 110) => {
   const lines = [parsed.summary, ...parsed.rows.flatMap((r) => r.items)].map((h) => richToPlainText(h || '').replace(TAG, '').trim()).filter(Boolean);
   const text = parsed.summary ? lines[0] : lines.find((l) => !ROUTINE.test(l)) || lines[0] || '';
-  if (text.length <= max) return text;
-  const cut = text.slice(0, max);
-  return `${cut.slice(0, Math.max(cut.lastIndexOf(' '), 30))}…`;
+  return shorten(text, max);
+};
+
+/**
+ * Where the night of day `index` (0-based) is spent: what was typed for the day, else the hotel stay that covers that night (by its check-in
+ * and check-out dates when the trip has a start date, else by counting the nights of the stays in order). Empty on the last day, which has no night.
+ */
+export const overnightOf = (quotation, start, index) => {
+  const typed = clean(quotation.itinerary?.[index]?.stay);
+  if (typed) return typed;
+  const own = quotation.packageDetails?.hotels || [];
+  const stays = own.length ? own : quotation.options?.[0]?.hotels || [];
+  const label = (h) => clean(h?.city) || clean(h?.hotelName);
+  const date = start ? addDays(start, index) : null;
+  if (date) {
+    const hit = stays.find((h) => {
+      const from = toUtcDate(h.checkInDate);
+      const to = toUtcDate(h.checkOutDate);
+      return from && to && +from <= +date && +date < +to;
+    });
+    if (hit) return label(hit);
+  }
+  let before = 0;
+  for (const h of stays) {
+    const nights = parseInt(String(h.nights), 10) || 0;
+    if (index >= before && index < before + nights) return label(h);
+    before += nights;
+  }
+  return '';
 };
 
 // ---- the document as a whole ---------------------------------------------------------------------------------------------

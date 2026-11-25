@@ -3,7 +3,7 @@ import { Page, RichLine } from '../PageParts';
 import { DayPhotos } from '../DayPhotos';
 import { IconLotus, ShieldAlert } from '../art';
 import { iconForDay, iconForLabel } from '../iconMap';
-import { dayDate, longDate, pad2, parseDay, weekday } from '../model';
+import { dayDate, longDate, overnightOf, pad2, parseDay, weekday } from '../model';
 import { richToPlainText } from '../../../utils/richText';
 
 const isShort = (html) => richToPlainText(html).length <= 34;
@@ -23,14 +23,14 @@ const Row = ({ row }) => {
 };
 
 /** A day of the itinerary: the band (ribbon, date, title, where the night is spent), then what happens, and the notes that belong to it. */
-export const DayCard = ({ day, index, total, model }) => {
+export const DayCard = ({ day, index, total, model, quotation }) => {
   const parsed = parseDay(day.description);
   const Art = iconForDay(`${day.title} ${parsed.summary}`, index);
   const date = dayDate(model, index);
   const rows = parsed.rows.slice();
   if (day.meals && !rows.some((r) => /meal/i.test(r.label))) rows.push({ label: 'Meals', items: [day.meals] });
   const last = index === total - 1;
-  const stay = String(day.stay || '').trim();
+  const stay = overnightOf(quotation, model.start, index);
   const heading = `Day ${index + 1}${date ? ` – ${weekday(date)}, ${longDate(date)}` : ''}`;
   return (
     <div className="quotation-keep qd-day" data-day={index + 1} data-section={index === 0 ? 'days' : undefined}>
@@ -76,7 +76,7 @@ export const DaysPage = ({ model, quotation, id }) => {
   const days = quotation.itinerary || [];
   return (
     <Page id={id} model={model} header="Day-by-Day Itinerary" flowClass="qd-days-flow">
-      {days.map((day, i) => <DayCard key={i} day={day} index={i} total={days.length} model={model} />)}
+      {days.map((day, i) => <DayCard key={i} day={day} index={i} total={days.length} model={model} quotation={quotation} />)}
       <div className="quotation-keep qd-end"><RichLine html={quotation.endOfTourNote || '***End of the Tour***'} /></div>
     </Page>
   );

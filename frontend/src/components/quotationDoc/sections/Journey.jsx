@@ -1,7 +1,7 @@
 import React from 'react';
 import { IntroBand, Page, SectionBanner } from '../PageParts';
 import { BannerBoat, Compass, IconBedRing, IconInfoRing } from '../art';
-import { dayBlurb, dayDate, overviewRows, parseDay, shortDayMonth, weekday } from '../model';
+import { dayBlurb, dayDate, overnightOf, overviewRows, parseDay, shortDayMonth, weekday } from '../model';
 import { richToPlainText } from '../../../utils/richText';
 
 const mapsUrl = (query) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -73,6 +73,7 @@ export const ShapePage = ({ model, quotation, id }) => {
       {days.map((day, i) => {
         const date = dayDate(model, i);
         const blurb = dayBlurb(parseDay(day.description));
+        const overnight = overnightOf(quotation, model.start, i);
         return (
           <div className={`quotation-keep qd-shape${i === days.length - 1 ? ' last' : ''}`} key={i} data-section={i === 0 ? 'shape' : undefined}>
             <div className="rail"><div className="circle">{String(i + 1).padStart(2, '0')}</div><div className="dash" /></div>
@@ -84,8 +85,8 @@ export const ShapePage = ({ model, quotation, id }) => {
                 </div>
                 {blurb && <div className="blurb">{blurb}</div>}
               </div>
-              <div className="night">Night<b>{day.stay || '—'}</b></div>
-              <a className="map" href={mapsUrl(`${day.title || day.stay || ''} ${model.place}`.trim())} target="_blank" rel="noopener noreferrer">MAP ↗</a>
+              <div className="night">{overnight || i < days.length - 1 ? 'Night' : 'Trip ends'}<b>{overnight || (i < days.length - 1 ? '—' : 'Departure')}</b></div>
+              <a className="map" href={mapsUrl(`${day.title || overnight || ''} ${model.place}`.trim())} target="_blank" rel="noopener noreferrer">LOCATION ↗</a>
             </div>
           </div>
         );
