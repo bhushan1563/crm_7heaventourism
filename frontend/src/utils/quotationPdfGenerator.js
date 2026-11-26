@@ -36,6 +36,14 @@ const a4HeightPx = (page) => {
   return Math.round(width * (297 / 210));
 };
 
+/** A page this little (px) over A4 is not split: it is drawn very slightly smaller onto its one sheet. */
+const SQUEEZE = 24;
+/** The least a continuation sheet carries (px, about a quarter of the sheet), and the room a sheet has under its header and above its footer. */
+const MIN_CARRY = 260;
+const SHEET_ROOM = 860;
+/** The space left above a section that is moved up under another. */
+const JOIN_GAP = 16;
+
 /**
  * Moves overflowing .quotation-keep blocks onto continuation pages
  * so each sheet stays within one A4 page. Header and footer are repeated.
@@ -48,7 +56,7 @@ const splitTallPages = (root) => {
     let guard = 0;
     let limit = a4HeightPx(current);
 
-    while (current && current.scrollHeight > limit && guard < 40) {
+    while (current && current.scrollHeight > limit + SQUEEZE && guard < 40) {
       guard += 1;
       const flow = current.querySelector('.quotation-flow');
       if (!flow) break;
@@ -57,20 +65,28 @@ const splitTallPages = (root) => {
       if (keeps().length <= 1) break;
 
       const overflow = [];
-      while (current.scrollHeight > limit && keeps().length > 1) {
-        const remaining = keeps();
-        const last = remaining[remaining.length - 1];
-        // Never strip a page down to its headings alone (a banner or a section band): a page with only a heading is worse than a page that
-        // runs a little over, which the sheet then scales to fit.
-        if (!remaining.slice(0, -1).some((k) => !k.classList.contains('qd-keepnext'))) break;
-        overflow.unshift(last);
-        last.remove();
-      }
-      // A heading (a banner, the band that opens a section) is never left alone at the foot of a sheet: it goes over with what it introduces.
-      while (keeps().length > 1 && keeps()[keeps().length - 1].classList.contains('qd-keepnext')) {
-        const heading = keeps()[keeps().length - 1];
-        overflow.unshift(heading);
-        heading.remove();
+      let carried = 0; // the height of what goes over to the next sheet
+      const heightOf = (node) => node.getBoundingClientRect().height;
+      const carry = () => {
+        const node = keeps()[keeps().length - 1];
+        carried += heightOf(node);
+        overflow.unshift(node);
+        node.remove();
+      };
+      // A page is never stripped down to its headings alone (a banner or a section band): that is worse than running a little over.
+      const canGive = () => keeps().length > 1 && keeps().slice(0, -1).some((k) => !k.classList.contains('qd-keepnext'));
+      // A heading is never left alone at the foot of a sheet: it goes over with what it introduces.
+      const carryHeadings = () => {
+        while (keeps().length > 1 && keeps()[keeps().length - 1].classList.contains('qd-keepnext')) carry();
+      };
+
+      while (current.scrollHeight > limit + SQUEEZE && canGive()) carry();
+      if (overflow.length === 0) break;
+      carryHeadings();
+      // The next sheet is never left with just a scrap (a closing line, a note): the blocks before it go over too, while they fit on one sheet.
+      while (carried < MIN_CARRY && canGive() && carried + heightOf(keeps()[keeps().length - 1]) <= SHEET_ROOM) {
+        carry();
+        carryHeadings();
       }
 
       if (overflow.length === 0) break;
@@ -86,6 +102,67 @@ const splitTallPages = (root) => {
       limit = a4HeightPx(current);
     }
   });
+};
+
+/** A page whose blocks are no taller than this (px, under half a sheet) is folded into the page before it when they fit there. */
+const SHORT_PAGE = 460;
+/** A page this bare (px) that cannot move up takes the last block of the page before it instead. */
+const BARE_PAGE = 300;
+
+/** The blocks of a page and where they start and end, measured from the top of the page. */
+const blocksOf = (page) => {
+  const nodes = Array.from(page.querySelectorAll('.quotation-keep'));
+  if (!nodes.length) return null;
+  const top = page.getBoundingClientRect().top;
+  return { nodes, start: nodes[0].getBoundingClientRect().top - top, end: Math.max(...nodes.map((n) => n.getBoundingClientRect().bottom)) - top };
+};
+
+/** The pages that may be joined: the framed pages of the trip itself (not the covers, and not the welcome letter). */
+const joinable = (page) => Boolean(page?.hasAttribute('data-qd-page') && !page.matches('.qd-cover, .qd-welcome') && page.querySelector('.quotation-flow'));
+
+/**
+ * For a bare page whose blocks do not fit on the page before: the last block of that page (with its heading) comes down to it, when that
+ * page keeps something of its own.
+ */
+const lendBlock = (theirs, page, mine) => {
+  const height = mine.end - mine.start;
+  if (height > BARE_PAGE || theirs.filter((n) => !n.classList.contains('qd-keepnext')).length < 2) return;
+  const moving = [theirs[theirs.length - 1]];
+  while (theirs[theirs.length - 1 - moving.length]?.classList.contains('qd-keepnext')) moving.unshift(theirs[theirs.length - 1 - moving.length]);
+  const lent = moving.reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
+  if (lent + JOIN_GAP + height > SHEET_ROOM) return;
+  mine.nodes[0].style.marginTop = `${JOIN_GAP}px`;
+  page.querySelector('.quotation-flow').prepend(...moving);
+};
+
+/**
+ * No sheet that is mostly empty when what it holds fits on the sheet before: a short section (a few lines of pricing, an acceptance that
+ * ran over) moves up under the previous one. Page numbers and the contents are worked out afterwards, so they stay right.
+ */
+const joinShortPages = (root) => {
+  let pages = Array.from(root.querySelectorAll('.quotation-page'));
+  for (let i = 1; i < pages.length; i += 1) {
+    const page = pages[i];
+    const before = pages[i - 1];
+    if (!joinable(page) || !joinable(before)) continue;
+    const mine = blocksOf(page);
+    const theirs = blocksOf(before);
+    const footer = before.querySelector('.qd-foot');
+    if (!mine || !theirs || !footer || mine.end - mine.start > SHORT_PAGE) continue;
+    const footerTop = a4HeightPx(before) - footer.getBoundingClientRect().height;
+    if (theirs.end + JOIN_GAP + (mine.end - mine.start) > footerTop) {
+      lendBlock(theirs.nodes, page, mine);
+      continue;
+    }
+    const flow = before.querySelector('.quotation-flow');
+    mine.nodes.forEach((node, k) => {
+      if (k === 0) node.style.marginTop = `${JOIN_GAP}px`;
+      flow.appendChild(node);
+    });
+    page.remove();
+    pages = Array.from(root.querySelectorAll('.quotation-page'));
+    i -= 1;
+  }
 };
 
 const PRINT_PAGE_CSS = `
@@ -182,6 +259,7 @@ const openPrintFrame = async (container) => {
   await waitForPrintFrame(iframe);
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   splitTallPages(doc);
+  joinShortPages(doc);
   finalizeDocument(doc.body, { perSheet: false }); // the sheets are now exact: number them and fill the contents
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   return iframe;

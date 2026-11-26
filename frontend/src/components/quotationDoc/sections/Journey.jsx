@@ -8,8 +8,9 @@ const mapsUrl = (query) => `https://www.google.com/maps/search/?api=1&query=${en
 
 /** The stops of the trip joined by a dashed line, in rows of up to four, each with its number and its nights. */
 const Route = ({ stops }) => {
+  const perRow = stops.length <= 6 ? Math.max(stops.length, 4) : 5; // up to six stops stay on one line
   const rows = [];
-  for (let i = 0; i < stops.length; i += 4) rows.push(stops.slice(i, i + 4));
+  for (let i = 0; i < stops.length; i += perRow) rows.push(stops.slice(i, i + perRow));
   let n = 0;
   return (
     <div className="quotation-keep qd-route">
@@ -21,7 +22,7 @@ const Route = ({ stops }) => {
             {row.map((stop, k) => {
               n += 1;
               return (
-                <div className="qd-stop" key={`${stop.name}-${k}`}>
+                <div className="qd-stop" key={`${stop.name}-${k}`} style={{ flexBasis: `${100 / perRow}%` }}>
                   {k < row.length - 1 && <span className="ln" />}
                   <div className="dot">{n}</div>
                   <div className="nm">{stop.name}</div>
@@ -48,7 +49,7 @@ export const JourneyPage = ({ model, quotation, numeral, id }) => {
       {rows.length > 0 && (
         <>
           <SectionBanner tight>Trip Overview</SectionBanner>
-          <table className="quotation-keep qd-table">
+          <table className="quotation-keep qd-table qd-overview">
             <thead><tr><th style={{ width: '22%' }}>Date</th><th style={{ width: '20%' }}>Destination</th><th>Hotel</th><th style={{ width: '17%' }}>Meal Plan</th></tr></thead>
             <tbody>
               {rows.map((r, i) => (

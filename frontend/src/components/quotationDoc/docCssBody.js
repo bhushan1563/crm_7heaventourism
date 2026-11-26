@@ -4,8 +4,8 @@ import { COLORS as C, FONT_SERIF } from './tokens';
 export const JOURNEY_CSS = `
 /* ---- the route (in place of a map) and the overview table ---- */
 .qd-route { position: relative; border: 1px solid ${C.rule}; background: ${C.panel}; padding: 4px; margin: 0 0 18px; }
-.qd-route-in { border: 1px solid ${C.rule}; background: linear-gradient(180deg, #fffdf8, #f8f1de); padding: 22px 26px 18px; min-height: 150px; position: relative; }
-.qd-route .cap { font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; color: ${C.teal}; text-transform: uppercase; margin-bottom: 16px; }
+.qd-route-in { border: 1px solid ${C.rule}; background: linear-gradient(180deg, #fffdf8, #f8f1de); padding: 14px 20px 14px; min-height: 118px; position: relative; }
+.qd-route .cap { font-size: 9.5px; font-weight: 700; letter-spacing: 0.22em; color: ${C.teal}; text-transform: uppercase; margin-bottom: 12px; }
 .qd-route .compass { position: absolute; right: 18px; top: 12px; }
 .qd-route .row { display: flex; align-items: flex-start; justify-content: center; margin-bottom: 16px; }
 .qd-route .row:last-child { margin-bottom: 0; }
@@ -21,6 +21,8 @@ table.qd-table { width: 100%; border-collapse: collapse; margin: 0 0 14px; backg
 table.qd-table th { background: ${C.navy}; color: #fff; font-size: 10px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; padding: 12px 8px; text-align: center; border: 1px solid ${C.navy}; }
 table.qd-table td { border: 1px solid ${C.rule}; padding: 12px 12px; font-size: 12.6px; color: ${C.ink}; line-height: 1.4; }
 table.qd-table td.c { text-align: center; }
+table.qd-overview th { padding: 9px 8px; }
+table.qd-overview td { padding: 7px 10px; font-size: 12px; }
 table.qd-table tr.total td { background: ${C.band}; font-weight: 700; }
 
 /* ---- the shape of the journey: a list of the days ---- */

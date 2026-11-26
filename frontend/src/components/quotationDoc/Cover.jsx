@@ -10,12 +10,15 @@ import { pad2, plural } from './model';
 
 const photoCrossOrigin = API_ORIGIN ? 'anonymous' : undefined;
 
-/** The picture on the cover: the one chosen for it, else the first photo the quotation has (a day's, else a hotel's). Nothing when there is none. */
+/**
+ * The picture on the cover: the one chosen for it ("Cover photo" in the builder), else the first photo of a day. A hotel's photo is used only on a
+ * hotel quotation: a building is no picture of a destination. Nothing when there is none (the cover then draws its own scene).
+ */
 export const coverPhotoOf = (quotation) => {
   if (quotation.coverPhoto && typeof quotation.coverPhoto.token === 'string') return quotation.coverPhoto;
   const days = (quotation.itinerary || []).flatMap((d) => d.photos || []);
   const stays = [...(quotation.packageDetails?.hotels || []), ...(quotation.options || []).flatMap((o) => o.hotels || [])].flatMap((h) => h.photos || []);
-  return [...days, ...stays].find((p) => p && typeof p.token === 'string') || null;
+  return [...days, ...(quotation.quotationType === 'Only Hotel' ? stays : [])].find((p) => p && typeof p.token === 'string') || null;
 };
 
 /** The size of the destination on the cover: the shorter the name, the larger it is set. */
