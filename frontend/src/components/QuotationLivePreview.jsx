@@ -1,21 +1,45 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
 import QuotationDocumentView from './QuotationDocumentView';
-import PaginatedPreview from './PaginatedPreview';
 import { useFitScale } from '../hooks/useFitScale';
 
 // The document is laid out at A4 width (210mm = 794px at 96dpi) everywhere and scaled down to the pane.
 const BUILDER_PAGE_WIDTH_PX = 794;
+const PREVIEW_ID = 'quotation-live-render-view';
+
+// The pages of the document that show what each tab of the builder is about (the first one the document has).
+const PAGES_OF_TAB = {
+  overview: ['cover'],
+  itinerary: ['days', 'shape'],
+  package: ['stay', 'land'],
+  visa: ['visa'],
+  visaFees: ['visa'],
+  flights: ['flights'],
+  pricing: ['pricing', 'stay'],
+  notes: ['terms']
+};
 
 /**
  * The builder's live document preview.
  * A sticky side pane on wide screens; below 1280px the pane sits under the form. The page is always scaled to fit the width of the pane.
+ * It redraws with every change; each part runs on as one long page here (the "PDF Preview" window shows the sheets exactly as downloaded).
+ * `section` is the builder tab that is open: the pane moves to the part of the document that tab fills in.
  */
-export const QuotationLivePreview = ({ quotation }) => {
+export const QuotationLivePreview = ({ quotation, section }) => {
   const [fitRef, fitScale] = useFitScale(BUILDER_PAGE_WIDTH_PX, { min: 0.3, max: 1 });
+  const paneRef = useRef(null);
+
+  useEffect(() => {
+    const pane = paneRef.current;
+    const page = (PAGES_OF_TAB[section] || []).map((name) => pane?.querySelector(`#${PREVIEW_ID}-${name}`)).find(Boolean);
+    if (!page) return;
+    // only the pane scrolls: the form must not jump away from under the person typing
+    pane.scrollTop = section === 'overview' ? 0 : pane.scrollTop + page.getBoundingClientRect().top - pane.getBoundingClientRect().top;
+  }, [section]);
 
   return (
     <div
+      ref={paneRef}
       className="rs-builder-preview"
       style={{
         display: 'flex',
@@ -46,12 +70,10 @@ export const QuotationLivePreview = ({ quotation }) => {
       </div>
 
       {/* Measured wrapper (never scaled itself); `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom scroll. */}
-      <div ref={fitRef} style={{ width: '100%', overflow: 'hidden' }}>
+      {/* flexShrink 0: as a flex item with hidden overflow it would otherwise shrink to the pane and cut off every page below the cover */}
+      <div ref={fitRef} data-testid="live-preview-pages" style={{ width: '100%', overflow: 'hidden', flexShrink: 0 }}>
         <div style={{ zoom: fitScale }}>
-          {/* shows the pages as the PDF lays them out, a moment after the last change */}
-          <PaginatedPreview sourceId="quotation-live-render-view" version={quotation} delay={900}>
-            <QuotationDocumentView quotation={quotation} id="quotation-live-render-view" />
-          </PaginatedPreview>
+          <QuotationDocumentView quotation={quotation} id={PREVIEW_ID} />
         </div>
       </div>
     </div>

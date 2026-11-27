@@ -3033,7 +3033,7 @@ export const QuotationBuilderPage = () => {
         </div>
 
         {/* RIGHT: Live Interactive Document Preview */}
-        <QuotationLivePreview quotation={formData} />
+        <QuotationLivePreview quotation={formData} section={activeTab} />
       </div >
 
       <VisaPicker
