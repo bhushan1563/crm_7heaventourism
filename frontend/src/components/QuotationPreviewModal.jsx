@@ -17,6 +17,7 @@ import { generateQuotationPDF, printQuotation } from '../utils/quotationPdfGener
 import { useToast } from '../context/ToastContext';
 import { saveBlob } from '../utils/download';
 import { NEW_VERSION_MESSAGE } from '../services/api';
+import PaginatedPreview from './PaginatedPreview';
 import { isChunkError } from '../utils/lazyWithReload';
 
 // The document is laid out at A4 width (96dpi). On narrow screens start zoomed out so the whole page width is visible.
@@ -295,12 +296,14 @@ export const QuotationPreviewModal = ({ isOpen, onClose, quotation, before = nul
         >
           {/* `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom horizontal scroll. */}
           <div style={{ zoom: zoomLevel }}>
-            <QuotationDocumentView
-              quotation={quotation}
-              pageNumber={null}
-              id="quotation-modal-preview"
-              before={before}
-            />
+            <PaginatedPreview sourceId="quotation-modal-full-render" version={quotation}>
+              <QuotationDocumentView
+                quotation={quotation}
+                pageNumber={null}
+                id="quotation-modal-preview"
+                before={before}
+              />
+            </PaginatedPreview>
           </div>
         </div>
       </div>

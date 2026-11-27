@@ -76,8 +76,7 @@ describe('the overview of a hotel quotation', () => {
     const { container } = show(hotelQuotation({ packageDetails: { hotels: [stay(), stay({ hotelName: 'Hotel Sunrise', city: 'Jaipur', starRating: '3 star', mealPlan: 'MAP', checkInDate: '2026-03-10', checkOutDate: '2026-03-12' })], inclusions: [] } }));
     const rows = [...container.querySelectorAll('[id$="-journey"] table.qd-table tbody tr')].map((tr) => [...tr.children].map((td) => td.textContent));
     expect(rows).toEqual([['7 – 10 March', 'Udaipur', 'Taj Lake Palace (5★)', 'CP (Breakfast Only)'], ['10 – 12 March', 'Jaipur', 'Hotel Sunrise (3★)', 'MAP']]);
-    expect(container.querySelector('.qd-toc')).toHaveTextContent('The Journey');
-    expect(container.querySelector('.qd-toc')).toHaveTextContent('Hotel & Accommodation');
+    expect([...container.querySelectorAll('.qd-band')].map((band) => [band.querySelector('.num').textContent, band.querySelector('h2').textContent])).toEqual([['I', 'The Journey'], ['II', 'Hotel & Accommodation']]);
   });
 
   it('is left out when the quotation has hotel options (each option carries its own hotels)', () => {

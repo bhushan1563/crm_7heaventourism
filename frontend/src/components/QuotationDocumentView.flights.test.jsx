@@ -40,11 +40,10 @@ describe('the flight screenshots on the flights page', () => {
     expect(images[0].closest('.quotation-keep')).not.toBeNull(); // each one moves to the next sheet whole when the page is full
   });
 
-  it('are a numbered section of the document: in the contents, after the days, with its heading', () => {
+  it('are a numbered section of the document, after the days, with its heading', () => {
     const { container } = show(base({ flightImages: [SHOT_A] }));
-    const toc = container.querySelector('.qd-toc');
-    const rows = [...toc.querySelectorAll('.qd-toc-row:not(.sub)')].map((row) => [row.querySelector('.rn').textContent, row.querySelector('.tt').textContent]);
-    expect(rows).toEqual([['I', 'Day by Day'], ['II', 'Flight Details'], ['III', 'Pricing']]);
+    const rows = [...container.querySelectorAll('.qd-band')].map((band) => [band.querySelector('.num').textContent, band.querySelector('h2').textContent]);
+    expect(rows).toEqual([['II', 'Flight Details'], ['III', 'Pricing']]); // the days are the first section and have no band
     expect(within(flightsPage(container)).getByRole('heading', { name: 'Flight Details' }).closest('.qd-band')).toHaveTextContent('II');
     expect(container.querySelector('[id$="-days"]').compareDocumentPosition(flightsPage(container)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

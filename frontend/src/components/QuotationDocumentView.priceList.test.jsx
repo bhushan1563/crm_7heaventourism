@@ -21,11 +21,11 @@ const OPTION = { name: 'Option 1', hotels: [{ hotelName: 'Hotel Sunrise', city: 
 const pricingPage = (container) => container.querySelector('[id$="-pricing"]');
 
 describe('the price list of a quotation', () => {
-  it('has a page of its own, a numbered section "Pricing" in the contents, after the days', () => {
+  it('has a page of its own, the numbered section "Pricing", after the days', () => {
     const page = show(quotation([item()]));
     expect(pricingPage(page)).not.toBeNull();
     expect(pricingPage(page)).toHaveTextContent('Pricing Breakdown');
-    const rows = [...page.querySelectorAll('.qd-toc-row:not(.sub)')].map((row) => [row.querySelector('.rn').textContent, row.querySelector('.tt').textContent]);
+    const rows = [...page.querySelectorAll('.qd-band')].map((band) => [band.querySelector('.num').textContent, band.querySelector('h2').textContent]);
     expect(rows).toContainEqual(['II', 'Pricing']);
     expect(page.querySelector('[id$="-days"]').compareDocumentPosition(pricingPage(page)) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -33,7 +33,6 @@ describe('the price list of a quotation', () => {
   it('has no pricing page when no price was typed', () => {
     const page = show(quotation([], { pricing: { items: [], totalCostPerPerson: 0, grandTotal: 0, totalCostNote: '' } }));
     expect(pricingPage(page)).toBeNull();
-    expect(page.querySelector('.qd-toc')).not.toHaveTextContent('Pricing');
   });
 
   it('prints an included Airfare with its price and note', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildModel, dayBlurb, overnightOf, journeyStops, nightsAndDays, numberWord, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate, welcomeParagraphs } from './model';
+import { buildModel, dayBlurb, overnightOf, journeyStops, nightsAndDays, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate } from './model';
 
 describe('durations and dates', () => {
   it('reads nights and days from the usual ways of writing a duration', () => {
@@ -23,11 +23,9 @@ describe('durations and dates', () => {
     expect(rangeText(toUtcDate('2026-12-12'), null)).toBe('12 December');
   });
 
-  it('splits a destination at the first comma and counts to twenty in words', () => {
+  it('splits a destination at the first comma', () => {
     expect(splitDestination('Bali, Indonesia')).toEqual({ place: 'Bali', country: 'Indonesia' });
     expect(splitDestination('Goa')).toEqual({ place: 'Goa', country: '' });
-    expect(numberWord(9)).toBe('nine');
-    expect(numberWord(30)).toBe('30');
   });
 });
 
@@ -99,6 +97,7 @@ describe('the trip', () => {
     expect(m.end.toISOString().slice(0, 10)).toBe('2026-12-20');
     expect(m.dateRange).toBe('12 December 2026 — 20 December 2026');
     expect(m.footerLabel).toBe('BALI TOUR ITINERARY');
+    expect(buildModel({ ...quotation, destination: 'THE GRAND HOUSEBOATS OF ALLEPPEY AND KUMARAKOM' }).footerLabel).toBe('TOUR ITINERARY'); // too long to share the footer
     expect(m.brand).toBe('7HEAVEN TOURISM');
     expect(m.stars).toBe(4);
   });
@@ -106,15 +105,6 @@ describe('the trip', () => {
   it('says it is a confirmation on a booking, and uses the visa country for a visa', () => {
     expect(buildModel(quotation, { confirmation: true })).toMatchObject({ kicker: 'Booking confirmed for', footerLabel: 'BALI BOOKING CONFIRMATION' });
     expect(buildModel({ quotationType: 'Visa', destination: 'Schengen Visa', visa: { country: 'France' } }).place).toBe('France');
-  });
-
-  it('writes the welcome letter for each kind of quotation, naming the company and the place', () => {
-    for (const type of ['Package', 'Only Hotel', 'Events / Corporate', 'Land Service', 'Visa']) {
-      const text = welcomeParagraphs(buildModel({ ...quotation, quotationType: type })).join(' ');
-      expect(text).toContain('7Heaven Tourism');
-      expect(text).toContain('Bali');
-    }
-    expect(welcomeParagraphs(buildModel(quotation))[0]).toContain('nine-day');
   });
 });
 

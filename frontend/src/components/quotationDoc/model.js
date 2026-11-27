@@ -198,9 +198,6 @@ export const DEFAULT_COMPANY = {
   website: 'www.7heaventourism.in'
 };
 
-const WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty'];
-/** 9 -> "nine" (up to twenty), otherwise the digits. */
-export const numberWord = (n) => (Number.isInteger(n) && n >= 0 && n <= 20 ? WORDS[n] : String(n));
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The town at the end of an address ("..., Alkapuri 390007, Vadodara" -> "Vadodara"). */
@@ -231,6 +228,12 @@ export const journeyStops = (quotation) => {
   return stops;
 };
 
+/** "BALI TOUR ITINERARY"; a place too long to share the footer with the page number is left out. */
+const footerLabel = (place, noun) => {
+  const full = `${(place || 'Your').toUpperCase()} ${noun}`;
+  return full.length > 38 ? noun : full;
+};
+
 /** What the document needs to know about the trip, in one place. */
 export const buildModel = (quotation, { confirmation = false } = {}) => {
   const type = quotation.quotationType || 'Package';
@@ -253,7 +256,7 @@ export const buildModel = (quotation, { confirmation = false } = {}) => {
     place,
     country: dest.country,
     kicker: confirmation ? 'Booking confirmed for' : KICKER[type] || KICKER.Package,
-    footerLabel: confirmation ? `${(place || 'Your').toUpperCase()} BOOKING CONFIRMATION` : `${(place || 'Your').toUpperCase()} ${FOOTER_NOUN[type] || FOOTER_NOUN.Package}`,
+    footerLabel: footerLabel(place, confirmation ? 'BOOKING CONFIRMATION' : FOOTER_NOUN[type] || FOOTER_NOUN.Package),
     tripId: clean(quotation.quotationNo),
     guest: /[\p{L}\p{N}]/u.test(clean(quotation.clientName)) ? clean(quotation.clientName) : 'Valued Guest',
     travellers: clean(quotation.paxDetails),
@@ -270,46 +273,6 @@ export const buildModel = (quotation, { confirmation = false } = {}) => {
 
 /** The date of the i-th day of the trip (0-based), or null when the trip has no start date. */
 export const dayDate = (model, i) => (model.start ? addDays(model.start, i) : null);
-
-/** The letter on the welcome page: what this document is, how the trip is arranged, and how to ask for a change. */
-export const welcomeParagraphs = (model) => {
-  const { company, place, type, days } = model;
-  const who = company.name;
-  const where = place || 'your destination';
-  const long = days > 1 ? `${numberWord(days)}-day ` : '';
-  const change = 'please tell us before confirmation and we will rework the plan around it.';
-  if (type === 'Visa') {
-    return [
-      `Thank you for choosing ${who} for your ${where} visa. This document sets out the visa we are applying for, the documents we need from each applicant, the fees, and what our service includes.`,
-      'Processing times and requirements are set by the issuing authority and may change without notice; we will keep you informed at every step and tell you at once if anything more is asked of you.',
-      `If anything here should be adjusted — an applicant added, a different type of visa, a change of dates — ${change}`,
-      'We look forward to taking care of this for you.'
-    ];
-  }
-  if (type === 'Land Service') {
-    return [
-      `Thank you for choosing ${who} for your land service in ${where}. This document sets out the vehicles we have arranged, the route, the rates, and what the service includes.`,
-      'Timings shown are indicative and may shift with traffic, weather and road conditions on the day; our coordinator will confirm each pickup with you directly.',
-      `If anything here should be adjusted — a different vehicle, an added stop, a change of timing — ${change}`,
-      'We look forward to welcoming you on board.'
-    ];
-  }
-  if (type === 'Only Hotel') {
-    return [
-      `Thank you for choosing ${who} for your stay in ${where}. This document sets out the hotels, the rooms and the rates we have arranged for you, and what to expect when you arrive.`,
-      'Rooms and rates are held subject to availability until the booking is confirmed; check-in and check-out times are those of each hotel and may vary with the season.',
-      `If anything here should be adjusted — a different hotel, a different room, an extra night — ${change}`,
-      `We look forward to welcoming you to ${where}.`
-    ];
-  }
-  const event = type === 'Events / Corporate';
-  return [
-    `Thank you for choosing ${who} for your ${event ? 'event' : 'holiday'} in ${where}. This document sets out your ${long}${event ? 'programme' : 'journey'} in full — where you stay, what each day holds, what the package includes, and what to prepare before you go.`,
-    'Every transfer and sightseeing day in this plan has been arranged with care, so the pace of the trip stays yours. Timings shown are indicative and may shift with weather, traffic and operating conditions on the day; our representative will confirm each morning’s pickup with you directly.',
-    `If anything here should be adjusted — a different hotel, an extra day at leisure, a change in the order of the tours — ${change}`,
-    `We look forward to welcoming you to ${where}.`
-  ];
-};
 
 /** "12 – 14 December" (one month), "28 Dec – 2 Jan" (two), or the one date. */
 export const rangeText = (a, b) => {

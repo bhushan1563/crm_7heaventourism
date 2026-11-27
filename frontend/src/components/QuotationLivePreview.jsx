@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
 import QuotationDocumentView from './QuotationDocumentView';
+import PaginatedPreview from './PaginatedPreview';
 import { useFitScale } from '../hooks/useFitScale';
 
 // The document is laid out at A4 width (210mm = 794px at 96dpi) everywhere and scaled down to the pane.
@@ -44,10 +45,13 @@ export const QuotationLivePreview = ({ quotation }) => {
         </div>
       </div>
 
-            {/* Measured wrapper (never scaled itself); `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom scroll. */}
+      {/* Measured wrapper (never scaled itself); `zoom` (unlike transform: scale) also shrinks the layout box, so there is no phantom scroll. */}
       <div ref={fitRef} style={{ width: '100%', overflow: 'hidden' }}>
         <div style={{ zoom: fitScale }}>
-          <QuotationDocumentView quotation={quotation} id="quotation-live-render-view" />
+          {/* shows the pages as the PDF lays them out, a moment after the last change */}
+          <PaginatedPreview sourceId="quotation-live-render-view" version={quotation} delay={900}>
+            <QuotationDocumentView quotation={quotation} id="quotation-live-render-view" />
+          </PaginatedPreview>
         </div>
       </div>
     </div>

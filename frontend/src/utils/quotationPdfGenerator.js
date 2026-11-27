@@ -40,6 +40,8 @@ const a4HeightPx = (page) => {
 const SQUEEZE = 14;
 /** The room a sheet has under its header and above its footer (px). */
 const SHEET_ROOM = 860;
+/** How much taller than a sheet a page may be and still be drawn smaller onto one sheet. */
+const MAX_SHRINK = 1.35;
 /** The space left above a section that is moved up under another. */
 const JOIN_GAP = 16;
 
@@ -102,8 +104,8 @@ const blocksOf = (page) => {
   return { nodes, start: nodes[0].getBoundingClientRect().top - top, end: Math.max(...nodes.map((n) => n.getBoundingClientRect().bottom)) - top };
 };
 
-/** The pages that may be filled from one another: the framed pages of the trip itself (not the covers, and not the welcome letter). */
-const joinable = (page) => Boolean(page?.hasAttribute('data-qd-page') && !page.matches('.qd-cover, .qd-welcome') && page.querySelector('.quotation-flow'));
+/** The pages that may be filled from one another: the framed pages of the trip itself (not the covers). */
+const joinable = (page) => Boolean(page?.hasAttribute('data-qd-page') && !page.matches('.qd-cover') && page.querySelector('.quotation-flow'));
 
 const isHeading = (node) => node.classList.contains('qd-keepnext');
 
@@ -244,16 +246,19 @@ const buildQuotationPrintHtml = (bodyHtml) => `
   </html>
 `;
 
+const IMAGE_WAIT_MS = 20000;
+
 const waitForPrintFrame = async (iframe) => {
   const doc = iframe.contentDocument;
   if (doc?.fonts?.ready) {
     await doc.fonts.ready;
   }
   const images = Array.from(doc?.images || []);
-  await Promise.all(images.map((img) => (img.complete ? null : new Promise((resolve) => {
+  const loaded = Promise.all(images.map((img) => (img.complete ? null : new Promise((resolve) => {
     img.onload = resolve;
     img.onerror = resolve;
   }))));
+  await Promise.race([loaded, new Promise((resolve) => setTimeout(resolve, IMAGE_WAIT_MS))]); // a photo that never answers must not hang the file
   await new Promise((resolve) => setTimeout(resolve, 60));
 };
 
@@ -409,32 +414,35 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-    // One A4 sheet when the section fits. A few millimetres over is scaled
-    // onto the sheet; anything taller is continued on the next pages.
-    if (imgHeight <= a4PageHeight + 15) {
+    // Every page of the document is one sheet. One that is still taller than a sheet (a single block that cannot be split) is drawn a
+    // little smaller, so its footer is never cut off onto a sheet of its own; only something far longer is continued over further sheets.
+    if (imgHeight <= a4PageHeight * MAX_SHRINK) {
       if (!isFirstPdfPage) {
         pdf.addPage('a4', 'portrait');
       }
-      const drawHeight = imgHeight >= a4PageHeight - 8 ? a4PageHeight : Math.min(imgHeight, a4PageHeight);
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, drawHeight, undefined, 'FAST');
+      const tall = imgHeight > a4PageHeight + 0.5;
+      const drawHeight = tall || imgHeight >= a4PageHeight - 8 ? a4PageHeight : imgHeight;
+      const drawWidth = tall ? (imgWidth * a4PageHeight) / imgHeight : imgWidth;
+      const left = (imgWidth - drawWidth) / 2;
+      if (tall) {
+        pdf.setFillColor(255, 252, 244); // the colour of the paper, beside the narrowed page
+        pdf.rect(0, 0, imgWidth, a4PageHeight, 'F');
+      }
+      pdf.addImage(imgData, 'JPEG', left, 0, drawWidth, drawHeight, undefined, 'FAST');
       if (pageRect.width && pageRect.height) {
-        const sx = imgWidth / pageRect.width;
+        const sx = drawWidth / pageRect.width;
         const sy = drawHeight / pageRect.height;
-        links.forEach((l) => pdf.link(l.x * sx, l.y * sy, l.w * sx, l.h * sy, { url: l.url }));
+        links.forEach((l) => pdf.link(left + l.x * sx, l.y * sy, l.w * sx, l.h * sy, { url: l.url }));
       }
       isFirstPdfPage = false;
     } else {
-      // In case an individual section is unusually long, slice it across sub-pages
       let heightLeft = imgHeight;
-      let position = 0;
       let subPage = 0;
-
       while (heightLeft > 18) {
         if (!isFirstPdfPage) {
           pdf.addPage('a4', 'portrait');
         }
-        position = -(subPage * a4PageHeight);
-        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        pdf.addImage(imgData, 'JPEG', 0, -(subPage * a4PageHeight), imgWidth, imgHeight, undefined, 'FAST');
         heightLeft -= a4PageHeight;
         subPage++;
         isFirstPdfPage = false;
@@ -455,6 +463,26 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
       frame.parentElement?.remove();
       frame.remove();
     }
+  }
+};
+
+/**
+ * The document as the PDF and the printer lay it out (the same pages, split, filled and numbered), as markup for showing on screen. Empty
+ * when the document is not laid out (nothing to measure).
+ */
+export const paginatedMarkup = async (containerId) => {
+  const container = document.getElementById(containerId);
+  if (!container || !container.getBoundingClientRect().width) return '';
+  const frame = await openPrintFrame(container);
+  try {
+    const copy = frame.contentDocument.querySelector('.quotation-doc-container')?.cloneNode(true);
+    if (!copy) return '';
+    copy.querySelectorAll('[id]').forEach((el) => el.removeAttribute('id')); // the original document keeps its ids to itself
+    copy.id = `${containerId}-pages`;
+    return copy.outerHTML;
+  } finally {
+    frame.parentElement?.remove();
+    frame.remove();
   }
 };
 

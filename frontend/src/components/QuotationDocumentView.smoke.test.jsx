@@ -9,9 +9,9 @@ afterEach(cleanup);
 const show = (quotation) => render(<MemoryRouter><QuotationDocumentView quotation={quotation} /></MemoryRouter>);
 
 describe('the quotation document with little or odd data', () => {
-  it('draws a cover, a welcome page and a closing page for a quotation that is still empty', () => {
+  it('draws only a cover and a closing page for a quotation that is still empty', () => {
     const { container } = show({ quotationType: 'Package', clientName: '', destination: '', duration: '', paxDetails: '', itinerary: [], packageDetails: { hotels: [], inclusions: [] }, options: [], priceTables: [], pricing: {} });
-    expect([...container.querySelectorAll('.quotation-page')].map((p) => p.id)).toEqual(['quotation-doc-cover', 'quotation-doc-welcome', 'quotation-doc-back']);
+    expect([...container.querySelectorAll('.quotation-page')].map((p) => p.id)).toEqual(['quotation-doc-cover', 'quotation-doc-back']);
   });
 
   it('draws nothing for no quotation at all', () => {
@@ -37,11 +37,16 @@ describe('the quotation document with little or odd data', () => {
     expect(cover({ ...base, itinerary: [] }).querySelector('.dome img')).toBeNull();
   });
 
-  it('prints each footer number and the contents once the pages are drawn', () => {
+  it('prints each footer number once the pages are drawn, with no letter or contents page', () => {
     const { container } = show({ quotationType: 'Package', destination: 'Goa', duration: '1 Night / 2 Days', travelDate: '2026-12-12', itinerary: [{ title: 'Arrival', stay: 'Goa', description: '<p>Morning: Beach</p>' }], packageDetails: { hotels: [] }, pricing: {} });
     const numbers = [...container.querySelectorAll('[data-pageno]')].map((e) => e.textContent);
     expect(numbers[0]).toBe('02'); // the cover is page 1 and carries no number
     expect(numbers.every(Boolean)).toBe(true);
-    expect(container.querySelector('[data-toc="days"]').textContent).toMatch(/^\d\d$/);
+    expect(container).not.toHaveTextContent('A Note Before You Travel');
+    expect(container).not.toHaveTextContent('Contents');
+    expect(container.querySelector('.qd-corner')).toBeNull(); // the corner pieces of the frame are gone
+    for (const foot of container.querySelectorAll('.qd-foot-row')) {
+      expect([...foot.children].map((el) => el.className)).toEqual(['qd-foot-side', 'qd-foot-num', 'qd-foot-side']); // equal sides: the number is in the middle
+    }
   });
 });

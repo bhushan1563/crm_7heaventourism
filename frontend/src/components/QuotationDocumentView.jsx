@@ -7,7 +7,6 @@ import { BackCover, Cover } from './quotationDoc/Cover';
 import { Page } from './quotationDoc/PageParts';
 import { buildModel, overviewRows } from './quotationDoc/model';
 import { finalizeDocument } from './quotationDoc/finalize';
-import { WelcomePage } from './quotationDoc/sections/Welcome';
 import { JourneyPage, ShapePage } from './quotationDoc/sections/Journey';
 import { DaysPage } from './quotationDoc/sections/Days';
 import { StayPage } from './quotationDoc/sections/Stay';
@@ -21,9 +20,9 @@ const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const STAY_TITLE = { 'Only Hotel': 'Hotel & Accommodation', 'Events / Corporate': 'Venue & Accommodation' };
 
 /**
- * The quotation as a document: a cover, a welcome letter with the contents, then the journey, the days, the hotels, the flights, the price,
+ * The quotation as a document: a cover, then the journey, the days, the hotels, the flights, the price,
  * the conditions and the acceptance, and a closing page. Every page is drawn at A4 size (794 x 1123 px at 96 dpi); the PDF splits a page
- * that has more than a sheet of content (see quotationPdfGenerator). A booking confirmation (`confirmationInfo`) has no welcome letter and
+ * that has more than a sheet of content (see quotationPdfGenerator). A booking confirmation (`confirmationInfo`)
  * carries the booking page(s) that `before` draws, right after the cover.
  */
 export const QuotationDocumentView = ({ quotation, id = 'quotation-doc', before = null }) => {
@@ -96,7 +95,6 @@ export const QuotationDocumentView = ({ quotation, id = 'quotation-doc', before 
   add('flights', 'Flight Details');
   add('pricing', 'Pricing');
   add('terms', isConfirmation ? 'General Policy' : 'Inclusions & Conditions');
-  if (has.terms && !isConfirmation) sections.push({ key: 'accept', title: 'Acceptance' });
   sections.forEach((s, i) => { s.numeral = ROMAN[i] || String(i + 1); });
   const numeral = (key) => sections.find((s) => s.key === key)?.numeral || '';
 
@@ -107,7 +105,6 @@ export const QuotationDocumentView = ({ quotation, id = 'quotation-doc', before 
     <div id={id} ref={rootRef} className="quotation-doc-container qd" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '24px' }}>
       <Cover model={model} quotation={quotation} id={pageId('cover')} />
       {before && before(parts)}
-      {!isConfirmation && <WelcomePage model={model} sections={sections} id={pageId('welcome')} />}
       {has.journey && <JourneyPage model={model} quotation={quotation} numeral={numeral('journey')} id={pageId('journey')} />}
       {has.days && <ShapePage model={model} quotation={quotation} id={pageId('shape')} />}
       {has.days && <DaysPage model={model} quotation={quotation} id={pageId('days')} />}

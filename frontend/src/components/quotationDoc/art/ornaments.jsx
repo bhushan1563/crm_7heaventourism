@@ -14,22 +14,19 @@ const sizeOf = (vw, vh, { width, height, size }) => {
   return [vw * PX, vh * PX];
 };
 
-/** Mirrors a drawing inside its own box (drawn this way, not with CSS, so the PDF keeps it). `flip` is 'x', 'y' or 'xy'. */
-const flipOf = (flip, vx, vy, vw, vh) => `${flip.includes('x') ? `translate(${2 * vx + vw} 0) scale(-1 1) ` : ''}${flip.includes('y') ? `translate(0 ${2 * vy + vh}) scale(1 -1)` : ''}`.trim();
-
 /**
  * Builds one art component. `color` is the main colour of the drawing, `accent` its second colour; `variant="cover"` redraws it in the
  * cover's light gold. Size it with `size` (longest side), `width` / `height` (px), or leave it at the sample's own size.
  */
 export const makeArt = (displayName, [vx, vy, vw, vh], defaults, render) => {
-  const Art = ({ color, accent, variant, width, height, size, style, className, title, flip }) => {
+  const Art = ({ color, accent, variant, width, height, size, style, className, title }) => {
     const cover = variant === 'cover';
     const c = color || (cover ? defaults.cover : defaults.color);
     const a = accent || (cover ? defaults.cover : defaults.accent);
     const [w, h] = sizeOf(vw, vh, { width, height, size });
     return (
       <svg xmlns="http://www.w3.org/2000/svg" viewBox={`${vx} ${vy} ${vw} ${vh}`} width={w} height={h} style={style} className={className} role={title ? 'img' : undefined} aria-label={title} aria-hidden={title ? undefined : 'true'} focusable="false">
-        {flip ? <g transform={flipOf(flip, vx, vy, vw, vh)}>{render(c, a)}</g> : render(c, a)}
+        {render(c, a)}
       </svg>
     );
   };
@@ -56,20 +53,6 @@ export const BottomOrnament = makeArt('BottomOrnament', [0, 0, 70.72, 13.4], { c
     <path d="M20.23 6.7L22.99 3.94L20.23 1.18L17.47 3.94L20.23 6.7Z" fill={c} opacity="0.9"/>
     <path d="M50.49 6.7L53.25 3.94L50.49 1.18L47.73 3.94L50.49 6.7Z" fill={c} opacity="0.9"/>
     <path d="M0.65 3.94L14 3.94M56.72 3.94L70.07 3.94" fill="none" stroke={c} strokeWidth="0.8" strokeLinecap="round" opacity="0.55"/>
-  </>
-));
-
-export const CornerOrnament = makeArt('CornerOrnament', [0, 0, 28.37, 28.37], { color: '#0b7480', accent: '#c09a3e', cover: '#e6cb7e' }, (c, a) => (
-  <>
-    <path d="M0.6 11.23C0.6 5.33 5.33 0.6 11.23 0.6" fill="none" stroke={c} strokeWidth="0.71" strokeLinecap="round"/>
-    <path d="M0.6 17.73C0.6 8.28 8.28 0.6 17.73 0.6" fill="none" stroke={c} strokeWidth="0.35" strokeLinecap="round" opacity="0.5"/>
-    <path d="M12.12 4.15L14.01 6.04L12.12 7.93L10.23 6.04L12.12 4.15Z" fill={c}/>
-    <path d="M4.15 12.12L6.04 14.01L4.15 15.9L2.26 14.01L4.15 12.12Z" fill={c}/>
-    <path d="M13.65 11.82C13.65 12.07 13.61 12.3 13.51 12.52C13.42 12.75 13.29 12.95 13.12 13.12C12.95 13.29 12.75 13.42 12.52 13.51C12.3 13.61 12.07 13.65 11.82 13.65C11.58 13.65 11.35 13.61 11.12 13.51C10.9 13.42 10.7 13.29 10.53 13.12C10.36 12.95 10.22 12.75 10.13 12.52C10.04 12.3 9.99 12.07 9.99 11.82C9.99 11.58 10.04 11.35 10.13 11.12C10.22 10.9 10.36 10.7 10.53 10.53C10.7 10.36 10.9 10.22 11.12 10.13C11.35 10.04 11.58 9.99 11.82 9.99C12.07 9.99 12.3 10.04 12.52 10.13C12.75 10.22 12.95 10.36 13.12 10.53C13.29 10.7 13.42 10.9 13.51 11.12C13.61 11.35 13.65 11.58 13.65 11.82Z" fill="none" stroke={c} strokeWidth="0.59"/>
-    <path d="M12.47 11.82C12.47 12 12.41 12.15 12.28 12.28C12.15 12.41 12 12.47 11.82 12.47C11.64 12.47 11.49 12.41 11.36 12.28C11.24 12.15 11.17 12 11.17 11.82C11.17 11.64 11.24 11.49 11.36 11.36C11.49 11.24 11.64 11.17 11.82 11.17C12 11.17 12.15 11.24 12.28 11.36C12.41 11.49 12.47 11.64 12.47 11.82Z" fill={c}/>
-    <path d="M15.96 7.98L17.31 9.34L15.96 10.7L14.6 9.34L15.96 7.98Z" fill={c} opacity="0.55"/>
-    <path d="M7.98 15.96L9.34 17.31L7.98 18.67L6.63 17.31L7.98 15.96Z" fill={c} opacity="0.55"/>
-    <path d="M20.68 2.38L27.76 2.38M2.38 20.68L2.38 27.76" fill="none" stroke={c} strokeWidth="0.38" strokeLinecap="round" opacity="0.35"/>
   </>
 ));
 

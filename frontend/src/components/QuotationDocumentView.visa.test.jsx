@@ -52,7 +52,8 @@ describe('the visa quotation document', () => {
     expect(screen.queryByText(/Day-by-Day/i)).toBeNull();
     expect(screen.queryByText(/Pricing Breakdown/)).toBeNull();
     for (const gone of ['journey', 'shape', 'days', 'stay', 'flights', 'pricing']) expect(container.querySelector(`[id$="-${gone}"]`), gone).toBeNull();
-    for (const page of ['cover', 'welcome', 'visa', 'back']) expect(container.querySelector(`[id$="-${page}"]`), page).not.toBeNull();
+    for (const page of ['cover', 'visa', 'back']) expect(container.querySelector(`[id$="-${page}"]`), page).not.toBeNull();
+    expect(container.querySelector('[id$="-welcome"]')).toBeNull(); // no letter and contents page: the client does not want it
   });
 
   it('opens with a cover that says what it is for: the country, the applicants and the trip number', () => {
@@ -63,21 +64,17 @@ describe('the visa quotation document', () => {
     expect(within(cover).getByText('Applicants').parentElement).toHaveTextContent('3');
   });
 
-  it('lists its one section in the contents, numbered I, on the page where it is', () => {
+  it('has its one section, numbered I, on the page after the cover', () => {
     const { container } = view(visaQuotation());
-    const toc = container.querySelector('.qd-toc');
-    expect(toc).toHaveTextContent('Visa Details');
-    expect(toc).not.toHaveTextContent('Day by Day');
-    expect(toc).not.toHaveTextContent('Inclusions & Conditions');
-    expect(toc.querySelector('.rn')).toHaveTextContent('I');
-    expect(toc.querySelector('[data-toc="visa"]')).toHaveTextContent('03'); // cover, welcome, then the visa
+    expect([...container.querySelectorAll('.qd-band')].map((band) => [band.querySelector('.num').textContent, band.querySelector('h2').textContent])).toEqual([['I', 'Visa Details']]);
+    expect(container.querySelector('[id$="-visa"] [data-pageno]')).toHaveTextContent('02'); // the cover, then the visa
   });
 
   it('prints no terms, policies or exclusions page: the client does not want them on a visa quotation', () => {
     const { container } = view(visaQuotation({ importantNotes: ['Fees are not refundable'], paymentPolicy: ['100% advance'], cancellationPolicy: ['No refund after submission'] }));
     for (const gone of ['TERMS, POLICIES, EXCLUSIONS', 'Payment Policy', 'Cancellation Policy', 'Fees are not refundable', '100% advance', 'No refund after submission', 'Travel insurance', 'Exclusions']) expect(container, gone).not.toHaveTextContent(gone);
     expect(container.querySelector('[id$="-terms"]')).toBeNull();
-    expect(container.querySelector('.qd-toc')).not.toHaveTextContent('Acceptance');
+    expect(container).not.toHaveTextContent('Acceptance');
     expect(container).toHaveTextContent('Documents'); // the visa's own pages are still there
   });
 
