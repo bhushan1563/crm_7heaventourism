@@ -46,9 +46,34 @@ export const splitDestination = (destination) => {
   return at < 0 ? { place: text, country: '' } : { place: text.slice(0, at).trim(), country: text.slice(at + 1).trim() };
 };
 
+// ---- photo sizes ---------------------------------------------------------------------------------------------------------
+// The PDF renderer ignores CSS "object-fit" (it stretches the picture to the box), so every size is worked out here.
+
+const ratioOf = (photo) => (Number(photo?.width) || 4) / (Number(photo?.height) || 3);
+
+/** The size a photo is shown at inside a frame: as large as fits, in its own proportions (nothing cut off). */
+export const fitIn = (photo, maxW, maxH) => {
+  const width = Math.min(maxW, maxH * ratioOf(photo));
+  return { width: Math.round(width), height: Math.round(width / ratioOf(photo)) };
+};
+
+/** Photos side by side, all as tall as each other and together as wide as the row (but never taller than `maxH`), each in its own proportions. */
+export const rowSizes = (photos, width, gap, maxH) => {
+  const height = Math.min(maxH, (width - gap * (photos.length - 1)) / photos.reduce((sum, p) => sum + ratioOf(p), 0));
+  return photos.map((p) => ({ width: Math.floor(height * ratioOf(p)), height: Math.round(height) }));
+};
+
+/** The size and offset that make a photo fill a frame in its own proportions, centred (what sticks out is cut off by the frame). */
+export const fill = (photo, frameW, frameH) => {
+  const width = Math.max(frameW, frameH * ratioOf(photo));
+  const height = width / ratioOf(photo);
+  return { width: Math.round(width), height: Math.round(height), left: Math.round((frameW - width) / 2), top: Math.round((frameH - height) / 2) };
+};
+
 // ---- a day of the itinerary ---------------------------------------------------------------------------------------------
 
-const CALLOUT_LABELS = ['note', 'notes', 'important', 'please note', 'tip', 'age limit', 'child policy', 'caution', 'safety'];
+const DISTANCE_LABEL = /distance|drive time|journey time|travel time/i;
+const CALLOUT_LABELS = ['note', 'notes', 'important', 'important note', 'important notes', 'please note', 'tip', 'age limit', 'child policy', 'caution', 'safety'];
 const WHY_LABELS = ['why this day', 'why'];
 const SUMMARY_LABELS = ['summary', 'overview', 'highlight'];
 const TAG = /<[^>]*>/g;
@@ -86,13 +111,15 @@ export const splitLabel = (html) => {
  * the two kinds of boxed note ("Note: ..." and "Why this day: ..."). Text with no labels at all is one row of bullets.
  */
 export const parseDay = (description) => {
-  const out = { summary: '', rows: [], callouts: [], why: '' };
+  const out = { summary: '', distance: '', rows: [], callouts: [], why: '' };
   const wrap = (html) => html; // every line is already a paragraph (dayLines), which is how formatted text is recognised (see richText)
   let row = null;
   for (const line of dayLines(description)) {
     const { label, html } = splitLabel(line);
     const key = label.toLowerCase();
     if (label && WHY_LABELS.includes(key)) { out.why = out.why ? `${out.why}${wrap(html)}` : wrap(html); row = null; continue; }
+    // a distance or a driving time belongs under the day's title, not in a row of its own
+    if (label && DISTANCE_LABEL.test(label)) { out.distance = `<p>${label}: ${html.replace(/^<p>/i, '')}`; row = null; continue; }
     if (label && SUMMARY_LABELS.includes(key)) { out.summary = wrap(html); row = null; continue; }
     if (label && CALLOUT_LABELS.includes(key)) { out.callouts.push({ title: label.replace(/^\w/, (c) => c.toUpperCase()), html: wrap(html) }); row = null; continue; }
     if (label) {
@@ -184,8 +211,8 @@ const KICKER = { Package: 'A private journey to', 'Only Hotel': 'A stay in', 'Ev
 
 /** The stars a set of hotel stays share ("4 star" -> 4), or 0 when they differ or none is rated. */
 export const sharedStars = (hotels) => {
-  const stars = new Set((hotels || []).map((h) => (String(h?.starRating || '').match(/\d/) || [''])[0]).filter(Boolean));
-  return stars.size === 1 ? Number([...stars][0]) : 0;
+  const each = (hotels || []).map((h) => (String(h?.starRating || '').match(/\d/) || [''])[0]);
+  return each.length && each.every((s) => s && s === each[0]) ? Number(each[0]) : 0; // one unrated hotel and the cover claims no stars
 };
 
 /** The places a trip stays in, in order, each with its nights: from the "night" of each day, else from the hotel stays. */
@@ -228,7 +255,7 @@ export const buildModel = (quotation, { confirmation = false } = {}) => {
     kicker: confirmation ? 'Booking confirmed for' : KICKER[type] || KICKER.Package,
     footerLabel: confirmation ? `${(place || 'Your').toUpperCase()} BOOKING CONFIRMATION` : `${(place || 'Your').toUpperCase()} ${FOOTER_NOUN[type] || FOOTER_NOUN.Package}`,
     tripId: clean(quotation.quotationNo),
-    guest: clean(quotation.clientName) || 'Valued Guest',
+    guest: /[\p{L}\p{N}]/u.test(clean(quotation.clientName)) ? clean(quotation.clientName) : 'Valued Guest',
     travellers: clean(quotation.paxDetails),
     nights,
     days,

@@ -6,18 +6,13 @@ export const OFFER_CSS = `
 /* ---- hotels ---- */
 .qd-hotel { border: 1px solid ${C.rule}; background: ${C.panel}; margin: 0 0 12px; overflow: hidden; }
 /* A photo is never cropped: it keeps its own shape (a very tall one is fitted whole inside the frame, on the band colour). */
-.qd-hsplit { margin: 0 0 12px; }
-/* each piece carries the card's own class (it may be moved to another page on its own) and shows only its share of the border */
-.qd-hotel.qd-hpart { border: 0; border-left: 1px solid ${C.rule}; border-right: 1px solid ${C.rule}; margin: 0; overflow: visible; }
-.qd-hotel.qd-hpart.is-first { border-top: 1px solid ${C.rule}; }
-.qd-hotel.qd-hpart.is-last { border-bottom: 1px solid ${C.rule}; }
-.qd-hotel .cover-wrap { background: ${C.band}; text-align: center; line-height: 0; }
-.qd-hotel .cover { display: inline-block; }
-.qd-hotel .strip { padding: 6px 12px 0; }
+.qd-hotel .strip { display: flex; justify-content: center; gap: 6px; padding: 10px 16px 0; }
+.qd-hotel .strip img { display: block; flex: none; border-radius: 2px; }
 .qd-hotel .row { display: flex; gap: 14px; padding: 12px 16px 14px; }
-.qd-hotel .ph { flex: none; width: 132px; }
+.qd-hotel .ph { flex: none; }
 .qd-hotel .ph img { display: block; border-radius: 2px; }
 .qd-hotel .main { flex: 1; min-width: 0; }
+.qd-hotel.is-side .facts { grid-template-columns: 1fr 1fr; }
 .qd-hotel .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
 .qd-hotel .nm { font-family: ${FONT_SERIF}; font-size: 16px; font-weight: 600; color: ${C.navy}; line-height: 1.25; }
 .qd-hotel .bk { font-size: 11px; color: ${C.navy}; margin-top: 2px; }
@@ -99,7 +94,7 @@ table.qd-ptable td.gv { background: #f6e7b4; font-family: ${FONT_SERIF}; font-si
 .qd-flight .bg { display: flex; gap: 18px; padding: 8px 14px; border-top: 1px dashed ${C.rule}; font-size: 10.8px; color: ${C.muted}; }
 .qd-flight .bg b { color: ${C.navy}; }
 .qd-shot { margin: 0 0 12px; text-align: center; }
-.qd-shot img { display: block; width: 100%; height: auto; max-height: 620px; object-fit: contain; border: 1px solid ${C.rule}; background: #fff; }
+.qd-shot img { display: block; margin: 0 auto; border: 1px solid ${C.rule}; background: #fff; }
 .qd-shot figcaption { margin-top: 3px; font-size: 10px; color: ${C.muted}; font-style: italic; }
 .qd-ticket { border: 1px solid ${C.teal}; background: ${C.panel}; padding: 12px 16px; }
 .qd-ticket b { color: ${C.teal}; font-size: 12px; }
@@ -117,6 +112,11 @@ table.qd-ptable td.gv { background: #f6e7b4; font-family: ${FONT_SERIF}; font-si
 table.qd-table td.r { text-align: right; }
 .qd-total { display: flex; justify-content: space-between; align-items: center; background: ${C.band}; border: 1px solid ${C.rule}; border-top: 2px solid ${C.navy}; padding: 10px 14px; margin: -14px 0 14px; font-size: 12.5px; font-weight: 700; color: ${C.navy}; }
 .qd-total .v { font-family: ${FONT_SERIF}; font-size: 16px; }
+
+/* ---- the overview of a library itinerary ---- */
+.qd-gallery { display: flex; justify-content: center; margin: 0 0 12px; }
+.qd-gallery > div { width: 100%; align-items: center; }
+.qd-overview-text { font-size: 12.8px; line-height: 1.7; color: ${C.ink}; text-align: justify; margin: 0 0 10px; }
 
 /* ---- terms and acceptance ---- */
 .qd-accept { margin-top: 6px; }

@@ -113,7 +113,7 @@ export const PriceList = ({ quotation, pricing, hasOptions, type }) => {
     <div className="quotation-keep qd-pricelist">
       <h3>Pricing Breakdown: -</h3>
       {items.length > 0 ? (
-        priceListLines(pricing).map((line, i) => <Line key={i} line={line} />)
+        priceListLines(pricing).filter((line) => line.cost > 0).map((line, i) => <Line key={i} line={line} />)
       ) : (
         <>
           {pricing.packageCostPerPerson > 0 && <div className="ln"><b>Package:</b><span>Rs {pricing.packageCostPerPerson.toLocaleString('en-IN')} {pricing.packageCostNote || `Per person X ${quotation.paxDetails || 'Pax'}`}</span></div>}

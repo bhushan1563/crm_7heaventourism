@@ -22,7 +22,7 @@ const base = (over = {}) => ({
 describe('a long itinerary day can run on over the page', () => {
   const lines = ['6:30AM Pick up at the hotel', '7:15AM ETA in Pier 1', '8:00AM Take the ferry', '10:00AM ETA in Tagbilaran'];
   const day = (description, over = {}) => ({ dayNumber: 'Day 04', title: 'CEBU - BOHOL - CEBU', description, ...over });
-  const cards = (container) => [...container.querySelectorAll('.quotation-flow > .quotation-keep.qd-day')];
+  const cards = (container) => [...container.querySelectorAll('.quotation-flow > .qd-day')];
 
   it('has its day heading and its title in the navy band of the day, with no yellow highlight', () => {
     const { container } = show(base({ itinerary: [day('Meet'), day('Free', { dayNumber: 'Day 05', title: 'FREE TIME' })] }));

@@ -8,16 +8,9 @@ import { addressLine } from '../../../utils/hotelStay';
 import { isDefaultOptionName } from '../../../utils/quotationOptions';
 import { RATE_LABELS, hotelTotal, optionTotal, optionUsesRates, rowNights, rowTotal as rateRowTotal, rowUnits } from '../../../utils/hotelRates';
 import { OptionPriceTable } from './Pricing';
-import { DayPhotos } from '../DayPhotos';
+import { fitIn, rowSizes } from '../model';
 
 const crossOrigin = API_ORIGIN ? 'anonymous' : undefined;
-/** The size a photo is shown at inside a frame: as large as fits, in its own proportions (explicit sizes, because the PDF renderer stretches a photo that is only fitted with CSS). */
-const fitIn = (photo, maxW, maxH) => {
-  const ratio = (Number(photo?.width) || 4) / (Number(photo?.height) || 3);
-  const width = Math.min(maxW, maxH * ratio);
-  return { width: Math.round(width), height: Math.round(width / ratio) };
-};
-
 const inr = (n) => (Number(n) || 0).toLocaleString('en-IN');
 const amenityLine = (amenities) => (amenities || []).join('  •  ');
 const timesLine = (h) => [h.checkInTime && `Check-in from ${h.checkInTime}`, h.checkOutTime && `Check-out by ${h.checkOutTime}`].filter(Boolean).join('  •  ');
@@ -74,7 +67,7 @@ export const HotelCard = ({ h, compact = false, confirmed = false, hidePrices = 
           {(h.city || h.address) && <div className="ad">📍 {addressLine(h)}</div>}
           {confirmed && h.contactNumber && <div className="ad"><strong>Hotel Contact No:</strong> {h.contactNumber}</div>}
         </div>
-        {stars && <span className="star">★ {stars}</span>}
+        {stars && <span className="star">{/\d/.test(stars) ? '★ ' : ''}{stars}</span>}
       </div>
       {facts.length > 0 && <div className="facts">{facts.map(([k, v]) => <div key={k}><b>{k}:</b> {v}</div>)}</div>}
       {h.amenities?.length > 0 && <div className="line"><b>Amenities:</b> {amenityLine(h.amenities)}</div>}
@@ -82,21 +75,15 @@ export const HotelCard = ({ h, compact = false, confirmed = false, hidePrices = 
       {!hidePrices && <RatesPrint stay={h} />}
     </div>
   );
-  const coverImg = cover && <div className="cover-wrap"><img className="cover" src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 656, 560)} /></div>;
-  if (!compact) {
-    // A large card is drawn in pieces (the photo, the other photos, the details), each a block of its own, so a card that is taller than the
-    // room left on a page continues on the next page instead of being squeezed or sliced. Side by side they read as one card.
-    const pieces = [coverImg, more.length > 0 && <div className="strip"><DayPhotos photos={more.slice(0, 3)} maxRowHeight={700} /></div>, <div className="row">{body}</div>].filter(Boolean);
-    return (
-      <div className="qd-hsplit">
-        {pieces.map((piece, i) => <div key={i} className={`quotation-keep qd-hotel qd-hpart${i === 0 ? ' is-first' : ''}${i === pieces.length - 1 ? ' is-last' : ''}`}>{piece}</div>)}
-      </div>
-    );
-  }
+  const picture = (photo, style) => <img key={photo.token} src={mediaUrl(photo.token)} alt={photo.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={style} />;
+  const several = !compact && more.length > 0;
+  const side = !several && Boolean(cover); // one photo (or a compact card): beside the details, not above them
+  const row = several ? [cover, ...more].slice(0, 3) : [];
   return (
-    <div className={`${keep ? 'quotation-keep ' : ''}qd-hotel`}>
+    <div className={`${keep ? 'quotation-keep ' : ''}qd-hotel${side && !compact ? ' is-side' : ''}`}>
+      {several && <div className="strip">{rowSizes(row, 624, 6, 190).map((size, i) => picture(row[i], size))}</div>}
       <div className="row">
-        {cover && <div className="ph"><img src={mediaUrl(cover.token)} alt={cover.caption || h.hotelName || ''} crossOrigin={crossOrigin} style={fitIn(cover, 132, 190)} /></div>}
+        {side && <div className="ph">{picture(cover, fitIn(cover, compact ? 132 : 250, compact ? 150 : 190))}</div>}
         {body}
       </div>
     </div>

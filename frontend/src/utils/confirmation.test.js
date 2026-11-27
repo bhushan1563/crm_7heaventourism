@@ -203,7 +203,7 @@ describe('returnDate', () => {
   });
   it('property: it never throws and is a later day than the travel date, or nothing', () => {
     fc.assert(
-      fc.property(fc.oneof(fc.constant(null), fc.string(), fc.date({ min: new Date('2000-01-01'), max: new Date('2100-01-01') }).map((d) => d.toISOString())), fc.string(), (date, length) => {
+      fc.property(fc.oneof(fc.constant(null), fc.string(), fc.date({ min: new Date('2000-01-01'), max: new Date('2100-01-01'), noInvalidDate: true }).map((d) => d.toISOString())), fc.string(), (date, length) => {
         const end = returnDate(date, length);
         if (end) {
           expect(end).toMatch(/^\d{4}-\d{2}-\d{2}$/);

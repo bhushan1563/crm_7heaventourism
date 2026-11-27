@@ -8,9 +8,9 @@ import { OFFER_CSS } from './docCssPages';
 const BASE = `
 .qd, .qd * { box-sizing: border-box; }
 .qd { font-family: ${FONT_SANS}; color: ${C.ink}; -webkit-font-smoothing: antialiased; }
-.qd-page { position: relative; width: 794px; max-width: 794px; min-height: 1123px; background: ${C.cream}; color: ${C.ink}; font-family: ${FONT_SANS}; display: flex; flex-direction: column; overflow: visible; }
+.qd-page { position: relative; width: 794px; max-width: 794px; min-height: 1122px; background: ${C.cream}; color: ${C.ink}; font-family: ${FONT_SANS}; display: flex; flex-direction: column; overflow: visible; }
 .qd-page.is-fixed { height: 1123px; overflow: hidden; }
-.qd-inner { position: relative; flex: 1; display: flex; flex-direction: column; padding: 0 68px; min-height: 1123px; }
+.qd-inner { position: relative; flex: 1; display: flex; flex-direction: column; padding: 0 68px; min-height: 1122px; }
 .qd-flow { display: flex; flex-direction: column; flex: 1; padding-bottom: 14px; }
 .qd-serif { font-family: ${FONT_SERIF}; }
 .qd p { margin: 0; }
@@ -123,7 +123,7 @@ const COVER = `
 .qd-cover .dome { overflow: hidden; position: absolute; left: -185px; top: 15px; width: 1028px; height: 1028px; border-radius: 50%; background-size: 658px 454px, 658px 454px; background-position: 185px -15px, 185px -15px; background-repeat: no-repeat; }
 .qd-cover .photo svg.edge { position: absolute; left: 0; top: 0; }
 .qd-cover .logo { left: 50%; top: 146px; width: 68px; height: 68px; margin-left: -34px; border-radius: 50%; background: #ffffff; border: 2px solid ${C.goldLight}; box-shadow: 0 2px 12px rgba(4,14,28,0.5); display: flex; align-items: center; justify-content: center; overflow: hidden; } /* solid white: the logo is a transparent badge made for a light background, so anything else tints its colours */
-.qd-cover .logo img { width: 58px; height: 58px; object-fit: contain; display: block; }
+.qd-cover .logo img { max-width: 58px; max-height: 58px; width: auto; height: auto; display: block; }
 .qd-cover .titleblock { left: 68px; width: 658px; top: 376px; text-align: center; }
 .qd-cover .kicker { font-size: 14px; font-weight: 800; letter-spacing: 0.3em; color: #f8e08f; text-shadow: 0 2px 10px rgba(4,14,28,0.9), 0 0 3px rgba(4,14,28,0.85); text-transform: uppercase; padding-left: 0.36em; line-height: 18px; }
 .qd-cover .title { font-family: ${FONT_SERIF}; font-weight: 700; color: #fff; text-shadow: 0 3px 16px rgba(4,14,28,0.92), 0 0 4px rgba(4,14,28,0.8); letter-spacing: 0.09em; text-transform: uppercase; line-height: 1.05; margin-top: 8px; padding-left: 0.09em; }

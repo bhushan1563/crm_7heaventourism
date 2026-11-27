@@ -6,7 +6,6 @@ import QuotationDocumentView from './QuotationDocumentView';
 import BookingPage from './confirmation/BookingPage';
 import { bookingView, quotationOf } from '../utils/confirmation';
 import { mediaUrl } from '../services/mediaService';
-import { DOC_CSS } from './quotationDoc/docCss';
 
 afterEach(cleanup);
 
@@ -35,7 +34,8 @@ describe('the flight screenshots on the flights page', () => {
     expect(images[0]).toHaveAttribute('alt', 'Onward flight');
     expect(images[1]).toHaveAttribute('alt', 'Flight details');
     expect(images[0].closest('figure')).toHaveClass('qd-shot');
-    expect(DOC_CSS).toMatch(/\.qd-shot img \{[^}]*width: 100%[^}]*object-fit: contain/); // never cropped, never stretched
+    expect(images[0]).toHaveStyle({ width: '349px', height: '620px' }); // a tall screenshot fitted whole: never cropped, never stretched
+    expect(images[1]).toHaveStyle({ width: '656px', height: '287px' });
     expect(page).toHaveTextContent('Onward flight');
     expect(images[0].closest('.quotation-keep')).not.toBeNull(); // each one moves to the next sheet whole when the page is full
   });

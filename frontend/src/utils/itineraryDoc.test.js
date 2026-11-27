@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { dayMeta, documentFacts, packBlocks, photoRows, richBlocks, slugify } from './itineraryDoc';
+import { dayMeta, documentFacts, photoRows, richBlocks, slugify } from './itineraryDoc';
 
 const photo = (w, h, n = 1) => ({ token: `t${n}`.padEnd(24, 'x'), width: w, height: h });
 
@@ -56,51 +56,6 @@ describe('photoRows', () => {
         }
         expect(rows.flat().map((r) => r.photo.token)).toEqual(list.map((x) => x.token));
       })
-    );
-  });
-});
-
-describe('packBlocks', () => {
-  it('fills pages in order and starts a new one when the next block does not fit', () => {
-    expect(packBlocks([{ height: 300 }, { height: 300 }, { height: 300 }, { height: 300 }], 700)).toEqual([[0, 1], [2, 3]]);
-  });
-  it('never leaves a heading alone at the bottom of a page', () => {
-    const pages = packBlocks([{ height: 600 }, { height: 40, keepWithNext: true }, { height: 200 }], 700);
-    expect(pages).toEqual([[0], [1, 2]]);
-  });
-  it('keeps a chain of headings together with the first ordinary block after them ("Day by day", then the day, then its text)', () => {
-    const blocks = [{ height: 800 }, { height: 40, keepWithNext: true }, { height: 60, keepWithNext: true }, { height: 150 }, { height: 100 }];
-    // 800 + 40 + 60 fits in 1000, but the text after the day heading does not: the whole chain moves to the next page.
-    expect(packBlocks(blocks, 1000)).toEqual([[0], [1, 2, 3, 4]]);
-  });
-  it('lets a chain stay on the page when all of it fits', () => {
-    const blocks = [{ height: 500 }, { height: 40, keepWithNext: true }, { height: 60, keepWithNext: true }, { height: 150 }];
-    expect(packBlocks(blocks, 1000)).toEqual([[0, 1, 2, 3]]);
-  });
-  it('gives an oversized block a page of its own', () => {
-    expect(packBlocks([{ height: 100 }, { height: 2000 }, { height: 100 }], 700)).toEqual([[0], [1], [2]]);
-  });
-  it('handles no blocks', () => {
-    expect(packBlocks([], 700)).toEqual([]);
-  });
-  it('property: every block appears exactly once, in order, and no page overflows unless it holds a single block', () => {
-    const block = fc.record({ height: fc.integer({ min: 1, max: 900 }), keepWithNext: fc.boolean() });
-    fc.assert(
-      fc.property(fc.array(block, { maxLength: 40 }), fc.integer({ min: 300, max: 1000 }), (blocks, capacity) => {
-        const pages = packBlocks(blocks, capacity);
-        expect(pages.flat()).toEqual(blocks.map((_, i) => i));
-        for (const page of pages) {
-          expect(page.length).toBeGreaterThan(0);
-          if (page.length > 1) expect(page.reduce((s, i) => s + blocks[i].height, 0)).toBeLessThanOrEqual(capacity);
-        }
-        // A heading is never the last thing on a page that also holds other blocks: whatever must stay with it comes along.
-        // (A heading alone on a page is only possible when what follows it is taller than a whole page.)
-        pages.forEach((page) => {
-          const last = page[page.length - 1];
-          if (page.length > 1 && last < blocks.length - 1) expect(blocks[last].keepWithNext, `block ${last} is a heading stranded at the end of a page`).toBeFalsy();
-        });
-      }),
-      { numRuns: 1500 }
     );
   });
 });

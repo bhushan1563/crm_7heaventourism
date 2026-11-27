@@ -6,7 +6,7 @@ import { Frame } from './PageParts';
 import { IconTagSmall, IconUsers, SkylineGeneric } from './art';
 import { headerTagline } from '../../utils/companyHeader';
 import { formatLongDate } from '../../utils/dateHelper';
-import { pad2, plural } from './model';
+import { fill, pad2, plural } from './model';
 
 const photoCrossOrigin = API_ORIGIN ? 'anonymous' : undefined;
 
@@ -36,7 +36,8 @@ const breakfast = (hotels) => hotels.length > 0 && hotels.every((h) => /breakfas
 /** Up to four facts under the cover card, each a number and a line about it; the last is always the round-the-clock assistance. */
 export const coverStats = (model, quotation) => {
   const stats = [];
-  const { type, nights, days, stops, hotels, stars, place } = model;
+  const { type, nights, days, stops, hotels, stars } = model;
+  const place = model.noPlace ? '' : model.place;
   const push = (n, label) => stats.push({ n: typeof n === 'number' ? pad2(n) : n, label });
   if (type === 'Visa') {
     const v = quotation.visa || {};
@@ -70,6 +71,9 @@ const lengthText = (model, quotation) => {
   return model.type === 'Only Hotel' ? 'Hotel Stay' : 'Tailor-made Journey';
 };
 
+/** Where a photo that fills the 658 x 454 picture frame sits inside the round "dome" (which starts 185 px left of and 15 px below the frame). */
+const onDome = (box) => ({ ...box, left: box.left + 185, top: box.top - 15 });
+
 /** The first page: the company, the picture, the destination, the trip at a glance, who it is for and what comes with it. */
 export const Cover = ({ model, quotation, id }) => {
   const photo = coverPhotoOf(quotation);
@@ -78,7 +82,7 @@ export const Cover = ({ model, quotation, id }) => {
   const tagline = [company.tagline, model.locality].filter(Boolean).join('  ·  ');
   const place = model.place || 'Your Journey';
   const contact = [company.phone, model.locality].filter(Boolean).join('  ·  ');
-  const pills = [
+  const pills = model.library ? [] : [
     model.type === 'Visa' ? ['Applicants', String(quotation.visa?.applicants || 1)] : ['Travellers', model.travellers],
     [model.confirmation ? 'Booking No' : 'Trip ID', model.tripId]
   ].filter(([, v]) => v);
@@ -92,7 +96,7 @@ export const Cover = ({ model, quotation, id }) => {
       <div className="abs photo">
         {photo ? (
           <div className="dome">
-            <img src={mediaUrl(photo.token)} alt="" crossOrigin={photoCrossOrigin} style={{ position: 'absolute', left: 185, top: -15, width: 658, height: 454, objectFit: 'cover', display: 'block' }} />
+            <img src={mediaUrl(photo.token)} alt="" crossOrigin={photoCrossOrigin} style={{ position: 'absolute', display: 'block', maxWidth: 'none', ...onDome(fill(photo, 658, 454)) }} />
           </div>
         ) : (
           <div className="dome" style={{ background: 'linear-gradient(180deg, #123456 0%, #0d2d4c 55%, #0a2742 100%)' }}>
@@ -104,16 +108,17 @@ export const Cover = ({ model, quotation, id }) => {
       </div>
       <div className="abs logo"><img src={company.logo || logoImg} alt="" crossOrigin={company.logo ? photoCrossOrigin : undefined} /></div>
 
-      <div className="abs titleblock">
+      <div className="abs titleblock" style={model.subtitle ? { top: model.subtitle.length > 52 ? 330 : 352 } : undefined}>
         <div className="kicker">{model.kicker}</div>
         <div className="title" style={{ fontSize: `${titleSize(place)}px` }}>{place}</div>
         {model.country && <div className="country">{model.country}</div>}
+        {model.subtitle && <div className="tagline" style={model.subtitle.length > 52 ? { fontSize: 14, lineHeight: '19px', padding: '0 40px' } : { padding: '0 24px' }}>{model.subtitle}</div>}
       </div>
 
       <div className="abs card-wrap">
-        <div className="card">
+        <div className="card" style={model.library ? { paddingTop: 26 } : undefined}>
           <div className="len">{lengthText(model, quotation)}</div>
-          {model.dateRange && <div className="dates">{model.dateRange}</div>}
+          {(model.dateRange || model.library) && <div className="dates">{model.dateRange || 'Day by day itinerary'}</div>}
           <div className="pills">
             {pills.map(([label, value]) => (
               <span className="pill" key={label}>
@@ -134,13 +139,15 @@ export const Cover = ({ model, quotation, id }) => {
       )}
       <div className="abs rule" style={{ top: 684 }} />
       <div className="abs prep">
+        {!model.library && (
+          <div>
+            <div className="k">Prepared exclusively for</div>
+            <div className="v">{model.guest}</div>
+            {model.travellers && <div className="d">{model.travellers.replace(/\s*\+\s*/g, ' & ')}</div>}
+          </div>
+        )}
         <div>
-          <div className="k">Prepared exclusively for</div>
-          <div className="v">{model.guest}</div>
-          {model.travellers && <div className="d">{model.travellers.replace(/\s*\+\s*/g, ' & ')}</div>}
-        </div>
-        <div>
-          <div className="k">Prepared by</div>
+          <div className="k">{model.library ? 'Presented by' : 'Prepared by'}</div>
           <div className="v">{company.name}</div>
           {contact && <div className="d">{contact}</div>}
         </div>

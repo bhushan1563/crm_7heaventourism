@@ -4,6 +4,7 @@ import { BannerBoat, IconPlane } from '../art';
 import { mediaUrl } from '../../../services/mediaService';
 import { API_ORIGIN } from '../../../services/api';
 import { formatDate } from '../../../utils/dateHelper';
+import { fitIn } from '../model';
 
 const crossOrigin = API_ORIGIN ? 'anonymous' : undefined;
 
@@ -37,7 +38,7 @@ export const FlightsPage = ({ model, quotation, numeral, id }) => {
       <IntroBand numeral={numeral} title="Flight Details" text="How you travel to and from your destination." art={<BannerBoat size={52} />} section="flights" />
       {images.map((photo) => (
         <figure key={photo.token} className="quotation-keep qd-shot">
-          <img src={mediaUrl(photo.token)} alt={photo.caption || 'Flight details'} width={photo.width} height={photo.height} crossOrigin={crossOrigin} />
+          <img src={mediaUrl(photo.token)} alt={photo.caption || 'Flight details'} crossOrigin={crossOrigin} style={fitIn(photo, 656, 620)} />
           {photo.caption && <figcaption>{photo.caption}</figcaption>}
         </figure>
       ))}

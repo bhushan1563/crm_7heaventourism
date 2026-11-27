@@ -24,10 +24,11 @@ export const iconForLabel = (label) => {
 const DAY_ICONS = [
   [/depart|farewell|fly back|flight home|return journey|onward/, DayDeparture],
   [/arriv|welcome|landing|pickup|airport/, DayPlaneTower],
+  [/^(?!.*\b(boat|cruise|ferry|island)).*\b(to|drop)\b/, DayCar], // a drive from one place to another
   [/swing|adventure|atv|raft|zip|bungee|trek|quad|paraglid|jet ?ski/, DaySwing],
   [/volcano|mountain|hill|waterfall|terrace|safari|park|zoo|valley|glacier|desert|canyon/, DayVolcano],
   [/temple|pura|mandir|fort|palace|heritage|monument|church|mosque|shrine|cathedral|old town/, DayPagoda],
-  [/cruise|boat|ferry|island|speedboat|sea|snorkel|dive|beach|bay|lake|river/, DayFerry],
+  [/cruise|boat|ferry|island|speedboat|\bsea\b|snorkel|\bdive|beach|\bbay\b|\blake\b|\briver\b/, DayFerry],
   [/water ?sports?|waves?|surf/, DayPagodaWaves],
   [/transfer|leisure|relax|free day|at ease|city tour|drive/, DayCar]
 ];

@@ -1,6 +1,6 @@
 import React from 'react';
 import { IntroBand, Page, SectionBanner } from '../PageParts';
-import { BannerBoat, Compass, IconBedRing, IconInfoRing } from '../art';
+import { BannerBoat, Compass, IconBedRing } from '../art';
 import { dayBlurb, dayDate, overnightOf, overviewRows, parseDay, shortDayMonth, weekday } from '../model';
 import { richToPlainText } from '../../../utils/richText';
 
@@ -60,7 +60,6 @@ export const JourneyPage = ({ model, quotation, numeral, id }) => {
         </>
       )}
       {roomInfo && <div className="quotation-keep qd-facts"><span className="ic"><IconBedRing width={21} height={21} /></span><span><b>Accommodation</b> — {roomInfo}</span></div>}
-      {rows.length > 0 && <div className="quotation-keep qd-facts"><span className="ic"><IconInfoRing width={21} height={21} /></span><span><b>Please note</b> — Hotel accommodation is subject to final confirmation and availability.</span></div>}
     </Page>
   );
 };
@@ -68,8 +67,9 @@ export const JourneyPage = ({ model, quotation, numeral, id }) => {
 /** "The Shape of the Journey": one line for each day, with its date, its place, a few words and where the night is spent. */
 export const ShapePage = ({ model, quotation, id }) => {
   const days = quotation.itinerary || [];
+  const anyNight = days.some((_, i) => overnightOf(quotation, model.start, i)); // an itinerary with no nights typed has no Night column at all
   return (
-    <Page id={id} model={model} header="The Journey">
+    <Page id={id} model={model} header="The Journey" className="qd-whole">
       <SectionBanner>The Shape of the Journey</SectionBanner>
       {days.map((day, i) => {
         const date = dayDate(model, i);
@@ -86,7 +86,7 @@ export const ShapePage = ({ model, quotation, id }) => {
                 </div>
                 {blurb && <div className="blurb">{blurb}</div>}
               </div>
-              <div className="night">{overnight || i < days.length - 1 ? 'Night' : 'Trip ends'}<b>{overnight || (i < days.length - 1 ? '—' : 'Departure')}</b></div>
+              {anyNight && <div className="night">{overnight || i < days.length - 1 ? 'Night' : 'Trip ends'}<b>{overnight || (i < days.length - 1 ? '—' : 'Departure')}</b></div>}
               <a className="map" href={mapsUrl(`${day.title || overnight || ''} ${model.place}`.trim())} target="_blank" rel="noopener noreferrer">LOCATION ↗</a>
             </div>
           </div>

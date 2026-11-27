@@ -41,16 +41,21 @@ table.qd-table tr.total td { background: ${C.band}; font-weight: 700; }
 .qd-shape .map { flex: none; border: 1px solid ${C.gold}; color: ${C.gold}; font-size: 9px; font-weight: 700; letter-spacing: 0.18em; padding: 5px 9px; text-decoration: none; background: ${C.panel}; line-height: 14px; white-space: nowrap; }
 
 /* ---- a day: a navy band with a ribbon, a drawing, and rows of what happens ---- */
-.qd-day { position: relative; margin: 9px 0 0; }
-.qd-days-flow > .qd-day:first-child { margin-top: -14px; }
-.qd-day-band { position: relative; display: flex; height: 83px; background: ${C.navy}; border-bottom: 4px solid ${C.gold}; padding-left: 87px; }
+.qd-daypart { position: relative; }
+.qd-daypart.is-head { margin-top: 9px; }
+.qd-days-flow > .qd-day:first-child > .qd-daypart.is-head, .qd-flow > .qd-daypart.is-head:first-child { margin-top: -14px; }
+.qd-daypart:not(.is-head) > .qd-day-body .qd-day-row:first-child { border-top: 1px dashed ${C.rule}; }
+/* the drawing stands clear of the ribbon, which hangs into the first piece; a day continued on a new page starts with a closed box */
+.qd-daypart.is-head .qd-day-art { padding: 30px 0 6px; }
+.qd-flow > .qd-daypart:not(.is-head):first-child > .qd-day-body { border-top: 1px solid ${C.rule}; }
+.qd-day-band { position: relative; display: flex; min-height: 83px; background: ${C.navy}; border-bottom: 4px solid ${C.gold}; padding-left: 87px; }
 .qd-day-ribbon { position: absolute; left: 16px; top: -9px; width: 71px; z-index: 2; }
 .qd-day-ribbon .body { height: 98px; background: linear-gradient(180deg, #11909b 0%, #0b6b76 100%); color: #fff; text-align: center; padding-top: 13px; }
 .qd-day-ribbon .tip { width: 0; height: 0; border-style: solid; border-width: 20px 35.5px 0 35.5px; border-color: #0b6b76 transparent transparent transparent; }
 .qd-day-ribbon .d { font-size: 10px; font-weight: 500; letter-spacing: 0.24em; padding-left: 0.24em; line-height: 14px; opacity: 0.95; }
 .qd-day-ribbon .n { font-family: ${FONT_SERIF}; font-size: 31px; font-weight: 400; line-height: 38px; }
 .qd-day-ribbon .lo { margin-top: 3px; opacity: 0.8; }
-.qd-day-head { flex: 1; min-width: 0; padding: 10px 14px 0 17px; display: flex; flex-direction: column; justify-content: center; }
+.qd-day-head { flex: 1; min-width: 0; padding: 10px 14px 10px 17px; display: flex; flex-direction: column; justify-content: center; }
 .qd-day-head .dt { font-family: ${FONT_SERIF}; font-size: 15px; font-weight: 400; letter-spacing: 0.05em; text-transform: uppercase; color: #fff; line-height: 20px; }
 .qd-day-head .ti { font-family: ${FONT_SERIF}; font-size: 18.5px; font-weight: 500; color: ${C.goldLight}; line-height: 24px; margin-top: 1px; }
 .qd-day-head .su { margin-top: 1px; font-size: 11.5px; letter-spacing: 0.05em; color: ${C.goldLight}; line-height: 16px; }
@@ -58,7 +63,7 @@ table.qd-table tr.total td { background: ${C.band}; font-weight: 700; }
 .qd-day-over .k { font-size: 8.5px; font-weight: 700; letter-spacing: 0.22em; color: ${C.goldLight}; text-transform: uppercase; line-height: 12px; }
 .qd-day-over .v { margin-top: 5px; font-family: ${FONT_SERIF}; font-size: 14px; color: #fff; line-height: 18px; }
 .qd-day-body { display: flex; border: 1px solid ${C.rule}; border-top: 0; background: ${C.panel}; }
-.qd-day-art { flex: none; width: 102px; display: flex; align-items: center; justify-content: center; border-right: 1px solid ${C.rule}; padding: 18px 0; }
+.qd-day-art { flex: none; width: 102px; display: flex; align-items: center; justify-content: center; border-right: 1px solid ${C.rule}; }
 .qd-day-rows { flex: 1; min-width: 0; background: #fffaf0; }
 .qd-day-row { display: flex; padding: 6px 12px 6px 17px; border-top: 1px dashed ${C.rule}; }
 .qd-day-row:first-child { border-top: 0; }
@@ -71,6 +76,7 @@ table.qd-table tr.total td { background: ${C.band}; font-weight: 700; }
 .qd-day-row li::before { content: ''; position: absolute; left: 1px; top: 7px; width: 5px; height: 5px; background: ${C.gold}; transform: rotate(45deg); }
 .qd-day-row ul.two { column-count: 2; column-gap: 16px; }
 .qd-day-row ul.two li { break-inside: avoid; }
+.qd-day-photos > div { align-items: center; }
 .qd-day-photos { padding: 8px 12px 10px 17px; border-top: 1px dashed ${C.rule}; background: #fffaf0; }
 .qd-callout { display: flex; align-items: flex-start; border: 1px solid ${C.rule}; border-radius: 14px; background: ${C.panel}; padding: 14px 16px; margin: 9px 0 0; }
 .qd-callout .ic { flex: none; width: 52px; padding-right: 14px; margin-right: 14px; border-right: 1px solid ${C.rule}; display: flex; align-items: center; justify-content: center; align-self: stretch; }

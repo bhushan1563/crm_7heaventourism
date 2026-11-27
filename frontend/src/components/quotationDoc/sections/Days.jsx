@@ -22,7 +22,11 @@ const Row = ({ row }) => {
   );
 };
 
-/** A day of the itinerary: the band (ribbon, date, title, where the night is spent), then what happens, and the notes that belong to it. */
+/**
+ * A day of the itinerary: the band (ribbon, date, title, where the night is spent), then what happens, and the notes that belong to it.
+ * It is drawn as pieces (the band with the first rows, each further row, the photos, each note), so a long day continues on the next page
+ * instead of moving over whole and leaving the page before it half empty.
+ */
 export const DayCard = ({ day, index, total, model, quotation, endNote = '' }) => {
   const parsed = parseDay(day.description);
   const Art = iconForDay(`${day.title} ${parsed.summary}`, index);
@@ -32,8 +36,17 @@ export const DayCard = ({ day, index, total, model, quotation, endNote = '' }) =
   const last = index === total - 1;
   const stay = overnightOf(quotation, model.start, index);
   const heading = `Day ${index + 1}${date ? ` – ${weekday(date)}, ${longDate(date)}` : ''}`;
-  return (
-    <div className="quotation-keep qd-day" data-day={index + 1} data-section={index === 0 ? 'days' : undefined}>
+  const under = parsed.summary || parsed.distance;
+
+  const body = (content, art = null) => (
+    <div className="qd-day-body">
+      <div className="qd-day-art">{art}</div>
+      <div className="qd-day-rows">{content}</div>
+    </div>
+  );
+  const first = rows.length ? rows.slice(0, 2).map((row, i) => <Row key={i} row={row} />) : <div className="qd-day-row nolabel"><div className="bl"><ul><li>Details of this day will be shared on confirmation.</li></ul></div></div>;
+  const pieces = [
+    <>
       <div className="qd-day-band">
         <div className="qd-day-ribbon">
           <div className="body"><div className="d">DAY</div><div className="n">{pad2(index + 1)}</div><div className="lo"><IconLotus size={15} color="#ffffff" accent="#ffffff" /></div></div>
@@ -42,7 +55,7 @@ export const DayCard = ({ day, index, total, model, quotation, endNote = '' }) =
         <div className="qd-day-head">
           <div className="dt">{heading}</div>
           <div className="ti">{day.title || 'Sightseeing & Excursions'}</div>
-          {parsed.summary && <div className="su"><RichLine html={parsed.summary} /></div>}
+          {under && <div className="su"><RichLine html={under} /></div>}
         </div>
         {(stay || last) && (
           <div className="qd-day-over">
@@ -51,23 +64,27 @@ export const DayCard = ({ day, index, total, model, quotation, endNote = '' }) =
           </div>
         )}
       </div>
-      <div className="qd-day-body">
-        <div className="qd-day-art"><Art size={60} /></div>
-        <div className="qd-day-rows">
-          {rows.length ? rows.map((row, i) => <Row key={i} row={row} />) : <div className="qd-day-row nolabel"><div className="bl"><ul><li>Details of this day will be shared on confirmation.</li></ul></div></div>}
-          {day.photos?.length > 0 && <div className="qd-day-photos"><DayPhotos photos={day.photos} maxRowHeight={420} /></div>}
-        </div>
+      {body(first, <Art size={52} />)}
+    </>,
+    ...rows.slice(2).map((row) => body(<Row row={row} />)),
+    ...(day.photos?.length ? [body(<div className="qd-day-photos"><DayPhotos photos={day.photos} maxRowHeight={170} /></div>)] : []),
+    ...parsed.callouts.map((c) => (
+      <div className="qd-callout">
+        <span className="ic"><ShieldAlert size={42} /></span>
+        <div><div className="ti">{c.title}</div><div className="tx"><RichLine html={c.html} /></div></div>
       </div>
-      {parsed.callouts.map((c, i) => (
-        <div className="qd-callout" key={`c${i}`}>
-          <span className="ic"><ShieldAlert size={42} /></span>
-          <div><div className="ti">{c.title}</div><div className="tx"><RichLine html={c.html} /></div></div>
+    )),
+    ...(parsed.why ? [<div className="qd-why"><span className="k">Why this day</span><span className="t"><RichLine html={parsed.why} /></span></div>] : [])
+  ];
+
+  return (
+    <div className="qd-day">
+      {pieces.map((piece, i) => (
+        <div key={i} className={`quotation-keep qd-daypart${i === 0 ? ' is-head' : ''}`} data-day={i === 0 ? index + 1 : undefined} data-section={index === 0 && i === 0 ? 'days' : undefined}>
+          {piece}
+          {endNote && i === pieces.length - 1 && <div className="qd-end"><RichLine html={endNote} /></div>}
         </div>
       ))}
-      {parsed.why && (
-        <div className="qd-why"><span className="k">Why this day</span><span className="t"><RichLine html={parsed.why} /></span></div>
-      )}
-      {endNote && <div className="qd-end"><RichLine html={endNote} /></div>}
     </div>
   );
 };

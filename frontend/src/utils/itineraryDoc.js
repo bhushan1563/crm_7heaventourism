@@ -62,36 +62,6 @@ export const photoRows = (photos = [], maxPerRow = 2) => {
   return rows;
 };
 
-/**
- * Packs blocks onto pages. `blocks` is [{ height, keepWithNext }] in reading order; a page holds `capacity` of height.
- * A block marked keepWithNext (a day heading) is never left alone at the bottom of a page. A block taller than a whole
- * page gets a page to itself (the caller shrinks such blocks beforehand).
- * @returns {number[][]} indexes of the blocks on each page
- */
-export const packBlocks = (blocks, capacity) => {
-  const pages = [];
-  let current = [];
-  let used = 0;
-  const startPage = () => {
-    if (current.length) pages.push(current);
-    current = [];
-    used = 0;
-  };
-  for (let i = 0; i < blocks.length; i += 1) {
-    const { height } = blocks[i];
-    // A heading needs room for itself AND everything that must stay with it: headings can follow each other ("Day by day",
-    // then the day's heading), so the chain runs on to the first ordinary block after the last heading.
-    let needed = height;
-    for (let j = i; blocks[j]?.keepWithNext && blocks[j + 1]; j += 1) needed += blocks[j + 1].height;
-    needed = Math.min(needed, capacity);
-    if (current.length && used + needed > capacity) startPage();
-    current.push(i);
-    used += height;
-  }
-  if (current.length) pages.push(current);
-  return pages;
-};
-
 /** The small line under a day's title ("Overnight: Ubud  •  Meals: Dinner"), or '' when the day has neither. */
 export const dayMeta = (day) =>
   [day.stay && `Overnight: ${day.stay}`, day.meals && `Meals: ${day.meals}`]

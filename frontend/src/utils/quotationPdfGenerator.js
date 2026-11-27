@@ -36,10 +36,9 @@ const a4HeightPx = (page) => {
   return Math.round(width * (297 / 210));
 };
 
-/** A page this little (px) over A4 is not split: it is drawn very slightly smaller onto its one sheet. */
-const SQUEEZE = 24;
-/** The least a continuation sheet carries (px, about a quarter of the sheet), and the room a sheet has under its header and above its footer. */
-const MIN_CARRY = 260;
+/** A page this little (px) over A4 is not split: its footer moves up that far, into the empty space above it (see sealPages). */
+const SQUEEZE = 14;
+/** The room a sheet has under its header and above its footer (px). */
 const SHEET_ROOM = 860;
 /** The space left above a section that is moved up under another. */
 const JOIN_GAP = 16;
@@ -65,29 +64,17 @@ const splitTallPages = (root) => {
       if (keeps().length <= 1) break;
 
       const overflow = [];
-      let carried = 0; // the height of what goes over to the next sheet
-      const heightOf = (node) => node.getBoundingClientRect().height;
       const carry = () => {
         const node = keeps()[keeps().length - 1];
-        carried += heightOf(node);
         overflow.unshift(node);
         node.remove();
       };
       // A page is never stripped down to its headings alone (a banner or a section band): that is worse than running a little over.
       const canGive = () => keeps().length > 1 && keeps().slice(0, -1).some((k) => !k.classList.contains('qd-keepnext'));
-      // A heading is never left alone at the foot of a sheet: it goes over with what it introduces.
-      const carryHeadings = () => {
-        while (keeps().length > 1 && keeps()[keeps().length - 1].classList.contains('qd-keepnext')) carry();
-      };
-
       while (current.scrollHeight > limit + SQUEEZE && canGive()) carry();
       if (overflow.length === 0) break;
-      carryHeadings();
-      // The next sheet is never left with just a scrap (a closing line, a note): the blocks before it go over too, while they fit on one sheet.
-      while (carried < MIN_CARRY && canGive() && carried + heightOf(keeps()[keeps().length - 1]) <= SHEET_ROOM) {
-        carry();
-        carryHeadings();
-      }
+      // A heading is never left alone at the foot of a sheet: it goes over with what it introduces.
+      while (keeps().length > 1 && keeps()[keeps().length - 1].classList.contains('qd-keepnext')) carry();
 
       if (overflow.length === 0) break;
 
@@ -104,9 +91,7 @@ const splitTallPages = (root) => {
   });
 };
 
-/** A page whose blocks are no taller than this (px, under half a sheet) is folded into the page before it when they fit there. */
-const SHORT_PAGE = 460;
-/** A page this bare (px) that cannot move up takes the last block of the page before it instead. */
+/** A page this bare (px) takes the last block of the page before it, when the two belong to the same section. */
 const BARE_PAGE = 300;
 
 /** The blocks of a page and where they start and end, measured from the top of the page. */
@@ -117,52 +102,88 @@ const blocksOf = (page) => {
   return { nodes, start: nodes[0].getBoundingClientRect().top - top, end: Math.max(...nodes.map((n) => n.getBoundingClientRect().bottom)) - top };
 };
 
-/** The pages that may be joined: the framed pages of the trip itself (not the covers, and not the welcome letter). */
+/** The pages that may be filled from one another: the framed pages of the trip itself (not the covers, and not the welcome letter). */
 const joinable = (page) => Boolean(page?.hasAttribute('data-qd-page') && !page.matches('.qd-cover, .qd-welcome') && page.querySelector('.quotation-flow'));
 
-/**
- * For a bare page whose blocks do not fit on the page before: the last block of that page (with its heading) comes down to it, when that
- * page keeps something of its own.
- */
-const lendBlock = (theirs, page, mine) => {
-  const height = mine.end - mine.start;
-  if (height > BARE_PAGE || theirs.filter((n) => !n.classList.contains('qd-keepnext')).length < 2) return;
-  const moving = [theirs[theirs.length - 1]];
-  while (theirs[theirs.length - 1 - moving.length]?.classList.contains('qd-keepnext')) moving.unshift(theirs[theirs.length - 1 - moving.length]);
-  const lent = moving.reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
-  if (lent + JOIN_GAP + height > SHEET_ROOM) return;
-  mine.nodes[0].style.marginTop = `${JOIN_GAP}px`;
-  page.querySelector('.quotation-flow').prepend(...moving);
+const isHeading = (node) => node.classList.contains('qd-keepnext');
+
+/** What has to move together from the top of a page: one block, or a section's heading with the first thing under it. */
+const leadingGroup = (nodes, whole) => {
+  if (whole) return nodes;
+  let n = 0;
+  while (n < nodes.length && isHeading(nodes[n])) n += 1;
+  return nodes.slice(0, n + 1);
 };
 
 /**
- * No sheet that is mostly empty when what it holds fits on the sheet before: a short section (a few lines of pricing, an acceptance that
- * ran over) moves up under the previous one. Page numbers and the contents are worked out afterwards, so they stay right.
+ * Fills every sheet: the first blocks of a page move up while they fit on the page before, so a document has no half-empty pages in the
+ * middle of it. A page marked "qd-whole" (the list of days) only moves up in one piece. Page numbers and contents are worked out afterwards.
  */
-const joinShortPages = (root) => {
+const packPages = (root) => {
   let pages = Array.from(root.querySelectorAll('.quotation-page'));
   for (let i = 1; i < pages.length; i += 1) {
     const page = pages[i];
     const before = pages[i - 1];
-    if (!joinable(page) || !joinable(before)) continue;
-    const mine = blocksOf(page);
-    const theirs = blocksOf(before);
-    const footer = before.querySelector('.qd-foot');
-    if (!mine || !theirs || !footer || mine.end - mine.start > SHORT_PAGE) continue;
-    const footerTop = a4HeightPx(before) - footer.getBoundingClientRect().height;
-    if (theirs.end + JOIN_GAP + (mine.end - mine.start) > footerTop) {
-      lendBlock(theirs.nodes, page, mine);
-      continue;
+    if (!joinable(page) || !joinable(before) || !blocksOf(before)) continue;
+    const target = before.querySelector('.quotation-flow');
+    const source = page.querySelector('.quotation-flow');
+    let mine = blocksOf(page);
+    while (mine) {
+      const group = leadingGroup(mine.nodes, page.matches('.qd-whole'));
+      const margin = group[0].style.marginTop;
+      if (isHeading(group[0])) group[0].style.marginTop = `${JOIN_GAP}px`;
+      group.forEach((node) => target.appendChild(node));
+      if (before.scrollHeight > a4HeightPx(before) + 1) {
+        group[0].style.marginTop = margin;
+        source.prepend(...group); // they do not fit: back where they were
+        break;
+      }
+      mine = blocksOf(page);
     }
-    const flow = before.querySelector('.quotation-flow');
-    mine.nodes.forEach((node, k) => {
-      if (k === 0) node.style.marginTop = `${JOIN_GAP}px`;
-      flow.appendChild(node);
-    });
-    page.remove();
-    pages = Array.from(root.querySelectorAll('.quotation-page'));
-    i -= 1;
+    if (!mine) {
+      page.remove();
+      pages = Array.from(root.querySelectorAll('.quotation-page'));
+      i -= 1;
+    }
   }
+};
+
+/** A page left with only a scrap takes blocks (with their headings) from the end of the previous page of the same section. */
+const fillBarePages = (root) => {
+  const pages = Array.from(root.querySelectorAll('.quotation-page'));
+  const header = (el) => el.querySelector('.qd-head-label')?.textContent || '';
+  pages.forEach((page, i) => {
+    const before = pages[i - 1];
+    if (!joinable(page) || !joinable(before) || header(page) !== header(before)) return;
+    for (;;) {
+      const mine = blocksOf(page);
+      const theirs = blocksOf(before)?.nodes || [];
+      // the page before always keeps something of its own
+      if (!mine || mine.end - mine.start > BARE_PAGE || theirs.filter((n) => !isHeading(n)).length < 2) return;
+      const moving = [theirs[theirs.length - 1]];
+      while (theirs[theirs.length - 1 - moving.length] && isHeading(theirs[theirs.length - 1 - moving.length])) moving.unshift(theirs[theirs.length - 1 - moving.length]);
+      const lent = moving.reduce((sum, n) => sum + n.getBoundingClientRect().height, 0);
+      if (lent + (mine.end - mine.start) > SHEET_ROOM) return;
+      page.querySelector('.quotation-flow').prepend(...moving);
+    }
+  });
+};
+
+/**
+ * Makes every sheet exactly A4: on a page a few pixels over, the footer moves up into the space above it, and the height is then fixed, so the
+ * browser's own Print never spills a sliver onto an extra, blank sheet.
+ */
+const sealPages = (root) => {
+  root.querySelectorAll('.quotation-page').forEach((page) => {
+    const limit = a4HeightPx(page);
+    const over = page.scrollHeight - limit;
+    const foot = page.querySelector('.qd-foot');
+    if (over > 0 && over <= SQUEEZE && foot) foot.style.marginTop = `-${over}px`;
+    if (page.scrollHeight <= limit + 1) {
+      page.style.setProperty('height', '297mm', 'important');
+      page.style.setProperty('overflow', 'hidden', 'important');
+    }
+  });
 };
 
 const PRINT_PAGE_CSS = `
@@ -237,9 +258,49 @@ const waitForPrintFrame = async (iframe) => {
 };
 
 /**
+ * Turns every drawing (inline SVG: the frame, the ornaments, the icons) into one picture with the same size and place. The page renderer
+ * copies the style of every single shape of an inline drawing, which made each page slow to capture; a picture is copied once.
+ */
+const flattenDrawings = async (doc) => {
+  const view = doc.defaultView;
+  const serializer = new view.XMLSerializer();
+  const sources = new Map(); // the same ornament repeats on every page: one address, decoded once
+  const jobs = Array.from(doc.querySelectorAll('.quotation-page svg')).map((svg) => {
+    const box = svg.getBoundingClientRect();
+    const style = view.getComputedStyle(svg);
+    const width = parseFloat(style.width) || box.width;
+    const height = parseFloat(style.height) || box.height;
+    if (!width || !height) return null;
+    const copy = svg.cloneNode(true);
+    copy.removeAttribute('class');
+    copy.removeAttribute('style');
+    copy.setAttribute('width', String(width * 3)); // drawn larger than shown, so it stays sharp on the printed page
+    copy.setAttribute('height', String(height * 3));
+    if (!copy.getAttribute('viewBox')) copy.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    const markup = serializer.serializeToString(copy).replace(/currentColor/g, style.color);
+    if (!sources.has(markup)) sources.set(markup, `data:image/svg+xml;charset=utf-8,${encodeURIComponent(markup)}`);
+    const img = doc.createElement('img');
+    img.alt = '';
+    img.src = sources.get(markup);
+    if (svg.getAttribute('class')) img.setAttribute('class', svg.getAttribute('class'));
+    for (const name of ['display', 'position', 'left', 'top', 'right', 'bottom', 'margin-top', 'margin-right', 'margin-bottom', 'margin-left', 'opacity', 'flex-grow', 'flex-shrink', 'flex-basis', 'vertical-align']) {
+      img.style.setProperty(name, style.getPropertyValue(name));
+    }
+    img.style.width = `${width}px`;
+    img.style.height = `${height}px`;
+    return { svg, img };
+  }).filter(Boolean);
+  jobs.forEach(({ svg, img }) => svg.replaceWith(img));
+  await Promise.all(jobs.map(({ img }) => (img.complete ? null : new Promise((resolve) => {
+    img.onload = resolve;
+    img.onerror = resolve;
+  }))));
+};
+
+/**
  * Lay the quotation out at A4 print size, then split overflow onto more sheets.
  */
-const openPrintFrame = async (container) => {
+const openPrintFrame = async (container, { flatten = false } = {}) => {
   const host = document.createElement('div');
   host.setAttribute('data-quotation-print-host', 'true');
   host.style.cssText = 'position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;border:0;padding:0;margin:0;pointer-events:none;';
@@ -259,8 +320,11 @@ const openPrintFrame = async (container) => {
   await waitForPrintFrame(iframe);
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   splitTallPages(doc);
-  joinShortPages(doc);
+  packPages(doc);
+  fillBarePages(doc);
+  sealPages(doc);
   finalizeDocument(doc.body, { perSheet: false }); // the sheets are now exact: number them and fill the contents
+  if (flatten) await flattenDrawings(doc);
   iframe.style.height = `${Math.max(doc.body.scrollHeight, 1123)}px`;
   return iframe;
 };
@@ -274,7 +338,7 @@ const openPrintFrame = async (container) => {
  * @param {Function} onProgress - Optional progress callback
  * @param {{ save?: boolean }} [options] - `save: false` returns the PDF as a Blob instead of downloading it (for sharing)
  */
-export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quotation.pdf', onProgress = null, { save = true } = {}) => {
+export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quotation.pdf', onProgress = null, { save = true, onPages = null } = {}) => {
   const container = document.getElementById(containerId);
   if (!container) {
     throw new Error(`Quotation container #${containerId} not found in DOM.`);
@@ -284,7 +348,7 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
 
   let frame;
   try {
-  frame = await openPrintFrame(container);
+  frame = await openPrintFrame(container, { flatten: true });
   const printDoc = frame.contentDocument;
 
   let pages = Array.from(printDoc.querySelectorAll('.quotation-page'));
@@ -331,6 +395,8 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
       backgroundColor: '#ffffff',
       logging: false,
       windowWidth: 794,
+      // Only this page is copied for its picture: copying all the others each time made a long document many times slower.
+      ignoreElements: (el) => el !== pageEl && el.classList?.contains('quotation-page'),
       onclone: (clonedDoc) => {
         const clonedPage = clonedDoc.getElementById(pageEl.id) || clonedDoc.querySelector(`[id="${pageEl.id}"]`);
         if (clonedPage) {
@@ -376,6 +442,7 @@ export const generateQuotationPDF = async (containerId, filename = '7Heaven_Quot
     }
   }
 
+  onPages?.(pdf.getNumberOfPages());
   if (onProgress) {
     onProgress(100, 'Finalizing PDF download...');
   }

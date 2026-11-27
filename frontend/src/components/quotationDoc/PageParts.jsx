@@ -90,6 +90,18 @@ export const Panel = ({ badge, title, icon, children, keep = true, className = '
   </div>
 );
 
+const CHUNK = 14; // the most lines one box holds: a very long list continues in further boxes, which can go on the next page
+
+/** A list in a box, or in as many boxes ("... (continued)") as it needs. `columns` 2 holds twice as many lines in each. */
+export const ListBoxes = ({ badge, title, icon, items, columns = 1, solid = false }) => {
+  const size = CHUNK * columns;
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => (
+    <Panel key={i} badge={badge} title={i ? `${title} (continued)` : title} icon={icon} style={{ marginBottom: 14 }}>
+      <DiamondList items={items.slice(i * size, (i + 1) * size)} columns={columns} solid={solid} />
+    </Panel>
+  ));
+};
+
 /** One line of formatted text (kept as typed: bold, colour, highlight). */
 export const RichLine = ({ html }) => <span className="qd-rich qd-line" dangerouslySetInnerHTML={{ __html: toDocumentHtml(html) }} />;
 
