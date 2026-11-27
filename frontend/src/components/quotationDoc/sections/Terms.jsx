@@ -1,5 +1,5 @@
 import React from 'react';
-import { DiamondList, IntroBand, ListBoxes, Page, Panel, SectionBanner } from '../PageParts';
+import { DiamondList, IntroBand, ListBoxes, Page, Panel } from '../PageParts';
 import { BadgeCheck, BadgeCross, BadgeSection, BadgeStar, BannerPagoda, IconCircleX, IconDocument } from '../art';
 
 const Pieces = ({ html }) => <div className="qd-rich qd-booktext" dangerouslySetInnerHTML={{ __html: html }} />;
@@ -12,7 +12,7 @@ const fitsPair = (a, b) => a.length + b.length > 0 && a.length <= 14 && b.length
 
 /**
  * "Inclusions & Conditions": what the offer covers, what it does not, the general conditions, the payment and cancellation policies and the
- * vehicle notes, then the acceptance (a quotation only). A booking confirmation prints "General Policy" with what the booking adds.
+ * vehicle notes. A booking confirmation prints "General Policy" with what the booking adds.
  */
 export const TermsPage = ({ model, quotation, numeral, id, confirmation = false, inclusions = [], additionalPieces = [], bookingTexts = [] }) => {
   const exclusions = quotation.exclusions || [];
@@ -67,16 +67,6 @@ export const TermsPage = ({ model, quotation, numeral, id, confirmation = false,
         </>
       )}
       <ListBoxes badge={<BadgeSection width={20} height={20} />} title="Points to be Noted (Vehicle Note)" items={vehicleNotes} columns={vehicleNotes.length > 2 ? 2 : 1} />
-      {!confirmation && (
-        <div className="quotation-keep qd-accept" data-section="accept">
-          <SectionBanner keep={false}>Acceptance</SectionBanner>
-          <div className="qd-sign">
-            <div><div className="k">For {model.company.name}</div><div className="d">Name &amp; date</div></div>
-            <div><div className="k">Guest signature</div><div className="d">Name &amp; date</div></div>
-          </div>
-          <p className="qd-fine">This itinerary is a proposal. Services, hotels and activities are confirmed only after written acceptance and receipt of the applicable booking amount. Quoted inclusions remain subject to availability at the time of confirmation.</p>
-        </div>
-      )}
     </Page>
   );
 };

@@ -8,6 +8,7 @@ import { toDocxColor, toHalfPoints } from './itineraryDocx';
 import { shareFileName } from './shareContact';
 import { returnDate, toDateInput } from './confirmation';
 import { feeAmount, visaFeeTotal } from './visa';
+import { fullAddress } from './companyHeader';
 import { addressLine } from './hotelStay';
 import { shownPriceNote } from './pricingNote';
 import { OPTIONAL_MARK, priceListLines } from './pricingLines';
@@ -243,7 +244,7 @@ export const generateVisaQuotationDocx = async (quotation, { company = quotation
         footers: {
           default: new d.Footer({
             children: [
-              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+              new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([fullAddress(company.address), company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
               new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), text(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
             ]
           })
@@ -605,7 +606,7 @@ export const generateConfirmationDocx = async (quotation, view, confirmation, { 
       properties: { page: { size: { width: PAGE.width, height: PAGE.height }, margin: { top: PAGE.margin, bottom: PAGE.margin, left: PAGE.margin, right: PAGE.margin } } },
       footers: {
         default: new d.Footer({ children: [
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run([fullAddress(company.address), company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
           new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [run('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), run(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
         ]})
       },
@@ -882,7 +883,7 @@ export const generateQuotationDocx = async (quotation, { company = quotation?.co
       properties: { page: { size: { width: PAGE.width, height: PAGE.height }, margin: { top: PAGE.margin, bottom: PAGE.margin, left: PAGE.margin, right: PAGE.margin } } },
       footers: {
         default: new d.Footer({ children: [
-          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([company.address, company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
+          new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text([fullAddress(company.address), company.phone, company.email, company.website].filter(Boolean).join('   |   '), { size: 16, color: '000000' })] }),
           new d.Paragraph({ alignment: d.AlignmentType.CENTER, children: [text('Page ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.CURRENT], size: 16, color: '000000' }), text(' of ', { size: 16, color: '000000' }), new d.TextRun({ children: [d.PageNumber.TOTAL_PAGES], size: 16, color: '000000' })] })
         ]})
       },

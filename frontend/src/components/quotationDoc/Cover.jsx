@@ -4,7 +4,7 @@ import { mediaUrl } from '../../services/mediaService';
 import { API_ORIGIN } from '../../services/api';
 import { Frame } from './PageParts';
 import { IconTagSmall, IconUsers, SkylineGeneric } from './art';
-import { headerTagline } from '../../utils/companyHeader';
+import { fullAddress, headerTagline } from '../../utils/companyHeader';
 import { formatLongDate } from '../../utils/dateHelper';
 import { fill, pad2, plural } from './model';
 
@@ -79,6 +79,8 @@ export const Cover = ({ model, quotation, id }) => {
   const photo = coverPhotoOf(quotation);
   const company = model.company;
   const stats = coverStats(model, quotation);
+  const ops = String(quotation.ops || '').trim();
+  const preparedBy = !model.library && /\p{L}/u.test(ops) ? ops : company.name; // the operations person looking after this trip
   const tagline = [headerTagline(company.tagline, model.confirmation), model.locality].filter(Boolean).join('  ·  ');
   const place = model.place || 'Your Journey';
   const contact = [company.phone, model.locality].filter(Boolean).join('  ·  ');
@@ -148,7 +150,7 @@ export const Cover = ({ model, quotation, id }) => {
         )}
         <div>
           <div className="k">{model.library ? 'Presented by' : 'Prepared by'}</div>
-          <div className="v">{company.name}</div>
+          <div className="v">{preparedBy}</div>
           {contact && <div className="d">{contact}</div>}
         </div>
       </div>
@@ -176,10 +178,10 @@ export const WHY_TRAVEL = [
   ['And Much More…', 'Because your comfort, trust and experience matter to us.']
 ];
 
-/** The last page: a scene, a thank-you, why to travel with the company, then its address, contacts and the trip number. */
+/** The last page: a scene, why to travel with the company, a thank-you, then its address, contacts and the trip number. */
 export const BackCover = ({ model, id }) => {
   const c = model.company;
-  const addressParts = String(c.address || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const addressParts = fullAddress(c.address).split(',').map((s) => s.trim()).filter(Boolean);
   const total = addressParts.join(', ').length;
   let at = 0;
   let run = 0;
@@ -194,11 +196,6 @@ export const BackCover = ({ model, id }) => {
         <div className="scene"><SkylineGeneric variant="cover" width={470} height={109} style={{ opacity: 0.8 }} /></div>
         <div className="scene-cap">Until we meet again</div>
         <div className="lotus"><span /><i /><span /></div>
-        <div className="k">Thank you for choosing</div>
-        <div className="nm">{model.brand}</div>
-        {c.tagline && <div className="tg">{headerTagline(c.tagline, model.confirmation)}</div>}
-        <div className="pt">★ {headerTagline(c.description, model.confirmation)} ★</div>
-        <div className="dv"><span /><i /><span /></div>
         <div className="why">
           <div className="why-title">Why travel with {String(model.company.name || '').replace(/\s*tourism\s*$/i, '') || model.company.name}?</div>
           <div className="why-grid">
@@ -210,6 +207,11 @@ export const BackCover = ({ model, id }) => {
             ))}
           </div>
         </div>
+        <div className="dv"><span /><i /><span /></div>
+        <div className="k">Thank you for choosing</div>
+        <div className="nm">{model.brand}</div>
+        {c.tagline && <div className="tg">{headerTagline(c.tagline, model.confirmation)}</div>}
+        <div className="pt">★ {headerTagline(c.description, model.confirmation)} ★</div>
         <div className="dv"><span /><i /><span /></div>
         <div className="addr">{line1 && <div>{line1}</div>}{line2 && <div>{line2}</div>}</div>
         {(c.phone || c.email) && <div className="reach">{c.phone}{c.phone && c.email && <i />}{c.email}</div>}

@@ -1,5 +1,5 @@
 // The stylesheet of the pages that carry the offer: hotels and options, the pricing tables, flights, the visa and land service bodies,
-// the terms and the acceptance.
+// and the terms.
 import { COLORS as C, FONT_SERIF } from './tokens';
 
 export const OFFER_CSS = `
@@ -118,12 +118,6 @@ table.qd-table td.r { text-align: right; }
 .qd-gallery > div { width: 100%; align-items: center; }
 .qd-overview-text { font-size: 12.8px; line-height: 1.7; color: ${C.ink}; text-align: justify; margin: 0 0 10px; }
 
-/* ---- terms and acceptance ---- */
-.qd-accept { margin-top: 6px; }
-.qd-sign { display: flex; gap: 34px; padding: 50px 20px 0; }
-.qd-sign > div { flex: 1; border-top: 1.5px solid ${C.navy}; padding-top: 7px; }
-.qd-sign .k { font-size: 10px; font-weight: 700; letter-spacing: 0.2em; color: ${C.navy}; text-transform: uppercase; }
-.qd-sign .d { margin-top: 3px; font-size: 11.2px; color: ${C.muted}; }
-.qd-fine { margin: 20px 30px 0; text-align: center; font-size: 11px; line-height: 1.55; color: ${C.muted}; }
+/* ---- terms ---- */
 .qd-booktext { font-size: 12px; line-height: 1.5; color: ${C.ink}; text-align: left; }
 `;

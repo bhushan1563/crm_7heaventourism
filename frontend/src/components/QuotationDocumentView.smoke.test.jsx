@@ -58,5 +58,33 @@ describe('the quotation document with little or odd data', () => {
     expect(back).toHaveTextContent('Clear and transparent pricing, with no surprises.');
     expect(back.textContent.indexOf('And Much More')).toBeLessThan(back.textContent.indexOf('405 Kanha Capital'));
   });
+
+  const trip = (over = {}) => ({
+    quotationType: 'Package', destination: 'Goa', companyDetails: { name: '7Heaven Tourism', address: '405 Kanha Capital, Alkapuri 390007, Vadodara', phone: '+91 9638554240' },
+    itinerary: [], packageDetails: { hotels: [], inclusions: ['Breakfast'] }, exclusions: ['Airfare'], pricing: {}, ...over
+  });
+
+  it('names the operations person under "Prepared by", and the company when there is none', () => {
+    const prepared = (q) => [...show(q).container.querySelectorAll('[data-qd-cover] .prep > div')].pop().querySelector('.v').textContent;
+    expect(prepared(trip({ ops: 'Mayuri Vasava' }))).toBe('Mayuri Vasava');
+    cleanup();
+    expect(prepared(trip({ ops: ' ' }))).toBe('7Heaven Tourism');
+  });
+
+  it('puts the thank-you under "Why travel with", and ends the address with the state and country', () => {
+    const { container } = show(trip());
+    const text = container.querySelector('[data-qd-back]').textContent;
+    const order = ['Why travel with', 'And Much More', 'Thank you for choosing', 'Vadodara, Gujarat, India'].map((t) => text.indexOf(t));
+    expect(order.every((n) => n >= 0)).toBe(true);
+    expect([...order].sort((a, b) => a - b)).toEqual(order);
+    expect(container.querySelector('[data-qd-cover]')).toHaveTextContent('+91 9638554240 · Vadodara'); // the town, as before
+    expect(container.querySelector('[data-qd-cover]')).not.toHaveTextContent('· India');
+  });
+
+  it('has no acceptance or signature block', () => {
+    const { container } = show(trip());
+    expect(container.querySelector('[id$="-terms"]')).not.toBeNull();
+    expect(container.textContent).not.toMatch(/Acceptance|Guest signature|This itinerary is a proposal/);
+  });
 });
 

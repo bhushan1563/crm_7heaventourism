@@ -240,7 +240,11 @@ export const DEFAULT_COMPANY = {
 export const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** The town at the end of an address ("..., Alkapuri 390007, Vadodara" -> "Vadodara"). */
-const localityOf = (address) => clean(String(address || '').split(',').pop()).replace(/\d{5,6}/g, '').trim();
+const localityOf = (address) => {
+  const parts = String(address || '').split(',').map((part) => clean(part.replace(/\d{5,6}/g, ''))).filter(Boolean);
+  while (parts.length > 1 && /^(india|gujarat)$/i.test(parts[parts.length - 1])) parts.pop(); // the town, not the state or the country
+  return (parts[parts.length - 1] || '').replace(/[\s.–-]+$/, '');
+};
 
 const FOOTER_NOUN = { Package: 'TOUR ITINERARY', 'Only Hotel': 'HOTEL STAY', 'Events / Corporate': 'EVENT PROPOSAL', 'Land Service': 'LAND SERVICES', Visa: 'VISA QUOTATION' };
 const KICKER = { Package: 'A private journey to', 'Only Hotel': 'A stay in', 'Events / Corporate': 'An event in', 'Land Service': 'Land services in', Visa: 'Visa services for' };

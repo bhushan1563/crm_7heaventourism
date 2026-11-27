@@ -13,3 +13,15 @@ export const headerTagline = (stored, confirmation = false) => {
   if (!standard) return text;
   return confirmation ? CONFIRMATION_TAGLINE : PRODUCTS_TAGLINE;
 };
+
+/**
+ * A company address as the documents print it: an address that ends at the town (Vadodara, with or without its PIN code) goes on with the
+ * state and the country. Stored addresses are left as they are; one that already says them, or is another town's, is not touched.
+ */
+export const fullAddress = (address) => {
+  const text = String(address ?? '').trim().replace(/[\s,.]+$/, '');
+  if (/vadodara(\s*[-–]?\s*\d{6})?$/i.test(text)) return `${text}, Gujarat, India`;
+  if (/vadodara[^,]*,\s*gujarat(\s*[-–]?\s*\d{6})?$/i.test(text)) return `${text}, India`;
+  return text;
+};
+

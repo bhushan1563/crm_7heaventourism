@@ -1,6 +1,7 @@
 import { formatDate } from './dateHelper';
 import { toDisplayHtml } from './richText'; // the flight note can be formatted: this escapes plain text and cleans formatted text
 import { mediaUrl } from '../services/mediaService';
+import { fullAddress } from './companyHeader';
 import { finalizeDocument } from '../components/quotationDoc/finalize';
 import { DOC_FONTS_HREF } from '../components/quotationDoc/tokens';
 
@@ -664,7 +665,7 @@ export const printFlightVoucher = (quotation) => {
         </div>
 
         <div class="footer">
-          <div>${co.address}</div>
+          <div>${esc(fullAddress(company.address))}</div>
           <div>Phone: ${co.phone} | Email: ${co.email} | Web: ${co.website}</div>
         </div>
       </body>

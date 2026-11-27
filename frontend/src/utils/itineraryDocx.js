@@ -4,6 +4,7 @@
 import { COMPANY } from '../config';
 import { mediaUrl } from '../services/mediaService';
 import { dayMeta, documentFacts, photoRows, richBlocks } from './itineraryDoc';
+import { fullAddress } from './companyHeader';
 
 const PAGE = { width: 11906, height: 16838, margin: 1020 }; // A4 in twips (1/20 pt); margins about 1.8 cm
 const CONTENT_WIDTH_PX = 660; // printable width in pixels (96 dpi)
@@ -219,7 +220,7 @@ export const generateItineraryDocx = async (itinerary, { onProgress, fetchImage 
 
   children.push(
     new d.Paragraph({ spacing: { before: 360, after: 40 }, border: { top: { style: d.BorderStyle.SINGLE, size: 6, color: 'CBD5E1', space: 8 } }, children: [new d.TextRun({ text: company.name, bold: true, color: BRAND })] }),
-    new d.Paragraph({ spacing: { after: 20 }, children: [new d.TextRun({ text: company.address, size: 18, color: '475569' })] }),
+    new d.Paragraph({ spacing: { after: 20 }, children: [new d.TextRun({ text: fullAddress(company.address), size: 18, color: '475569' })] }),
     new d.Paragraph({ children: [new d.TextRun({ text: [company.phone, company.email, company.website].filter(Boolean).join('   |   '), size: 18, color: '475569' })] })
   );
 
