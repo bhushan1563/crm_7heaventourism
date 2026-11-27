@@ -49,4 +49,14 @@ describe('the quotation document with little or odd data', () => {
       expect([...foot.children].map((el) => el.className)).toEqual(['qd-foot-side', 'qd-foot-num', 'qd-foot-side']); // equal sides: the number is in the middle
     }
   });
+
+  it('says why to travel with the company on the last page, above the address, in the words the client gave', () => {
+    const { container } = show({ quotationType: 'Package', destination: 'Goa', companyDetails: { name: '7Heaven Tourism', address: '405 Kanha Capital, Vadodara' }, itinerary: [], packageDetails: { hotels: [] }, pricing: {} });
+    const back = container.querySelector('[data-qd-back]');
+    expect(back.querySelector('.why-title').textContent).toBe('Why travel with 7Heaven?');
+    expect([...back.querySelectorAll('.why-head')].map((el) => el.textContent.replace('✦', '').trim())).toEqual(['We Serve More Than We Commit', 'Best Coordination Before & During Your Tour', 'No Hidden Costs', 'Professional & Experienced Drivers', 'Top-Condition Vehicles', 'And Much More…']);
+    expect(back).toHaveTextContent('Clear and transparent pricing, with no surprises.');
+    expect(back.textContent.indexOf('And Much More')).toBeLessThan(back.textContent.indexOf('405 Kanha Capital'));
+  });
 });
+

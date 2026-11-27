@@ -186,6 +186,45 @@ export const overnightOf = (quotation, start, index) => {
   return '';
 };
 
+// ---- the "Location" button of a day --------------------------------------------------------------------------------------
+// It opens Google Maps on a PLACE. A day's title ("Arrival, pick up & transfer", "Departure", "Shikara ride") must never be searched:
+// Maps answers such words with taxi firms and other travel agencies. Only names of places are put in the search.
+
+/** Words that are not the name of a place: a stay or a destination holding one of them would bring up businesses. */
+const NOT_A_PLACE = /\b(hotels?|resorts?|house ?boats?|camps?|tents?|home ?stays?|villas?|lodge|stays?|inn|cottages?|overnight|cruise|flights?|train|bus|airport|station|transfers?|pick ?ups?|drop|arrival|departure|sight ?seeing|tours?|travels?|trips?|packages?|holidays?|honeymoon|services?|taxi|cabs?)\b/i;
+
+/** A destination or town without the words that sell it: "Kerala Tour Package" -> "Kerala". */
+const placeName = (value) =>
+  clean(String(value ?? '').replace(/\([^)]*\)/g, ' ').replace(/\b(tour|trip|package|holidays?|honeymoon|special|family|group|delight|escape)\b/gi, ' ')).replace(/^[\s,&+–—-]+|[\s,&+–—-]+$/g, '');
+
+const usable = (value) => {
+  const name = placeName(String(value ?? '').split(/[/|]/)[0]); // "Ubud / Kuta": the first of the two
+  return name && !NOT_A_PLACE.test(name) ? name : '';
+};
+
+/** Where a day's name appears in a title, as a whole word ("" is never found). */
+const lastMention = (title, place) => {
+  const found = [...title.matchAll(new RegExp(`(^|[^\\p{L}])${place.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\p{L}])`, 'giu'))];
+  return found.length ? found[found.length - 1].index : -1;
+};
+
+/**
+ * The search for the "Location" button of day `index`: the place of the trip the day's title ends at ("Haridwar to Kausani" -> Kausani,
+ * "Drop to Haridwar" -> Haridwar), else where that night is spent, else where the night before was, followed by the destination.
+ */
+export const mapQuery = (quotation, model, index) => {
+  const days = quotation.itinerary || [];
+  const nights = days.map((_, i) => usable(overnightOf(quotation, model.start, i)));
+  const cities = [...(quotation.packageDetails?.hotels || []), ...(quotation.options || []).flatMap((o) => o.hotels || [])].map((h) => usable(h.city));
+  const known = [...new Set([...nights, ...cities].filter(Boolean))];
+  const title = String(days[index]?.title || '');
+  const named = known.map((place) => ({ place, at: lastMention(title, place) })).filter((m) => m.at >= 0).sort((a, b) => b.at - a.at)[0]?.place;
+  const before = nights.slice(0, index).reverse().find(Boolean);
+  const place = named || nights[index] || before || '';
+  const region = [usable(model.place), usable(model.country)].filter((part) => part && part.toLowerCase() !== place.toLowerCase());
+  return [place, ...region].filter(Boolean).join(', ') || placeName(model.place);
+};
+
 // ---- the document as a whole ---------------------------------------------------------------------------------------------
 
 export const DEFAULT_COMPANY = {

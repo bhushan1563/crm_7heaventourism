@@ -166,7 +166,17 @@ export const Cover = ({ model, quotation, id }) => {
   );
 };
 
-/** The last page: a thank-you, the company's details and the trip number, over the same scene as the welcome page. */
+/** Why a guest should travel with the company, in the client's own words: printed on the last page above the address. */
+export const WHY_TRAVEL = [
+  ['We Serve More Than We Commit', 'Going the extra mile to make your journey special.'],
+  ['Best Coordination Before & During Your Tour', 'Seamless support from booking to your return.'],
+  ['No Hidden Costs', 'Clear and transparent pricing, with no surprises.'],
+  ['Professional & Experienced Drivers', 'Reliable drivers with good route knowledge and service standards.'],
+  ['Top-Condition Vehicles', 'Clean, comfortable and well-maintained vehicles for your journey.'],
+  ['And Much More…', 'Because your comfort, trust and experience matter to us.']
+];
+
+/** The last page: a scene, a thank-you, why to travel with the company, then its address, contacts and the trip number. */
 export const BackCover = ({ model, id }) => {
   const c = model.company;
   const addressParts = String(c.address || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -180,14 +190,26 @@ export const BackCover = ({ model, id }) => {
   return (
     <div className="quotation-page qd-page qd-cover qd-back is-fixed" id={id} data-qd-page="" data-qd-back="">
       <Frame cover />
-      <div className="abs scene"><SkylineGeneric variant="cover" width={660} height={153} style={{ opacity: 0.8 }} /></div>
-      <div className="abs scene-cap">Until we meet again</div>
       <div className="abs thanks">
+        <div className="scene"><SkylineGeneric variant="cover" width={470} height={109} style={{ opacity: 0.8 }} /></div>
+        <div className="scene-cap">Until we meet again</div>
         <div className="lotus"><span /><i /><span /></div>
         <div className="k">Thank you for choosing</div>
         <div className="nm">{model.brand}</div>
         {c.tagline && <div className="tg">{headerTagline(c.tagline, model.confirmation)}</div>}
         <div className="pt">★ {headerTagline(c.description, model.confirmation)} ★</div>
+        <div className="dv"><span /><i /><span /></div>
+        <div className="why">
+          <div className="why-title">Why travel with {String(model.company.name || '').replace(/\s*tourism\s*$/i, '') || model.company.name}?</div>
+          <div className="why-grid">
+            {WHY_TRAVEL.map(([title, text]) => (
+              <div className="why-item" key={title}>
+                <div className="why-head"><span aria-hidden="true">✦</span> {title}</div>
+                <div className="why-text">{text}</div>
+              </div>
+            ))}
+          </div>
+        </div>
         <div className="dv"><span /><i /><span /></div>
         <div className="addr">{line1 && <div>{line1}</div>}{line2 && <div>{line2}</div>}</div>
         {(c.phone || c.email) && <div className="reach">{c.phone}{c.phone && c.email && <i />}{c.email}</div>}

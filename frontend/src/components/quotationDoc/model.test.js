@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildModel, dayBlurb, overnightOf, journeyStops, nightsAndDays, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate } from './model';
+import { buildModel, dayBlurb, mapQuery, overnightOf, journeyStops, nightsAndDays, overviewRows, parseDay, rangeText, splitDestination, splitLabel, toUtcDate } from './model';
 
 describe('durations and dates', () => {
   it('reads nights and days from the usual ways of writing a duration', () => {
@@ -145,3 +145,49 @@ describe('the few words of a day in the list', () => {
   });
 });
 
+
+describe('the search behind a day\'s Location button', () => {
+  const trip = (titles, over = {}) => ({
+    quotationType: 'Package', destination: 'Uttarakhand', travelDate: '2027-01-02', duration: `${titles.length - 1} Nights`,
+    itinerary: titles.map((title) => ({ title })),
+    packageDetails: {
+      hotels: [
+        { city: 'Haridwar', nights: '1 Night', checkInDate: '2027-01-02', checkOutDate: '2027-01-03' },
+        { city: 'Kausani', nights: '2 Nights', checkInDate: '2027-01-03', checkOutDate: '2027-01-05' },
+        { city: 'Rishikesh', nights: '1 Night', checkInDate: '2027-01-05', checkOutDate: '2027-01-06' }
+      ]
+    },
+    ...over
+  });
+  const queries = (q) => q.itinerary.map((_, i) => mapQuery(q, buildModel(q), i));
+
+  it('is the place the day ends at, never the words of the title that would bring up travel agencies', () => {
+    const q = trip(['Haridwar to Haridwar - Pick up, Transfer & Local Sightseeing', 'Haridwar to Kausani', 'Kausani Full Day Sightseeing', 'Transfer to Rishikesh', 'Drop to Haridwar']);
+    expect(queries(q)).toEqual(['Haridwar, Uttarakhand', 'Kausani, Uttarakhand', 'Kausani, Uttarakhand', 'Rishikesh, Uttarakhand', 'Haridwar, Uttarakhand']);
+  });
+
+  it('uses the night, or the night before on the last day, when the title names no place of the trip', () => {
+    const q = trip(['Arrival & Welcome', 'Scenic drive', 'At leisure', 'Temple visit', 'Departure']);
+    expect(queries(q)).toEqual(['Haridwar, Uttarakhand', 'Kausani, Uttarakhand', 'Kausani, Uttarakhand', 'Rishikesh, Uttarakhand', 'Rishikesh, Uttarakhand']);
+  });
+
+  it('shows the destination alone when no place is known, and leaves out words that sell the trip', () => {
+    const q = { quotationType: 'Package', destination: 'Kerala Tour Package, India', itinerary: [{ title: 'Arrival and airport pick up' }, { title: 'Departure transfer' }], packageDetails: { hotels: [] } };
+    expect(queries(q)).toEqual(['Kerala, India', 'Kerala, India']);
+  });
+
+  it('does not search for a houseboat or a hotel typed as the night', () => {
+    const q = { quotationType: 'Package', destination: 'Kerala', itinerary: [{ title: 'Cruise', stay: 'Houseboat' }, { title: 'Beach', stay: 'Kovalam' }, { title: 'Return', stay: '' }], packageDetails: { hotels: [] } };
+    expect(queries(q)).toEqual(['Kerala', 'Kovalam, Kerala', 'Kovalam, Kerala']);
+  });
+
+  it('never holds a word that Maps answers with businesses, whatever is typed', () => {
+    const q = trip(['Airport pick up by private taxi', 'Sightseeing tour with travel agency', 'Hotel check in', 'Cab transfer', 'Departure']);
+    for (const query of queries(q)) expect(query).not.toMatch(/pick|taxi|tour|travel|agency|hotel|cab|transfer|departure/i);
+  });
+
+  it('searches for one place when two are written together', () => {
+    const q = { quotationType: 'Package', destination: 'Bali', itinerary: [{ title: 'Safari', stay: 'Ubud / Kuta' }], packageDetails: { hotels: [] } };
+    expect(queries(q)).toEqual(['Ubud, Bali']);
+  });
+});

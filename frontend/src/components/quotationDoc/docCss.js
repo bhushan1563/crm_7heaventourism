@@ -146,9 +146,16 @@ const COVER = `
 .qd-cover .stats > div + div { border-left: 1px solid ${C.navyLine}; }
 .qd-cover .stats .n { font-family: ${FONT_SERIF}; font-size: 37px; font-weight: 400; color: ${C.goldLight}; line-height: 44px; }
 .qd-cover .stats .l { margin-top: 6px; font-size: 11px; line-height: 17px; color: #fff; }
-.qd-back .scene { left: 68px; top: 362px; width: 660px; height: 153px; }
-.qd-back .scene-cap { left: 0; right: 0; top: 524px; text-align: center; font-family: ${FONT_SERIF}; font-style: italic; font-size: 12px; color: ${C.slate}; }
-.qd-back .thanks { left: 68px; width: 658px; top: 604px; text-align: center; }
+.qd-back .thanks { left: 68px; width: 658px; top: 62px; bottom: 62px; display: flex; flex-direction: column; justify-content: center; text-align: center; }
+.qd-back .scene { display: flex; justify-content: center; height: 109px; }
+.qd-back .scene-cap { margin: 8px 0 22px; font-family: ${FONT_SERIF}; font-style: italic; font-size: 12px; line-height: 17px; color: ${C.slate}; }
+.qd-back .why { margin-top: 18px; }
+.qd-back .why-title { font-family: ${FONT_SERIF}; font-size: 18px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: ${C.goldLight}; line-height: 26px; }
+.qd-back .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 22px; margin-top: 16px; text-align: left; padding: 0 12px; }
+.qd-back .why-head { position: relative; padding-left: 19px; font-size: 11.5px; font-weight: 700; line-height: 17px; color: #fff; }
+.qd-back .why-head span { position: absolute; left: 0; top: 0; color: ${C.goldLight}; font-size: 12px; }
+.qd-back .why-text { margin-top: 2px; padding-left: 19px; font-size: 10.5px; line-height: 15.5px; color: ${C.slate}; }
+.qd-back .why + .dv { margin-top: 20px; }
 .qd-back .lotus, .qd-back .dv { display: flex; align-items: center; justify-content: center; gap: 8px; height: 12px; }
 .qd-back .lotus span, .qd-back .dv span { width: 44px; height: 1px; background: ${C.navyLine}; }
 .qd-back .lotus i, .qd-back .dv i { width: 6px; height: 6px; background: ${C.goldLight}; transform: rotate(45deg); }

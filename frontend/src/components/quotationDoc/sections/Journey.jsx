@@ -1,7 +1,7 @@
 import React from 'react';
 import { IntroBand, Page, SectionBanner } from '../PageParts';
 import { BannerBoat, Compass, IconBedRing } from '../art';
-import { dayBlurb, dayDate, overnightOf, overviewRows, parseDay, shortDayMonth, weekday } from '../model';
+import { dayBlurb, dayDate, mapQuery, overnightOf, overviewRows, parseDay, shortDayMonth, weekday } from '../model';
 import { richToPlainText } from '../../../utils/richText';
 
 const mapsUrl = (query) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
@@ -87,7 +87,7 @@ export const ShapePage = ({ model, quotation, id }) => {
                 {blurb && <div className="blurb">{blurb}</div>}
               </div>
               {anyNight && <div className="night">{overnight || i < days.length - 1 ? 'Night' : 'Trip ends'}<b>{overnight || (i < days.length - 1 ? '—' : 'Departure')}</b></div>}
-              <a className="map" href={mapsUrl(`${day.title || overnight || ''} ${model.place}`.trim())} target="_blank" rel="noopener noreferrer">LOCATION ↗</a>
+              <a className="map" href={mapsUrl(mapQuery(quotation, model, i))} target="_blank" rel="noopener noreferrer">LOCATION ↗</a>
             </div>
           </div>
         );
