@@ -1,6 +1,6 @@
 import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import QuotationLivePreview from './QuotationLivePreview';
 
 afterEach(cleanup);
@@ -45,5 +45,14 @@ describe('the live preview of the builder', () => {
     const { container, rerender } = render(<QuotationLivePreview quotation={quotation()} section="overview" />);
     rerender(<QuotationLivePreview quotation={quotation()} section="flights" />);
     expect(container.querySelector('.rs-builder-preview').scrollTop).toBe(0);
+  });
+
+  it('highlights the open tab, then whichever jump button was pressed', () => {
+    render(<QuotationLivePreview quotation={quotation()} section="overview" />);
+    const weight = (name) => screen.getByRole('button', { name }).style.fontWeight;
+    expect(weight('Cover')).toBe('700');
+    fireEvent.click(screen.getByRole('button', { name: 'Hotels' }));
+    expect(weight('Hotels')).toBe('700');
+    expect(weight('Cover')).toBe('500');
   });
 });

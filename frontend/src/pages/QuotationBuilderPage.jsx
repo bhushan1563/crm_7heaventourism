@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Save,
@@ -838,6 +838,8 @@ export const QuotationBuilderPage = () => {
     });
   };
 
+  const statusPicked = useRef(false); // the person chose a status themselves: it is saved as chosen
+
   // Save Quotation
   const handleSave = async (downloadAfter = false) => {
     if (!formData.clientName.trim()) {
@@ -878,8 +880,11 @@ export const QuotationBuilderPage = () => {
       const base = isVisa(formData)
         ? { ...formData, visa: visaPayload(formData.visa), visaFees: feesPayload(formData.visaFees) }
         : isLandService(formData) ? { ...formData, vehicles: vehiclesPayload(formData.vehicles) } : formData;
+      // A saved quotation is complete and ready: a 'Draft' moves on to 'Sent' upon saving, unless Draft was picked by hand in the Status list
+      const statusToSave = formData.status === 'Draft' && !statusPicked.current ? 'Sent' : (formData.status || 'Sent');
+      const baseWithStatus = { ...base, status: statusToSave };
       // The pricing tables belong to hotel and package quotations only; for any other type they are left out of the request.
-      const { priceTables: _tables, ...withoutTables } = base;
+      const { priceTables: _tables, ...withoutTables } = baseWithStatus;
       // A hotel or package quotation always says whether it has pricing tables: an empty list is how one that went back to the usual price list clears them.
       const payload = layoutOf(formData) ? { ...withoutTables, priceTables: priceTablesPayload(formData.priceTables || []) } : withoutTables;
       if (isEditMode) {
@@ -889,6 +894,7 @@ export const QuotationBuilderPage = () => {
       }
 
       if (res.success) {
+        setFormData((prev) => ({ ...prev, status: statusToSave }));
         confetti({
           particleCount: 80,
           spread: 70,
@@ -1256,7 +1262,10 @@ export const QuotationBuilderPage = () => {
                   <select
                     className="form-select"
                     value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    onChange={(e) => {
+                      statusPicked.current = true;
+                      setFormData({ ...formData, status: e.target.value });
+                    }}
                   >
                     {QUOTATION_STATUSES.map((status) => (
                       <option key={status} value={status}>{status}</option>

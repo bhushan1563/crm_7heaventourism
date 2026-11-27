@@ -79,7 +79,7 @@ export const Cover = ({ model, quotation, id }) => {
   const photo = coverPhotoOf(quotation);
   const company = model.company;
   const stats = coverStats(model, quotation);
-  const tagline = [company.tagline, model.locality].filter(Boolean).join('  ·  ');
+  const tagline = [headerTagline(company.tagline, model.confirmation), model.locality].filter(Boolean).join('  ·  ');
   const place = model.place || 'Your Journey';
   const contact = [company.phone, model.locality].filter(Boolean).join('  ·  ');
   const pills = model.library ? [] : [
@@ -186,7 +186,7 @@ export const BackCover = ({ model, id }) => {
         <div className="lotus"><span /><i /><span /></div>
         <div className="k">Thank you for choosing</div>
         <div className="nm">{model.brand}</div>
-        {c.tagline && <div className="tg">{c.tagline}</div>}
+        {c.tagline && <div className="tg">{headerTagline(c.tagline, model.confirmation)}</div>}
         <div className="pt">★ {headerTagline(c.description, model.confirmation)} ★</div>
         <div className="dv"><span /><i /><span /></div>
         <div className="addr">{line1 && <div>{line1}</div>}{line2 && <div>{line2}</div>}</div>

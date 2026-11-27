@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FileText,
   Plus,
@@ -39,16 +39,26 @@ import QuotationDocumentView from '../components/QuotationDocumentView';
 import { generateQuotationPDF } from '../utils/quotationPdfGenerator';
 import { saveBlob } from '../utils/download';
 import { formatDate } from '../utils/dateHelper';
-import { QUOTATION_STATUS_TABS } from '../config';
+import { QUOTATION_STATUS_TABS, QUOTATION_STATUSES } from '../config';
 import { getErrorMessage } from '../services/api';
 import './quotationList.css';
 
 const STATUS_TABS = QUOTATION_STATUS_TABS;
+const STATUS_BADGE_CLASS = {
+  'Follow up': 'badge-followup',
+  Confirmed: 'badge-confirmed',
+  Draft: 'badge-under-process',
+  Sent: 'badge-quoted',
+  Revised: 'badge-quoted',
+  Expired: 'badge-danger',
+  Cancelled: 'badge-danger'
+};
 
 export const QuotationListPage = () => {
   const { user, can, canEditRecord } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [quotations, setQuotations] = useState([]);
   const [stats, setStats] = useState(null);
@@ -106,7 +116,7 @@ export const QuotationListPage = () => {
 
   useEffect(() => {
     fetchQuotations();
-  }, []);
+  }, [location.key]);
 
   const handleConfirmBooking = async (optionIndex, priceTableIndex) => {
     setIsConfirming(true);
