@@ -29,12 +29,12 @@ after(async () => {
   await app.close();
 });
 
-test('a confirmed quotation cannot be changed, not even by an administrator, and the message says how to change it', async () => {
+test('a confirmed quotation can be changed even after confirmation', async () => {
   const q = await makeQuotation();
   await confirm(q);
   const r = (await quote(`/${q._id}`, { method: 'PUT', token: admin.token, json: { paxDetails: '22 Adults' } })).body;
-  assert.equal(r.success, false);
-  assert.match(r.message, /locked.*cancel the confirmation to change the quotation/);
+  assert.equal(r.success, true);
+  assert.equal(r.data.paxDetails, '22 Adults');
 });
 
 test('cancel, change the quotation, confirm again: the new booking shows the changed quotation in every part', async () => {

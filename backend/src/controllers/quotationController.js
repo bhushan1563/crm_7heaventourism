@@ -251,16 +251,6 @@ export const updateQuotation = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
     }
 
-    if (existing.confirmationId) {
-      // Core sold contract details remain locked, but itinerary adjustments are permitted once confirmed
-      const isItineraryUpdate = Array.isArray(req.body.itinerary);
-      const nameChanged = req.body.clientName && req.body.clientName.trim() !== String(existing.clientName || '').trim();
-      const paxChanged = req.body.paxDetails && req.body.paxDetails.trim() !== String(existing.paxDetails || '').trim();
-      if (!isItineraryUpdate || nameChanged || paxChanged) {
-        return res.status(200).json({ success: false, message: lockedMessage(existing, 'changed') });
-      }
-    }
-
     const changes = {
       ...omit(req.body, PROTECTED_QUOTATION_FIELDS),
       ...extras.overrides
@@ -270,7 +260,7 @@ export const updateQuotation = async (req, res) => {
       return res.status(200).json({ success: false, message: 'Quotation not found.' });
     }
 
-    // Keep the confirmed booking voucher snapshot in sync with itinerary and duration updates
+    // Keep the confirmed booking voucher snapshot in sync with any updates
     if (existing.confirmationId) {
       await ConfirmationModel.updateOne(
         { _id: existing.confirmationId },
@@ -278,10 +268,12 @@ export const updateQuotation = async (req, res) => {
           $set: {
             'quote.itinerary': updated.itinerary,
             ...(updated.duration ? { duration: updated.duration, 'quote.duration': updated.duration } : {}),
-            ...(updated.destination ? { destination: updated.destination, 'quote.destination': updated.destination } : {})
+            ...(updated.destination ? { destination: updated.destination, 'quote.destination': updated.destination } : {}),
+            ...(updated.clientName ? { 'quote.clientName': updated.clientName } : {}),
+            ...(updated.paxDetails ? { 'quote.paxDetails': updated.paxDetails } : {})
           }
         }
-      ).catch((err) => console.error('Failed to sync confirmation itinerary:', err));
+      ).catch((err) => console.error('Failed to sync confirmation:', err));
     }
 
     res.json({

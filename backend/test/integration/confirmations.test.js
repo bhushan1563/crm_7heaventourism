@@ -96,16 +96,15 @@ test('different quotations confirmed at the same moment get different numbers', 
   assert.equal(new Set(results.map((r) => r.data.confirmationNo)).size, 4);
 });
 
-test('a confirmed quotation is locked for everyone: it cannot be changed or deleted, and a copy of it is open', async () => {
+test('a confirmed quotation can still be edited but cannot be deleted, and a copy of it is open', async () => {
   const q = await makeQuotation();
   const c = (await confirm(q)).data;
 
   const edit = await quote(`/${q._id}`, asAdmin({ clientName: 'Someone else' }, 'PUT'));
-  assert.equal(edit.body.success, false);
-  assert.equal(edit.body.message, `This quotation is confirmed as ${c.confirmationNo} and is locked, so it cannot be changed. Open the confirmation to add booking details, or cancel the confirmation to change the quotation.`);
+  assert.equal(edit.body.success, true);
+  assert.equal((await QuotationModel.findById(q._id)).clientName, 'Someone else');
   const del = await quote(`/${q._id}`, { method: 'DELETE', token: admin.token });
   assert.match(del.body.message, /locked, so it cannot be deleted/);
-  assert.equal((await QuotationModel.findById(q._id)).clientName, 'Aarav Mehta');
   assert.equal((await QuotationModel.findById(q._id)).deleted, false);
 
   const copy = (await quote(`/${q._id}/duplicate`, { method: 'POST', token: admin.token })).body.data;
@@ -118,9 +117,10 @@ test('the lock fields belong to the server: a request cannot set or clear them',
   assert.deepEqual([forged.confirmationId, forged.confirmationNo], ['', '']);
   const q = await makeQuotation();
   const c = (await confirm(q)).data;
+  // A confirmed quotation can now be edited, but server-owned fields (confirmationId, confirmationNo) cannot be cleared
   const attempt = await quote(`/${q._id}`, asAdmin({ confirmationId: '', confirmationNo: '', isLocked: false }, 'PUT'));
-  assert.equal(attempt.body.success, false, 'still locked');
-  assert.equal((await QuotationModel.findById(q._id)).confirmationId, c._id);
+  assert.equal(attempt.body.success, true, 'edit succeeds');
+  assert.equal((await QuotationModel.findById(q._id)).confirmationId, String(c._id), 'confirmationId stays protected');
 });
 
 test('quotations with hotel options need the accepted option; its hotels and price become the confirmation\'s', async () => {
