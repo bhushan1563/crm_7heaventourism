@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 let app;
 let admin;
 const quotations = (path = '', opts = {}) => app.call(`/api/quotations${path}`, opts);
-const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
+const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, additionalCosting: 0, pax: 2, ...over });
 const sheet = () => [
   { name: 'Option 1', rows: [row('Adult'), row('Extra bed', { pax: 1 }), row('CWB', { tcs: 0, pax: 1 }), row('CNB', { pax: 0 })] },
   { name: 'Option 2', rows: [row('Adult', { package: 36000 }), row('Extra bed', { pax: 0 }), row('CWB', { pax: 0 }), row('CNB', { pax: 0 })] }
@@ -28,7 +28,7 @@ test('a hotel quotation keeps its pricing options exactly as entered', async () 
   assert.equal(body.success, true, body.message);
   const tables = body.data.priceTables;
   assert.deepEqual(tables.map((t) => [t.name, t.rows.map((r) => r.label)]), [['Option 1', ['Adult', 'Extra bed', 'CWB', 'CNB']], ['Option 2', ['Adult', 'Extra bed', 'CWB', 'CNB']]]);
-  assert.deepEqual(tables[0].rows[0], { label: 'Adult', package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2 });
+  assert.deepEqual(tables[0].rows[0], { label: 'Adult', package: 30000, airfare: 12000, visa: 6000, tcs: 1500, additionalCosting: 0, pax: 2 });
   const read = (await quotations(`/${body.data._id}`, { token: admin.token })).body.data;
   assert.deepEqual(read.priceTables, tables);
 });
@@ -36,7 +36,7 @@ test('a hotel quotation keeps its pricing options exactly as entered', async () 
 test('typed values are tidied: blanks are 0, amounts rounded to the paisa, an empty name becomes "Option n"', async () => {
   const body = await create({ priceTables: [{ name: ' ', rows: [{ label: ' Adult ', package: '1000.456', airfare: '', pax: '3' }] }] });
   assert.equal(body.success, true, body.message);
-  assert.deepEqual(body.data.priceTables, [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000.46, airfare: 0, visa: 0, tcs: 0, pax: 3 }] }]);
+  assert.deepEqual(body.data.priceTables, [{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000.46, airfare: 0, visa: 0, tcs: 0, additionalCosting: 0, pax: 3 }] }]);
 });
 
 test('problems are explained in plain words naming the option and the row, and nothing is saved', async () => {

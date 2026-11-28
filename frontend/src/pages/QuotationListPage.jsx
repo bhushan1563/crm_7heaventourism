@@ -608,140 +608,140 @@ export const QuotationListPage = () => {
                       <div className="ql-actions">
                         {/* 1. Follow-up Button */}
                         <span className="ql-slot">
-                        {canModify && (
-                          <button
-                            onClick={() => setFollowUpItem(q)}
-                            className="btn btn-outline btn-sm btn-icon"
-                            title="Mark for Follow up"
-                            style={{ color: 'var(--fg-EA580C)', borderColor: 'var(--bd-FED7AA)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            <PhoneForwarded size={13} color="#EA580C" />
-                          </button>
-                        )}
+                          {canModify && (
+                            <button
+                              onClick={() => setFollowUpItem(q)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              title="Mark for Follow up"
+                              style={{ color: 'var(--fg-EA580C)', borderColor: 'var(--bd-FED7AA)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <PhoneForwarded size={13} color="#EA580C" />
+                            </button>
+                          )}
 
                         </span>
                         {/* 2. Preview PDF Modal */}
                         <span className="ql-slot">
-                        <button
-                          onClick={() => {
-                            setPreviewQuotation(q);
-                            setIsPreviewOpen(true);
-                          }}
-                          className="btn btn-outline-azure btn-sm btn-icon"
-                          title="Interactive PDF Preview"
-                          style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                        >
-                          <Eye size={13} />
-                        </button>
+                          <button
+                            onClick={() => {
+                              setPreviewQuotation(q);
+                              setIsPreviewOpen(true);
+                            }}
+                            className="btn btn-outline-azure btn-sm btn-icon"
+                            title="Interactive PDF Preview"
+                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                          >
+                            <Eye size={13} />
+                          </button>
 
                         </span>
                         {/* 3. Direct PDF Download */}
                         <span className="ql-slot">
-                        {hasDownloadRight && (
-                          <button
-                            onClick={() => handleDirectDownload(q)}
-                            className="btn btn-primary btn-sm btn-icon"
-                            disabled={isDownloading}
-                            title="Direct Download Branded PDF"
-                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
-                          </button>
-                        )}
+                          {hasDownloadRight && (
+                            <button
+                              onClick={() => handleDirectDownload(q)}
+                              className="btn btn-primary btn-sm btn-icon"
+                              disabled={isDownloading}
+                              title="Direct Download Branded PDF"
+                              style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <Download size={13} />}
+                            </button>
+                          )}
 
                         </span>
                         {/* 3b. Direct Word Download */}
                         <span className="ql-slot">
-                        {hasDownloadRight && (
-                          <button
-                            onClick={() => handleDirectWordDownload(q)}
-                            className="btn btn-outline btn-sm btn-icon"
-                            disabled={wordDownloadingId === q._id}
-                            title="Download Word (.docx)"
-                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            {wordDownloadingId === q._id ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
-                          </button>
-                        )}
+                          {hasDownloadRight && (
+                            <button
+                              onClick={() => handleDirectWordDownload(q)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              disabled={wordDownloadingId === q._id}
+                              title="Download Word (.docx)"
+                              style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              {wordDownloadingId === q._id ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                            </button>
+                          )}
 
                         </span>
                         {/* 4. Duplicate Quotation */}
                         <span className="ql-slot">
-                        {hasCreateRight && (
-                          <button
-                            onClick={() => handleDuplicate(q._id)}
-                            className="btn btn-outline btn-sm btn-icon"
-                            title="Duplicate as New Draft"
-                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            <Copy size={13} />
-                          </button>
-                        )}
+                          {hasCreateRight && (
+                            <button
+                              onClick={() => handleDuplicate(q._id)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              title="Duplicate as New Draft"
+                              style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <Copy size={13} />
+                            </button>
+                          )}
 
                         </span>
                         {/* 4b. Confirm the booking (the client accepted), or open the booking it already became */}
                         <span className="ql-slot">
-                        {q.confirmationId ? (
-                          can('confirmations', 'canRead') && (
-                            <button
-                              onClick={() => navigate(`/confirmations/${q.confirmationId}`)}
-                              className="btn btn-outline btn-sm btn-icon"
-                              title={`Open booking ${q.confirmationNo}`}
-                              aria-label={`Open booking ${q.confirmationNo}`}
-                              style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                            >
-                              <CheckCircle2 size={13} color="#059669" />
-                            </button>
-                          )
-                        ) : (
-                          canModify && can('confirmations', 'canCreate') && !confirmBlockedReason(q) && (
-                            <button
-                              onClick={() => setConfirmItem(q)}
-                              className="btn btn-outline btn-sm btn-icon"
-                              title="Confirm booking (the client accepted this quotation)"
-                              aria-label={`Confirm booking for ${q.quotationNo}`}
-                              style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                            >
-                              <CheckCircle2 size={13} />
-                            </button>
-                          )
-                        )}
+                          {q.confirmationId ? (
+                            can('confirmations', 'canRead') && (
+                              <button
+                                onClick={() => navigate(`/confirmations/${q.confirmationId}`)}
+                                className="btn btn-outline btn-sm btn-icon"
+                                title={`Open booking ${q.confirmationNo}`}
+                                aria-label={`Open booking ${q.confirmationNo}`}
+                                style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                              >
+                                <CheckCircle2 size={13} color="#059669" />
+                              </button>
+                            )
+                          ) : (
+                            canModify && can('confirmations', 'canCreate') && !confirmBlockedReason(q) && (
+                              <button
+                                onClick={() => setConfirmItem(q)}
+                                className="btn btn-outline btn-sm btn-icon"
+                                title="Confirm booking (the client accepted this quotation)"
+                                aria-label={`Confirm booking for ${q.quotationNo}`}
+                                style={{ color: 'var(--fg-059669)', borderColor: 'var(--bd-A7F3D0)', width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                              >
+                                <CheckCircle2 size={13} />
+                              </button>
+                            )
+                          )}
 
                         </span>
                         {/* 5. Edit Quotation */}
                         <span className="ql-slot">
-                        {q.confirmationId ? (
-                          <span title={`Confirmed as ${q.confirmationNo}: locked. Cancel the booking to change it.`} style={{ padding: '4px', color: 'var(--fg-059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
-                            <Lock size={13} />
-                          </span>
-                        ) : canModify ? (
-                          <button
-                            onClick={() => navigate(`/quotations/${q._id}/edit`)}
-                            className="btn btn-outline btn-sm btn-icon"
-                            title="Edit Itinerary & Pricing"
-                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            <Edit size={13} />
-                          </button>
-                        ) : (
-                          <span title="Locked for Assigned Staff" style={{ padding: '4px', color: 'var(--fg-DC2626)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
-                            <Lock size={13} />
-                          </span>
-                        )}
+                          {q.confirmationId ? (
+                            <span title={`Confirmed as ${q.confirmationNo}: locked. Cancel the booking to change it.`} style={{ padding: '4px', color: 'var(--fg-059669)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
+                              <Lock size={13} />
+                            </span>
+                          ) : canModify ? (
+                            <button
+                              onClick={() => navigate(`/quotations/${q._id}/edit`)}
+                              className="btn btn-outline btn-sm btn-icon"
+                              title="Edit Itinerary & Pricing"
+                              style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <Edit size={13} />
+                            </button>
+                          ) : (
+                            <span title="Locked for Assigned Staff" style={{ padding: '4px', color: 'var(--fg-DC2626)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '26px', height: '26px', flexShrink: 0 }}>
+                              <Lock size={13} />
+                            </span>
+                          )}
 
                         </span>
                         {/* 6. Delete Quotation */}
                         <span className="ql-slot">
-                        {can('quotations', 'canDelete') && canModify && !q.confirmationId && (
-                          <button
-                            onClick={() => setDeleteItem(q)}
-                            className="btn btn-danger btn-sm btn-icon"
-                            title="Delete Quotation"
-                            style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
-                          >
-                            <Trash2 size={13} />
-                          </button>
-                        )}
+                          {can('quotations', 'canDelete') && canModify && !q.confirmationId && (
+                            <button
+                              onClick={() => setDeleteItem(q)}
+                              className="btn btn-danger btn-sm btn-icon"
+                              title="Delete Quotation"
+                              style={{ width: '26px', height: '26px', padding: 0, flexShrink: 0 }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </span>
                       </div>
                     </td>

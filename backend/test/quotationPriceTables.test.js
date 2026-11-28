@@ -16,13 +16,13 @@ const bad = (value) => {
   assert.ok(typeof r.message === 'string' && r.message.length > 8);
   return r.message;
 };
-const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
+const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, additionalCosting: 0, pax: 2, ...over });
 const sheet = () => [
   { name: 'Option 1', rows: [row('Adult'), row('Extra bed', { package: 25000, airfare: 12000, visa: 6000, tcs: 1500, pax: 1 }), row('CWB', { package: 22000, airfare: 9000, visa: 6000, tcs: 0, pax: 1 }), row('CNB', { package: 15000, airfare: 9000, visa: 6000, tcs: 0, pax: 0 })] },
   { name: 'Option 2', rows: [row('Adult', { package: 36000 }), row('Extra bed', { pax: 0 }), row('CWB', { pax: 0 }), row('CNB', { pax: 0 })] }
 ];
 
-test('a row\'s Total is Package + Airfare + Visa + TCS, its Final Price is Total x PAX, and an option\'s Grand Total adds the Final Prices', () => {
+test('a row\'s Total is Package + Airfare + Visa + TCS + Additional Costing, its Final Price is Total x PAX, and an option\'s Grand Total adds the Final Prices', () => {
   const [one, two] = sheet();
   assert.equal(rowTotal(one.rows[0]), 49500);
   assert.equal(rowFinal(one.rows[0]), 99000); // 49,500 x 2 adults
@@ -52,7 +52,7 @@ test('an option with nothing entered is empty, one with any amount or any PAX is
 
 test('what is typed is tidied: blanks become 0, amounts are rounded to the paisa, labels and names are cleaned, an empty name becomes "Option n"', () => {
   const tables = ok([{ name: '  ', rows: [{ label: '  Extra   bed ', package: '25000.456', airfare: '', visa: null, tcs: undefined, pax: '2' }] }, { name: ' Taj  option ', rows: [] }]);
-  assert.deepEqual(tables[0], { name: 'Option 1', layout: 'sheet', rows: [{ label: 'Extra bed', package: 25000.46, airfare: 0, visa: 0, tcs: 0, pax: 2 }] }); // a table without a layout is a sheet
+  assert.deepEqual(tables[0], { name: 'Option 1', layout: 'sheet', rows: [{ label: 'Extra bed', package: 25000.46, airfare: 0, visa: 0, tcs: 0, additionalCosting: 0, pax: 2 }] }); // a table without a layout is a sheet
   assert.equal(tables[1].name, 'Taj option');
   assert.deepEqual(ok([]), []);
 });
@@ -90,7 +90,7 @@ test('property: whatever arrives, the answer is a clear message or tables that o
         assert.ok(table.name.length > 0 && table.name.length <= L.name);
         for (const rw of table.rows) {
           assert.ok(rw.label.length > 0 && rw.label.length <= L.label);
-          for (const k of ['package', 'airfare', 'visa', 'tcs']) assert.ok(Number.isFinite(rw[k]) && rw[k] >= 0 && rw[k] <= L.maxAmount);
+          for (const k of ['package', 'airfare', 'visa', 'tcs', 'additionalCosting']) assert.ok(Number.isFinite(rw[k]) && rw[k] >= 0 && rw[k] <= L.maxAmount);
           assert.ok(Number.isInteger(rw.pax) && rw.pax >= 0 && rw.pax <= L.maxPax);
           assert.ok(Math.abs(rowFinal(rw) - rowTotal(rw) * rw.pax) < 0.011);
         }

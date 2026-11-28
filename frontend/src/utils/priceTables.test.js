@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 import { blankTable, cellText, filledTables, lowestTotal, priceTablesPayload, priceTablesProblem, rowFinal, rowTotal, tableHasData, tableTotal, usesPriceTables } from './priceTables';
 
-const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, pax: 2, ...over });
+const row = (label, over = {}) => ({ label, package: 30000, airfare: 12000, visa: 6000, tcs: 1500, additionalCosting: 0, pax: 2, ...over });
 const hotel = (tables) => ({ quotationType: 'Only Hotel', priceTables: tables });
 
 describe('the arithmetic', () => {
-  it('Total is Package + Airfare + Visa + TCS, Final Price is Total x PAX, Grand Total adds the Final Prices (typed text works too)', () => {
+  it('Total is Package + Airfare + Visa + TCS + Additional Costing, Final Price is Total x PAX, Grand Total adds the Final Prices (typed text works too)', () => {
     expect(rowTotal(row('Adult'))).toBe(49500);
     expect(rowFinal(row('Adult'))).toBe(99000);
     expect(rowTotal({ package: '1000', airfare: '250.50', visa: '', tcs: undefined })).toBe(1250.5);
@@ -64,7 +64,7 @@ describe('priceTablesProblem', () => {
 
 describe('priceTablesPayload', () => {
   it('sends numbers as numbers, tidies the names and gives an empty name its default', () => {
-    expect(priceTablesPayload([{ name: ' ', rows: [{ label: ' Adult ', package: '1000', airfare: '', visa: undefined, tcs: '5.5', pax: '2' }] }])).toEqual([{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 5.5, pax: 2 }] }]);
+    expect(priceTablesPayload([{ name: ' ', rows: [{ label: ' Adult ', package: '1000', airfare: '', visa: undefined, tcs: '5.5', additionalCosting: '', pax: '2' }] }])).toEqual([{ name: 'Option 1', layout: 'sheet', rows: [{ label: 'Adult', package: 1000, airfare: 0, visa: 0, tcs: 5.5, additionalCosting: 0, pax: 2 }] }]);
     expect(priceTablesPayload(undefined)).toEqual([]);
   });
 });
@@ -72,7 +72,7 @@ describe('priceTablesPayload', () => {
 describe('property', () => {
   it('whatever is typed, the problem is a message or null, and when there is none the payload adds up the same way', () => {
     const cell = fc.oneof(fc.integer({ min: -5, max: 5000 }), fc.constantFrom('', '12.5', 'abc', ' '), fc.double({ min: 0, max: 1e5, noNaN: true }).map(String));
-    const rowArb = fc.record({ label: fc.oneof(fc.string({ maxLength: 10 }), fc.constant('Adult')), package: cell, airfare: cell, visa: cell, tcs: cell, pax: cell });
+    const rowArb = fc.record({ label: fc.oneof(fc.string({ maxLength: 10 }), fc.constant('Adult')), package: cell, airfare: cell, visa: cell, tcs: cell, additionalCosting: cell, pax: cell });
     fc.assert(
       fc.property(fc.array(fc.record({ name: fc.string({ maxLength: 12 }), rows: fc.array(rowArb, { maxLength: 4 }) }), { minLength: 1, maxLength: 3 }), (tables) => {
         const q = hotel(tables);

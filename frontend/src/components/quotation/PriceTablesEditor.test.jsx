@@ -31,7 +31,7 @@ describe('PriceTablesEditor', () => {
     render(<Harness initial={start()} />);
     expect(screen.getAllByRole('region').map((r) => r.getAttribute('aria-label'))).toEqual(['Option 1', 'Option 2']);
     const first = screen.getByRole('region', { name: 'Option 1' });
-    expect(within(first).getAllByRole('columnheader').map((h) => h.textContent.trim()).filter(Boolean)).toEqual(['Sr No', 'Package', 'Airfare', 'Visa', 'TCS', 'Total', 'PAX', 'Final Price', 'Remove the row']); // the last one is only for screen readers
+    expect(within(first).getAllByRole('columnheader').map((h) => h.textContent.trim()).filter(Boolean)).toEqual(['Sr No', 'Package', 'Airfare', 'Visa', 'TCS', 'Additional Costing', 'Total', 'PAX', 'Final Price', 'Remove the row']); // the last one is only for screen readers
     expect(within(first).getAllByRole('textbox').map((t) => t.value)).toEqual(['Option 1', 'Adult', 'Extra bed', 'CWB', 'CNB']); // the option's own name, then the rows
     expect(within(first).getByText('Grand Total')).toBeInTheDocument();
   });
@@ -53,7 +53,7 @@ describe('PriceTablesEditor', () => {
     expect(within(first).getByText('Rs 1,19,000')).toBeInTheDocument(); // 99,000 + 20,000
     const second = screen.getByRole('region', { name: 'Option 2' });
     expect(within(second).getByText('Rs 0')).toBeInTheDocument();
-    expect(seen.mock.lastCall[0][0].rows[0]).toMatchObject({ package: '30000', airfare: '12000', visa: '6000', tcs: '1500', pax: '2' });
+    expect(seen.mock.lastCall[0][0].rows[0]).toMatchObject({ package: '30000', airfare: '12000', visa: '6000', tcs: '1500', additionalCosting: '', pax: '2' });
   });
 
   it('adds, renames, copies and removes options', async () => {
@@ -97,7 +97,7 @@ describe('PriceTablesEditor', () => {
   it('explains the layout in plain words', () => {
     render(<Harness initial={start()} />);
     const hint = document.querySelector('.pt-hint');
-    expect(hint).toHaveTextContent('Total is Package + Airfare + Visa + TCS, Final Price is Total × PAX');
+    expect(hint).toHaveTextContent('Total is Package + Airfare + Visa + TCS + Additional Costing, Final Price is Total × PAX');
     expect(hint).toHaveTextContent('An option with nothing entered is not printed');
     expect(hint).toHaveTextContent('worked out for you as you type');
   });

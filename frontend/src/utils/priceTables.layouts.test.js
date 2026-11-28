@@ -126,7 +126,7 @@ describe('what is sent to the server', () => {
   it('a sheet keeps its own figures and says it is a sheet', () => {
     const sent = priceTablesPayload([{ name: '', rows: [{ label: 'Adult', package: '10', airfare: '', visa: '', tcs: '', pax: '2' }] }]);
     expect(sent[0]).toMatchObject({ name: 'Option 1', layout: 'sheet' });
-    expect(Object.keys(sent[0].rows[0]).sort()).toEqual(['airfare', 'label', 'package', 'pax', 'tcs', 'visa']);
+    expect(Object.keys(sent[0].rows[0]).sort()).toEqual(['additionalCosting', 'airfare', 'label', 'package', 'pax', 'tcs', 'visa']);
   });
 });
 
