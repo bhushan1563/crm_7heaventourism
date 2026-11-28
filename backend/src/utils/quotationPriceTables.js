@@ -13,7 +13,7 @@ import { ROOM_TABLE_LIMITS, ROOM_ROW_LABELS, roomTableHasData, roomTableTotal } 
 // Only the typed figures are stored; every Total, Final Price and Grand Total is worked out from them, so the figures can never disagree.
 
 export const PRICE_TABLE_LIMITS = { tables: 6, rows: 10, name: 60, label: 40, maxAmount: 1_000_000_000, maxPax: 999 };
-export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS']];
+export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS'], ['additionalCosting', 'Additional Costing']];
 export const TABLE_LAYOUTS = ['sheet', 'rooms'];
 /** Which layout a kind of quotation is priced with (nothing for the others: they have their own pricing). */
 export const LAYOUT_OF_TYPE = { 'Only Hotel': 'sheet', Package: 'sheet' };
@@ -33,7 +33,7 @@ const isPlainObject = (v) => v !== null && typeof v === 'object' && !Array.isArr
 const round2 = (n) => Math.round(n * 100) / 100;
 const blank = (v) => v === undefined || v === null || v === '';
 
-/** What one person of this kind costs: Package + Airfare + Visa + TCS. */
+/** What one person of this kind costs: Package + Airfare + Visa + TCS + Additional Costing. */
 export const rowTotal = (row) => round2(AMOUNT_COLUMNS.reduce((sum, [key]) => sum + (Number(row?.[key]) || 0), 0));
 /** What the row comes to: the Total of one person times the number of persons. */
 export const rowFinal = (row) => round2(rowTotal(row) * (Number(row?.pax) || 0));

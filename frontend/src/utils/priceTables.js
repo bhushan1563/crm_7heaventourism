@@ -15,11 +15,14 @@ import { ROOM_ROW_LABELS, ROOM_TABLE_LIMITS, roomDefaults, roomTableHasData, roo
 import { typedCount } from './rateTable';
 
 export const PRICE_TABLE_LIMITS = { tables: 6, rows: 10, name: 60, label: 40, maxAmount: 1_000_000_000, maxPax: 999 };
-export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS']];
+export const AMOUNT_COLUMNS = [['package', 'Package'], ['airfare', 'Airfare'], ['visa', 'Visa'], ['tcs', 'TCS'], ['additionalCosting', 'Additional Costing']];
 export const DEFAULT_ROW_LABELS = ['Adult', 'Extra bed', 'CWB', 'CNB'];
-/** The amount columns the sheet of a kind of quotation shows: a package has Package and Airfare, a hotel the Package amount and what else is typed. */
+/** The amount columns the sheet of a kind of quotation shows: a package has Package, Airfare and Additional Costing (when entered); a hotel the Package amount and what else is typed. */
 export const sheetColumns = (quotationType, tables = []) => {
-  if (quotationType === 'Package') return AMOUNT_COLUMNS.filter(([key]) => key === 'package' || key === 'airfare');
+  if (quotationType === 'Package') {
+    const hasAdditional = (tables || []).some((t) => (t?.rows || []).some((r) => Number(r?.additionalCosting) > 0));
+    return AMOUNT_COLUMNS.filter(([key]) => key === 'package' || key === 'airfare' || (key === 'additionalCosting' && hasAdditional));
+  }
   if (quotationType !== HOTEL) return AMOUNT_COLUMNS;
   return AMOUNT_COLUMNS.filter(([key]) => key === 'package' || (tables || []).some((t) => (t?.rows || []).some((r) => Number(r?.[key]) > 0)));
 };
@@ -52,7 +55,7 @@ export const usesPriceTables = (quotation) => tablesOf(quotation).length > 0;
 const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
 const rs = (n) => `Rs ${(Number(n) || 0).toLocaleString('en-IN')}`;
 
-export const blankRow = (label = '') => ({ label, package: '', airfare: '', visa: '', tcs: '', pax: '' });
+export const blankRow = (label = '') => ({ label, package: '', airfare: '', visa: '', tcs: '', additionalCosting: '', pax: '' });
 export const blankRoomRow = (label = '') => ({ label, rate: '', nights: '', rooms: '' });
 /** A new option in one of the two layouts, with the rows of the client's sheet. */
 export const blankTable = (name, layout = 'sheet') =>
@@ -182,6 +185,6 @@ export const priceTablesPayload = (tables) =>
     return {
       name,
       layout: 'sheet',
-      rows: (table.rows || []).map((row) => ({ label: String(row.label || '').trim(), package: Number(row.package) || 0, airfare: Number(row.airfare) || 0, visa: Number(row.visa) || 0, tcs: Number(row.tcs) || 0, pax: Number(row.pax) || 0 }))
+      rows: (table.rows || []).map((row) => ({ label: String(row.label || '').trim(), package: Number(row.package) || 0, airfare: Number(row.airfare) || 0, visa: Number(row.visa) || 0, tcs: Number(row.tcs) || 0, additionalCosting: Number(row.additionalCosting) || 0, pax: Number(row.pax) || 0 }))
     };
   });

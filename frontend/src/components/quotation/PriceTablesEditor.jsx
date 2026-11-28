@@ -44,7 +44,7 @@ export const PriceTablesEditor = ({ tables, onChange, quotation }) => {
         </p>
       ) : (
         <p className="pt-hint">
-          One table for each option you offer. Fill in the amounts for one person, and PAX for how many of each kind. <strong>Total</strong> is {AMOUNT_COLUMNS.map(([, title]) => title).join(' + ')}, <strong>Final Price</strong> is Total × PAX, and the Grand Total adds them up. All of it is worked out for you as you type. An option with nothing entered is not printed.
+          One table for each option you offer. Fill in the amounts for one person, and PAX for how many of each kind. <strong>Total</strong> is {AMOUNT_COLUMNS.map(([, title]) => title).join(' + ')}, <strong>Final Price</strong> is Total × PAX, and the Grand Total adds them up. All of it is worked out for you as you type. An option with nothing entered is not printed. The <strong>Additional Costing</strong> column appears when you enter a value.
         </p>
       )}
 
